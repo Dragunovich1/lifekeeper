@@ -133,8 +133,10 @@ const VaultApp = () => {
           avatarSrc={data.profile.avatar}
         />
         <main className="app-content">
-          {/* Default renders Dashboard */}
-          <Component />
+          <div className="container">
+            {/* Default renders Dashboard */}
+            <Component />
+          </div>
         </main>
       </div>
       <div
