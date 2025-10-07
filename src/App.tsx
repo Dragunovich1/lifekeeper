@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { AuthGate } from './components/AuthGate'
 import { Sidebar } from './components/Sidebar'
