@@ -53,13 +53,50 @@ const sectionComponents = {
 
 type SectionComponentKey = keyof typeof sectionComponents
 
-const DefaultSection = () => <div className="section-placeholder">Selecciona una seccion</div>
+import { DashboardSection } from './sections'
+
+const DefaultSection = () => <DashboardSection />
 
 const VaultApp = () => {
   const { data, lock } = useAppData()
-  const [activeSection, setActiveSection] = useState<MainSectionKey | null>('profile')
+  const [activeSection, setActiveSection] = useState<MainSectionKey | null>(null)
   const [activeSubSection, setActiveSubSection] = useState<SubSectionKey>('settings')
   const [isSidebarVisible, setIsSidebarVisible] = useState(false)
+
+  const navigateTo = (section: MainSectionKey | null, sub?: SubSectionKey) => {
+    setActiveSection(section)
+    if (section && sub) {
+      setActiveSubSection(sub)
+      window.location.hash = `#${section}:${sub}`
+    } else if (section) {
+      const first = navigation.find(n => n.key === section)?.subSections[0].key as SubSectionKey
+      setActiveSubSection(first)
+      window.location.hash = `#${section}:${first}`
+    } else {
+      window.location.hash = ''
+    }
+  }
+
+  // Deep-link via hash: #section:sub
+  useEffect(() => {
+    const syncFromHash = () => {
+      const raw = window.location.hash.replace(/^#/, '')
+      if (!raw) {
+        setActiveSection(null)
+        return
+      }
+      const [sec, sub] = raw.split(':') as [MainSectionKey, SubSectionKey]
+      const valid = navigation.find(n => n.key === sec)
+      if (valid) {
+        setActiveSection(sec)
+        const hasSub = valid.subSections.some(s => s.key === sub)
+        setActiveSubSection(hasSub ? sub : valid.subSections[0].key as SubSectionKey)
+      }
+    }
+    window.addEventListener('hashchange', syncFromHash)
+    syncFromHash()
+    return () => window.removeEventListener('hashchange', syncFromHash)
+  }, [])
 
   const componentKey = activeSection ? `${activeSection}:${activeSubSection}` as SectionComponentKey : null
   const Component = useMemo(() => (componentKey ? sectionComponents[componentKey] : null) ?? DefaultSection, [componentKey])
@@ -74,14 +111,16 @@ const VaultApp = () => {
         activeSection={activeSection}
         activeSubSection={activeSubSection}
         onSectionChange={(key) => {
-          setActiveSection(prev => prev === key ? null : key)
-          const section = navigation.find((item) => item.key === key)
-          if (section && section.subSections.length > 0) {
-            setActiveSubSection(section.subSections[0].key as SubSectionKey)
+          const next = activeSection === key ? null : key
+          if (next) {
+            const first = navigation.find((item) => item.key === next)!.subSections[0].key as SubSectionKey
+            navigateTo(next, first)
+          } else {
+            navigateTo(null)
           }
         }}
-        onSubSectionChange={(_, subKey) => {
-          setActiveSubSection(subKey)
+        onSubSectionChange={(sectionKey, subKey) => {
+          navigateTo(sectionKey, subKey)
           setIsSidebarVisible(false)
         }}
         visible={isSidebarVisible}
@@ -94,6 +133,7 @@ const VaultApp = () => {
           avatarSrc={data.profile.avatar}
         />
         <main className="app-content">
+          {/* Default renders Dashboard */}
           <Component />
         </main>
       </div>

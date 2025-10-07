@@ -43,7 +43,7 @@ export const Sidebar = ({
   return (
     <aside className={classNames('sidebar', visible ? 'visible' : 'hidden')}>
       <div className="sidebar-header">
-        <span className="sidebar-title">Panel</span>
+        <span className="sidebar-title">Lifekeeper</span>
       </div>
       {sections.map((section) => {
         const Icon = iconMap[section.icon]
