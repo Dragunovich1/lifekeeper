@@ -94,7 +94,7 @@ export const PasswordManagerSection = () => {
         subtitle="Todos tus accesos cifrados con la clave maestra, listos para copiar con temporizador"
       />
 
-      <div className="section-body">
+      <div className="section-body compact">
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Nueva credencial</h3>

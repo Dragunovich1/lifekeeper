@@ -73,7 +73,7 @@ export const SensitiveDocumentsSection = () => {
         subtitle="Respalda documentos importantes de forma cifrada dentro de la app"
       />
 
-      <div className="section-body">
+      <div className="section-body compact">
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Subir documento</h3>

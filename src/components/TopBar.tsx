@@ -22,14 +22,13 @@ export const TopBar = ({ onToggleSidebar, onLock, userName, avatarSrc }: TopBarP
 
   return (
     <header className="topbar">
-      <div className="container topbar-inner">
-        <div className="topbar-left">
-          <button type="button" className="topbar-toggle" onClick={onToggleSidebar}>
-            Menu
-          </button>
-          <h2 className="topbar-title">LifeKeeper</h2>
-        </div>
-        <div className="topbar-right">
+      <div className="topbar-left">
+        <button type="button" className="topbar-toggle" onClick={onToggleSidebar}>
+          Menu
+        </button>
+        <h2 className="topbar-title">LifeKeeper</h2>
+      </div>
+      <div className="topbar-right">
           {userName ? (
             <div className="topbar-user-block">
               {avatarSrc ? (

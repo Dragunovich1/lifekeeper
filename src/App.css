@@ -50,8 +50,8 @@ li { list-style: none; }
 }
 
 /* --- Layout containers --- */
-.container { width: 100%; max-width: 720px; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
-.topbar-inner { padding-left: 1rem; padding-right: 1rem; }
+.container { width: 100%; max-width: 100%; margin: 0 auto; padding-left: 0; padding-right: 0; }
+.topbar-inner { padding-left: 0; padding-right: 0; }
 .auth-hero-content {
   max-width: 440px;
   margin: 0 auto;
@@ -164,8 +164,10 @@ li { list-style: none; }
 .section-body {
   display: grid;
   gap: 1.5rem;
-  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
 }
+.section-body.compact { max-width: 800px; }
 .section-header {
   display: flex;
   flex-direction: column;
@@ -336,7 +338,7 @@ li { list-style: none; }
   .sidebar-overlay { display: none; }
   .topbar-toggle { display: none; }
 
-  .container { max-width: 960px; }
+  .container { max-width: 100%; }
 
   /* Constrain form widths on larger viewports */
   .panel .form-grid { max-width: 860px; }
@@ -345,7 +347,7 @@ li { list-style: none; }
 
 /* === LARGE DESKTOP/TV BREAKPOINT === */
 @media (min-width: 1440px) {
-  .container { max-width: 1200px; }
+  .container { max-width: 100%; }
   .auth-card {
     max-width: 480px;
   }
@@ -357,5 +359,4 @@ li { list-style: none; }
   .form-grid.two-columns { grid-template-columns: 1fr; }
   .form-grid.three-columns { grid-template-columns: 1fr; }
   .panel .form-grid { max-width: 640px; }
-  .container { max-width: 800px; }
 }

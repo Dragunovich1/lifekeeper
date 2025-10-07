@@ -59,7 +59,7 @@ export const PrivateNotesSection = () => {
         title="Notas privadas"
         subtitle="Texto cifrado para informacion delicada, visible solo tras desbloquear la app"
       />
-      <div className="section-body">
+      <div className="section-body compact">
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Crear nota</h3>
