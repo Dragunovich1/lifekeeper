@@ -27,7 +27,7 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-"LifeKeeper <no-reply@lifekeeper.lat>"}
+      SMTP_FROM: ${SMTP_FROM:-LifeKeeper <no-reply@lifekeeper.lat>}
     depends_on:
       postgres:
         condition: service_healthy

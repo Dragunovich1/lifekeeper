@@ -6,7 +6,13 @@ const port = parseInt(process.env.SMTP_PORT || '587', 10)
 const secure = process.env.SMTP_SECURE === 'true' || port === 465
 const user = process.env.SMTP_USER
 const pass = process.env.SMTP_PASS
-const defaultFrom = process.env.SMTP_FROM || 'LifeKeeper <no-reply@lifekeeper.lat>'
+const sanitizeEmailAddress = (val) => {
+  if (!val) return 'LifeKeeper <no-reply@lifekeeper.lat>'
+  return String(val).replace(/^["']+|["']+$/g, '').trim()
+}
+
+const rawFrom = process.env.SMTP_FROM || 'LifeKeeper <no-reply@lifekeeper.lat>'
+const defaultFrom = sanitizeEmailAddress(rawFrom)
 
 let transporter = null
 
@@ -33,10 +39,12 @@ if (resendApiKey) {
   console.log('[MAIL] No se configuró RESEND_API_KEY ni SMTP_HOST. Los correos se imprimirán en consola (Modo Simulación).')
 }
 
-export async function sendEmail({ to, subject, html, text, from = defaultFrom }) {
+export async function sendEmail({ to, subject, html, text, from }) {
   if (!to || !subject) {
     throw new Error('Destinatario (to) y Asunto (subject) son requeridos')
   }
+
+  const sender = sanitizeEmailAddress(from || defaultFrom)
 
   // 1. Envío prioritario vía Resend REST API (ultra rápido y nativo)
   if (resendApiKey) {
@@ -48,7 +56,7 @@ export async function sendEmail({ to, subject, html, text, from = defaultFrom })
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from,
+          from: sender,
           to: Array.isArray(to) ? to : [to],
           subject,
           html,
@@ -73,7 +81,7 @@ export async function sendEmail({ to, subject, html, text, from = defaultFrom })
   if (transporter) {
     try {
       const info = await transporter.sendMail({
-        from,
+        from: sender,
         to,
         subject,
         html,
