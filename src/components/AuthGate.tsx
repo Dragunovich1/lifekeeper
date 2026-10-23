@@ -24,7 +24,7 @@ const initialSignup = {
 }
 
 export const AuthGate = ({ children }: { children: ReactNode }) => {
-  const { data, masterPassword, hasVault, unlock, createVault, error, updateData } = useAppDataUnsafe()
+  const { data, masterPassword, hasVault, unlock, createVault, error } = useAppDataUnsafe()
   const { preferences } = usePreferences()
   const isLightMode = preferences.mode === 'light'
   const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png' : '/brand/logo-login.png'

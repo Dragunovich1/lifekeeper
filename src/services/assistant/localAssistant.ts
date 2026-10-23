@@ -252,7 +252,7 @@ export function processAssistantQuery(query: string, data: AppData): AssistantMe
     if (upcoming.length > 0) {
       const next = upcoming[0]
       return createMsg(
-        `🩺 **Tu próxima consulta médica programada:**\n\n• **Especialidad:** ${next.specialty}\n• **Profesional:** ${next.doctor}\n• **Fecha:** ${formatDate(next.date)}\n\n¿Querés revisar el historial de consultas anteriores?`,
+        `🩺 **Tu próxima consulta médica programada:**\n\n• **Motivo:** ${next.reason || 'Consulta general'}\n• **Profesional:** ${next.doctor}\n• **Fecha:** ${formatDate(next.date)}\n\n¿Querés revisar el historial de consultas anteriores?`,
         { label: 'Ver Consultas Médicas', hash: '#health:consultations' },
       )
     }
@@ -269,7 +269,7 @@ export function processAssistantQuery(query: string, data: AppData): AssistantMe
     const nextVaccines = data.health.vaccines.filter((v) => v.nextDoseDate && toLocalDateKey(v.nextDoseDate) >= todayKey)
 
     return createMsg(
-      `💉 **Tu libreta de vacunación:**\n\n• **Total aplicadas:** ${total}\n• **Próximos refuerzos:** ${nextVaccines.length > 0 ? nextVaccines.map((v) => `\n  • ${v.name}: ${formatDate(v.nextDoseDate!)}`).join('') : 'No tenés refuerzos próximos agendados.'}`,
+      `💉 **Tu libreta de vacunación:**\n\n• **Total aplicadas:** ${total}\n• **Próximos refuerzos:** ${nextVaccines.length > 0 ? nextVaccines.map((v) => `\n  • ${v.vaccine}: ${formatDate(v.nextDoseDate!)}`).join('') : 'No tenés refuerzos próximos agendados.'}`,
       { label: 'Ver Vacunas', hash: '#health:vaccines' },
     )
   }
@@ -283,9 +283,9 @@ export function processAssistantQuery(query: string, data: AppData): AssistantMe
         hash: '#personal:vehicles',
       })
     }
-    const main = v[0]
+    const lastService = v.slice().sort((a, b) => b.date.localeCompare(a.date))[0]
     return createMsg(
-      `🚗 **Información de tu vehículo (${main.brand} ${main.model}):**\n\n• **Patente / Placa:** ${main.plate || 'No cargada'}\n• **Kilometraje actual:** ${main.mileage.toLocaleString('es-AR')} km\n• **Historial de servicios:** ${main.services.length} registros`,
+      `🚗 **Información de vehículos y mantenimientos:**\n\n• **Total de servicios registrados:** ${v.length}\n• **Último registro:** ${lastService.vehicleName} (${lastService.serviceType})\n• **Fecha del servicio:** ${formatDate(lastService.date)}${lastService.mileage ? `\n• **Kilometraje:** ${lastService.mileage.toLocaleString('es-AR')} km` : ''}${lastService.nextServiceDate ? `\n• **Próximo service:** ${formatDate(lastService.nextServiceDate)}` : ''}`,
       { label: 'Ver Mantenimiento Vehicular', hash: '#personal:vehicles' },
     )
   }
@@ -293,11 +293,10 @@ export function processAssistantQuery(query: string, data: AppData): AssistantMe
   // 11. ESTADO DE ÁNIMO / DIARIO
   if (norm.includes('anim') || norm.includes('humor') || norm.includes('sent') || norm.includes('diari') || norm.includes('nota')) {
     const entries = data.diary.entries
-    const moods = data.diary.moods
-    const lastMood = moods.length > 0 ? moods[moods.length - 1] : null
+    const lastEntry = entries.length > 0 ? entries.slice().sort((a, b) => b.date.localeCompare(a.date))[0] : null
 
     return createMsg(
-      `📓 **Tu Diario Personal y Estado de Ánimo:**\n\n• **Entradas escritas:** ${entries.length}\n• **Último estado registrado:** ${lastMood ? `${lastMood.mood} (el ${formatDate(lastMood.date)})` : 'Aún no registraste tu ánimo hoy'}\n\n¿Querés dejar una reflexión o escribir cómo te sentís hoy?`,
+      `📓 **Tu Diario Personal y Estado de Ánimo:**\n\n• **Entradas escritas:** ${entries.length}\n• **Último estado registrado:** ${lastEntry ? `${lastEntry.mood} (el ${formatDate(lastEntry.date)})` : 'Aún no registraste tu ánimo hoy'}\n\n¿Querés dejar una reflexión o escribir cómo te sentís hoy?`,
       { label: 'Abrir Diario', hash: '#diary:notes' },
     )
   }

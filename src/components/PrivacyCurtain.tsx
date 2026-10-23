@@ -5,7 +5,7 @@ interface PrivacyCurtainProps {
   enabled?: boolean
 }
 
-export const PrivacyCurtain = ({ enabled = true }: PrivacyCurtainProps) => {
+export const PrivacyCurtain = ({ enabled = false }: PrivacyCurtainProps) => {
   const [blurred, setBlurred] = useState(false)
 
   useEffect(() => {
