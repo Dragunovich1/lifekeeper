@@ -7,7 +7,7 @@ export interface AppDataContextValue {
   hasVault: boolean
   error?: string
   unlock: (password: string) => Promise<void>
-  createVault: (password: string, initialProfile?: { fullName?: string; username?: string; email?: string }) => Promise<void>
+  createVault: (password: string, initialProfile?: { firstName?: string; lastName?: string; fullName?: string; username?: string; email?: string }) => Promise<void>
   lock: () => void
   resetVault: () => void
   updateData: (updater: (previous: AppData) => AppData) => void

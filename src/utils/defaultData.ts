@@ -1,6 +1,8 @@
 import type { AppData, EmergencyProfile, UserProfile } from '../types'
 
 const createEmptyEmergencyProfile = (): EmergencyProfile => ({
+  firstName: '',
+  lastName: '',
   fullName: '',
   bloodType: '',
   allergies: [],
@@ -11,6 +13,8 @@ const createEmptyEmergencyProfile = (): EmergencyProfile => ({
 })
 
 const createEmptyUserProfile = (): UserProfile => ({
+  firstName: '',
+  lastName: '',
   fullName: '',
   nickName: '',
   bio: '',
@@ -65,23 +69,53 @@ export const createEmptyAppData = (): AppData => ({
   },
 })
 
-const cloneEmergencyProfile = (value?: EmergencyProfile): EmergencyProfile => ({
-  ...createEmptyEmergencyProfile(),
-  ...(value ?? {}),
-  allergies: value?.allergies ? [...value.allergies] : [],
-  medications: value?.medications ? [...value.medications] : [],
-  conditions: value?.conditions ? [...value.conditions] : [],
-  emergencyContacts: value?.emergencyContacts ? [...value.emergencyContacts] : [],
-})
+const splitName = (fullName?: string, explicitFirst?: string, explicitLast?: string) => {
+  let firstName = (explicitFirst ?? '').trim()
+  let lastName = (explicitLast ?? '').trim()
+  const rawFull = (fullName ?? '').trim()
 
-const cloneUserProfile = (value?: UserProfile): UserProfile => ({
-  ...createEmptyUserProfile(),
-  ...(value ?? {}),
-  auth: {
-    ...createEmptyUserProfile().auth,
-    ...(value?.auth ?? {}),
-  },
-})
+  if ((!firstName || !lastName) && rawFull) {
+    const parts = rawFull.split(/\s+/)
+    if (!firstName) firstName = parts[0] || ''
+    if (!lastName && parts.length > 1) lastName = parts.slice(1).join(' ')
+  }
+
+  const computedFullName = (firstName && lastName)
+    ? `${firstName} ${lastName}`.trim()
+    : (firstName || lastName || rawFull)
+
+  return { firstName, lastName, fullName: computedFullName }
+}
+
+const cloneEmergencyProfile = (value?: EmergencyProfile): EmergencyProfile => {
+  const { firstName, lastName, fullName } = splitName(value?.fullName, value?.firstName, value?.lastName)
+  return {
+    ...createEmptyEmergencyProfile(),
+    ...(value ?? {}),
+    firstName,
+    lastName,
+    fullName,
+    allergies: value?.allergies ? [...value.allergies] : [],
+    medications: value?.medications ? [...value.medications] : [],
+    conditions: value?.conditions ? [...value.conditions] : [],
+    emergencyContacts: value?.emergencyContacts ? [...value.emergencyContacts] : [],
+  }
+}
+
+const cloneUserProfile = (value?: UserProfile): UserProfile => {
+  const { firstName, lastName, fullName } = splitName(value?.fullName, value?.firstName, value?.lastName)
+  return {
+    ...createEmptyUserProfile(),
+    ...(value ?? {}),
+    firstName,
+    lastName,
+    fullName,
+    auth: {
+      ...createEmptyUserProfile().auth,
+      ...(value?.auth ?? {}),
+    },
+  }
+}
 
 export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
   const defaults = createEmptyAppData()

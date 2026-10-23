@@ -75,7 +75,10 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   )
 
   const createVault = useCallback(
-    async (password: string, initialProfile?: { fullName?: string; username?: string; email?: string }) => {
+    async (
+      password: string,
+      initialProfile?: { firstName?: string; lastName?: string; fullName?: string; username?: string; email?: string },
+    ) => {
       const existingHash = loadMasterHash()
       if (existingHash) {
         throw new Error('Ya existe una contraseña maestra configurada.')
@@ -83,10 +86,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
       const empty = createEmptyAppData()
       if (initialProfile) {
+        const first = (initialProfile.firstName || '').trim()
+        const last = (initialProfile.lastName || '').trim()
+        const full = initialProfile.fullName || (first && last ? `${first} ${last}` : first || last || '')
+
         empty.profile = {
           ...empty.profile,
-          fullName: initialProfile.fullName || '',
-          nickName: initialProfile.username || '',
+          firstName: first,
+          lastName: last,
+          fullName: full,
+          nickName: initialProfile.username || first || '',
           auth: {
             ...empty.profile.auth,
             username: initialProfile.username || '',

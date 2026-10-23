@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Scale,
   Search,
+  Share2,
   Snowflake,
   Sparkles,
   Sun,
@@ -43,6 +44,7 @@ import {
   X,
 } from 'lucide-react'
 import { Modal } from '../../components/Modal'
+import { ShareModal } from '../../components/ShareModal'
 import { VaultScoreCard } from '../../components/VaultScoreCard'
 import { fetchAirQuality, type AirQualityData } from '../../services/api'
 import { useAppData } from '../../hooks/useAppData'
@@ -561,6 +563,7 @@ export const DashboardSection = () => {
   }
 
   const [tipIndex, setTipIndex] = useState<number>(() => getSessionTipIndex(masterPassword))
+  const [shareModalOpen, setShareModalOpen] = useState(false)
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
@@ -1127,6 +1130,16 @@ export const DashboardSection = () => {
               <span className="status-dot" aria-hidden />
               <span>{heroStatusText}</span>
             </span>
+
+            <button
+              type="button"
+              className="dashboard-share-pill"
+              onClick={() => setShareModalOpen(true)}
+              title="Compartir LifeKeeper con conocidos"
+            >
+              <Share2 size={13} aria-hidden />
+              <span>Compartir app</span>
+            </button>
           </div>
         </div>
 
@@ -2010,6 +2023,8 @@ export const DashboardSection = () => {
           </div>
         </form>
       </Modal>
+
+      <ShareModal open={shareModalOpen} onClose={() => setShareModalOpen(false)} />
     </div>
   )
 }

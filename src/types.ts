@@ -66,6 +66,8 @@ export interface EmergencyContact {
 }
 
 export interface EmergencyProfile {
+  firstName?: string
+  lastName?: string
   fullName: string
   birthDate?: string
   bloodType: string
@@ -198,6 +200,8 @@ export interface UserAuthInfo {
 }
 
 export interface UserProfile {
+  firstName?: string
+  lastName?: string
   fullName: string
   nickName?: string
   bio?: string

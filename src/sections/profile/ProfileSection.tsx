@@ -10,6 +10,8 @@ import { fromLocalDateOrDateTime, toLocalDateKey } from '../../utils/dates'
 import { downloadEmergencyKitPdf } from '../../services/crypto/emergencyKit'
 
 interface ProfileFormState {
+  firstName: string
+  lastName: string
   fullName: string
   nickName: string
   bio: string
@@ -29,25 +31,43 @@ interface ProfileFormState {
   }
 }
 
-const toFormState = (profile: UserProfile): ProfileFormState => ({
-  fullName: profile.fullName ?? '',
-  nickName: profile.nickName ?? '',
-  bio: profile.bio ?? '',
-  birthDate: profile.birthDate ?? '',
-  country: profile.country ?? '',
-  avatar: profile.avatar,
-  heightCm: typeof profile.heightCm === 'number' && profile.heightCm > 0 ? profile.heightCm : '',
-  weightKg: typeof profile.weightKg === 'number' && profile.weightKg > 0 ? profile.weightKg : '',
-  auth: {
-    username: profile.auth.username ?? '',
-    email: profile.auth.email ?? '',
-    phone: profile.auth.phone ?? '',
-    twoFactorEnabled: Boolean(profile.auth.twoFactorEnabled),
-    recoveryEmail: profile.auth.recoveryEmail ?? '',
-    securityQuestion: profile.auth.securityQuestion ?? '',
-    securityAnswerHint: profile.auth.securityAnswerHint ?? '',
-  },
-})
+const toFormState = (profile: UserProfile): ProfileFormState => {
+  let firstName = profile.firstName ?? ''
+  let lastName = profile.lastName ?? ''
+  const fullName = profile.fullName ?? ''
+
+  if ((!firstName || !lastName) && fullName.trim()) {
+    const parts = fullName.trim().split(/\s+/)
+    if (!firstName) firstName = parts[0] || ''
+    if (!lastName && parts.length > 1) lastName = parts.slice(1).join(' ')
+  }
+
+  const computedFullName = (firstName && lastName)
+    ? `${firstName} ${lastName}`.trim()
+    : (firstName || lastName || fullName)
+
+  return {
+    firstName,
+    lastName,
+    fullName: computedFullName,
+    nickName: profile.nickName ?? '',
+    bio: profile.bio ?? '',
+    birthDate: profile.birthDate ?? '',
+    country: profile.country ?? '',
+    avatar: profile.avatar,
+    heightCm: typeof profile.heightCm === 'number' && profile.heightCm > 0 ? profile.heightCm : '',
+    weightKg: typeof profile.weightKg === 'number' && profile.weightKg > 0 ? profile.weightKg : '',
+    auth: {
+      username: profile.auth.username ?? '',
+      email: profile.auth.email ?? '',
+      phone: profile.auth.phone ?? '',
+      twoFactorEnabled: Boolean(profile.auth.twoFactorEnabled),
+      recoveryEmail: profile.auth.recoveryEmail ?? '',
+      securityQuestion: profile.auth.securityQuestion ?? '',
+      securityAnswerHint: profile.auth.securityAnswerHint ?? '',
+    },
+  }
+}
 
 export const ProfileSection = () => {
   const { data, updateData } = useAppData()
@@ -150,7 +170,11 @@ export const ProfileSection = () => {
         ...previous,
         profile: {
           ...previous.profile,
-          fullName: formState.fullName,
+          firstName: formState.firstName.trim() || undefined,
+          lastName: formState.lastName.trim() || undefined,
+          fullName: (formState.firstName.trim() && formState.lastName.trim())
+            ? `${formState.firstName.trim()} ${formState.lastName.trim()}`
+            : formState.firstName.trim() || formState.lastName.trim() || formState.fullName.trim(),
           nickName: formState.nickName || undefined,
           bio: formState.bio || undefined,
           birthDate: formState.birthDate
@@ -252,12 +276,35 @@ export const ProfileSection = () => {
 
           <div className="form-grid two-columns">
             <div className="field">
-              <label htmlFor="profile-fullname">Nombre completo</label>
+              <label htmlFor="profile-firstname">Nombre</label>
               <input
-                id="profile-fullname"
-                value={formState.fullName}
-                onChange={(event) => setFormState({ ...formState, fullName: event.target.value })}
-                placeholder="Ej. Juan Pérez"
+                id="profile-firstname"
+                value={formState.firstName}
+                onChange={(event) => {
+                  const first = event.target.value
+                  setFormState({
+                    ...formState,
+                    firstName: first,
+                    fullName: `${first} ${formState.lastName}`.trim(),
+                  })
+                }}
+                placeholder="Ej. Daniel"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="profile-lastname">Apellido</label>
+              <input
+                id="profile-lastname"
+                value={formState.lastName}
+                onChange={(event) => {
+                  const last = event.target.value
+                  setFormState({
+                    ...formState,
+                    lastName: last,
+                    fullName: `${formState.firstName} ${last}`.trim(),
+                  })
+                }}
+                placeholder="Ej. Díaz"
               />
             </div>
             <div className="field">

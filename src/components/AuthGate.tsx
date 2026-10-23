@@ -17,7 +17,8 @@ import { notifyWelcome, notifyNewLoginAlert, notifyBruteForceAlert } from '../se
 type AuthMode = 'unlock' | 'create' | 'restore'
 
 const initialSignup = {
-  fullName: '',
+  firstName: '',
+  lastName: '',
   username: '',
   email: '',
   password: '',
@@ -215,12 +216,16 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       return
     }
 
-    if (!signup.fullName.trim()) {
-      setLocalError('Ingresa tu nombre completo')
+    if (!signup.firstName.trim()) {
+      setLocalError('Ingresá tu nombre')
+      return
+    }
+    if (!signup.lastName.trim()) {
+      setLocalError('Ingresá tu apellido')
       return
     }
     if (!signup.username.trim()) {
-      setLocalError('Define un nombre de usuario')
+      setLocalError('Definí un nombre de usuario')
       return
     }
     if (!signup.email.trim()) {
@@ -228,7 +233,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       return
     }
     if (!signup.password.trim()) {
-      setLocalError('Configura una contraseña maestra segura')
+      setLocalError('Configurá una contraseña maestra segura')
       return
     }
     if (signup.password !== signup.confirm) {
@@ -238,9 +243,15 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
 
     try {
       setIsLoading(true)
+      const firstName = signup.firstName.trim()
+      const lastName = signup.lastName.trim()
+      const computedFullName = `${firstName} ${lastName}`.trim()
       const meta = { username: signup.username.trim(), email: signup.email.trim() }
+
       await createVault(signup.password, {
-        fullName: signup.fullName.trim(),
+        firstName,
+        lastName,
+        fullName: computedFullName,
         username: signup.username.trim(),
         email: signup.email.trim(),
       })
@@ -250,12 +261,12 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       // Descarga automática del Emergency Kit PDF
       void downloadEmergencyKitPdf({
         userEmail: signup.email.trim(),
-        userName: signup.fullName.trim(),
+        userName: computedFullName,
       })
 
       // Envío de correo de bienvenida oficial con template LifeKeeper
       if (signup.email.trim()) {
-        void notifyWelcome(signup.fullName.trim(), signup.email.trim())
+        void notifyWelcome(firstName, signup.email.trim())
       }
 
       // Si el navegador soporta biometría, enrolar
@@ -406,16 +417,29 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
               ) : (
                 <>
                   <div className="auth-field">
-                    <label className="auth-label" htmlFor="signup-fullname">
-                      Nombre completo
+                    <label className="auth-label" htmlFor="signup-firstname">
+                      Nombre
                     </label>
                     <input
-                      id="signup-fullname"
+                      id="signup-firstname"
                       className="auth-input"
-                      autoComplete="name"
-                      value={signup.fullName}
-                      onChange={(event) => setSignup((prev) => ({ ...prev, fullName: event.target.value }))}
-                      placeholder="Ej. Ana Gómez"
+                      autoComplete="given-name"
+                      value={signup.firstName}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, firstName: event.target.value }))}
+                      placeholder="Ej. Daniel"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="signup-lastname">
+                      Apellido
+                    </label>
+                    <input
+                      id="signup-lastname"
+                      className="auth-input"
+                      autoComplete="family-name"
+                      value={signup.lastName}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, lastName: event.target.value }))}
+                      placeholder="Ej. Díaz"
                     />
                   </div>
                   <div className="auth-field">
