@@ -13,43 +13,89 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
   {
     id: 'welcome',
     sender: 'assistant',
-    text: '¡Hola! Soy tu **Asistente LifeKeeper**. Conozco tu bóveda de forma 100% privada y local en tu dispositivo.\n\n¿Qué querés consultar hoy?',
+    text: '¡Hola! Soy tu **Asistente LifeKeeper**. Conozco tu bóveda de forma 100% privada y local en tu dispositivo.\n\nPodés preguntarme sobre tu **historia clínica**, **medicación**, **gastos y finanzas**, **clima y lluvias**, o pedirme un **resumen general**.\n\n¿En qué te puedo ayudar hoy?',
     timestamp: 'Ahora',
   },
 ]
 
 const QUICK_PROMPTS = [
+  { label: '🌦️ ¿Va a llover hoy?', query: '¿Va a llover hoy?' },
+  { label: '🌧️ ¿Lloverá esta semana?', query: '¿Va a llover esta semana?' },
+  { label: '🩺 Mi historia clínica', query: 'Decime mi historia clínica' },
   { label: '📊 ¿Cuánto gasté este mes?', query: '¿Cuánto gasté este mes?' },
   { label: '💊 ¿Qué pastillas tomo hoy?', query: '¿Qué pastillas tomo hoy?' },
   { label: '💧 ¿Cuánta agua tomé?', query: '¿Cuánta agua tomé hoy?' },
-  { label: '⚖️ ¿Cómo está mi peso e IMC?', query: '¿Cómo está mi peso o IMC?' },
   { label: '🔐 ¿Mis claves están seguras?', query: '¿Tengo contraseñas débiles?' },
-  { label: '🗓️ ¿Qué tengo pendiente hoy?', query: '¿Qué recordatorios tengo hoy?' },
+  { label: '🗓️ ¿Qué tengo que hacer hoy?', query: '¿Qué tengo que hacer hoy?' },
   { label: '📋 Resumen general', query: 'Haceme un resumen general' },
 ]
 
 /**
- * Renderiza texto enriquecido con soporte simple de **negritas** y listas con viñetas.
+ * Renderiza texto enriquecido con soporte de viñetas, negritas y saltos de línea con contención visual estricta.
  */
 function renderFormattedMessage(content: string) {
   const lines = content.split('\n')
 
-  return lines.map((line, lineIdx) => {
-    // Parser simple de **negrita**
-    const parts = line.split(/(\*\*.*?\*\*)/g)
-    const formattedLine = parts.map((part, partIdx) => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={partIdx} style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
-      }
-      return part
-    })
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', width: '100%', minWidth: 0 }}>
+      {lines.map((line, lineIdx) => {
+        const trimmed = line.trim()
+        if (!trimmed) {
+          return <div key={lineIdx} style={{ height: '0.4rem' }} />
+        }
 
-    return (
-      <div key={lineIdx} style={{ minHeight: line.trim() ? 'auto' : '0.5rem', margin: '0.15rem 0' }}>
-        {formattedLine}
-      </div>
-    )
-  })
+        const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ')
+        const cleanLine = isBullet ? trimmed.replace(/^[•\-]\s*/, '') : line
+
+        const parts = cleanLine.split(/(\*\*.*?\*\*)/g)
+        const renderedText = parts.map((part, partIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+              <strong key={partIdx} style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
+                {part.slice(2, -2)}
+              </strong>
+            )
+          }
+          return part
+        })
+
+        if (isBullet) {
+          return (
+            <div
+              key={lineIdx}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem',
+                paddingLeft: trimmed.startsWith('  ') ? '1.25rem' : '0.25rem',
+                lineHeight: '1.55',
+              }}
+            >
+              <span style={{ color: 'var(--color-accent-cyan)', fontSize: '0.85rem', flexShrink: 0, marginTop: '0.1rem' }}>
+                •
+              </span>
+              <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+                {renderedText}
+              </span>
+            </div>
+          )
+        }
+
+        return (
+          <div
+            key={lineIdx}
+            style={{
+              lineHeight: '1.55',
+              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
+            }}
+          >
+            {renderedText}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
@@ -73,7 +119,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     }
   }, [open, messages, isTyping])
 
-  const handleSend = (userText: string) => {
+  const handleSend = async (userText: string) => {
     const text = userText.trim()
     if (!text) return
 
@@ -88,12 +134,22 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     setInput('')
     setIsTyping(true)
 
-    // Breve pausa para efecto de procesamiento local natural
-    setTimeout(() => {
-      const response = processAssistantQuery(text, data)
+    try {
+      const response = await processAssistantQuery(text, data)
       setMessages((prev) => [...prev, response])
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `err-${Date.now()}`,
+          sender: 'assistant',
+          text: 'Ocurrió un error al procesar tu consulta en local. Por favor probá nuevamente.',
+          timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        },
+      ])
+    } finally {
       setIsTyping(false)
-    }, 200)
+    }
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -115,17 +171,24 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       open={open}
       onClose={onClose}
       title="Asistente LifeKeeper"
-      subtitle="Inteligencia semántica local · Cifrado en tu dispositivo"
-      maxWidth="680px"
+      subtitle="Inteligencia semántica local · Cifrado Zero-Knowledge · Meteorología en vivo"
+      maxWidth="840px"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', height: '520px', gap: '0.75rem' }}>
-        {/* Banner de Privacidad */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'min(620px, 78vh)',
+          gap: '0.75rem',
+        }}
+      >
+        {/* Banner de Privacidad y Estado */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0.5rem 0.875rem',
+            padding: '0.6rem 1rem',
             background: 'rgba(14, 165, 233, 0.08)',
             border: '1px solid rgba(14, 165, 233, 0.2)',
             borderRadius: 'var(--radius-lg)',
@@ -133,9 +196,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             color: 'var(--color-text-secondary)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <ShieldCheck size={16} color="var(--color-accent-cyan)" />
-            <span>Consultas procesadas 100% en local. Nada sale a servidores externos.</span>
+            <span>Consultas procesadas 100% en tu dispositivo. Tu bóveda permanece cifrada.</span>
           </div>
           {messages.length > 1 && (
             <button
@@ -149,11 +212,14 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                padding: '0.2rem',
+                gap: '0.3rem',
+                fontSize: '0.75rem',
+                padding: '0.2rem 0.4rem',
                 borderRadius: 'var(--radius-sm)',
               }}
             >
-              <Trash2 size={14} />
+              <Trash2 size={13} />
+              <span>Limpiar</span>
             </button>
           )}
         </div>
@@ -162,11 +228,12 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem',
-            padding: '0.5rem 0.25rem',
+            gap: '1.1rem',
+            padding: '0.5rem 0.5rem 0.5rem 0.25rem',
           }}
         >
           {messages.map((m) => {
@@ -177,17 +244,18 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                 key={m.id}
                 style={{
                   display: 'flex',
-                  gap: '0.625rem',
+                  gap: '0.75rem',
                   alignSelf: isUser ? 'flex-end' : 'flex-start',
-                  maxWidth: '85%',
+                  maxWidth: isUser ? '82%' : '90%',
+                  width: 'auto',
                   flexDirection: isUser ? 'row-reverse' : 'row',
                 }}
               >
                 {/* Avatar Icon */}
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
+                    width: '34px',
+                    height: '34px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
@@ -197,18 +265,27 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                       ? 'var(--color-accent-blue)'
                       : 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
                     color: '#ffffff',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+                    marginTop: '2px',
                   }}
                 >
-                  {isUser ? <User size={16} /> : <Bot size={17} />}
+                  {isUser ? <User size={16} /> : <Bot size={18} />}
                 </div>
 
                 {/* Burbuja de contenido */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: isUser ? 'flex-end' : 'flex-start',
+                    minWidth: 0,
+                    flex: 1,
+                  }}
+                >
                   <div
                     style={{
-                      padding: '0.85rem 1.125rem',
-                      borderRadius: isUser ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                      padding: '0.95rem 1.25rem',
+                      borderRadius: isUser ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
                       background: isUser
                         ? 'linear-gradient(135deg, var(--color-accent-blue), #2563eb)'
                         : 'var(--color-surface-hover)',
@@ -216,8 +293,11 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                       color: isUser ? '#ffffff' : 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                       lineHeight: '1.6',
+                      overflowWrap: 'break-word',
                       wordBreak: 'break-word',
                       boxShadow: 'var(--shadow-sm)',
+                      width: 'fit-content',
+                      maxWidth: '100%',
                     }}
                   >
                     {renderFormattedMessage(m.text)}
@@ -230,11 +310,11 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                       className="primary-button"
                       style={{
                         fontSize: '0.75rem',
-                        padding: '0.35rem 0.75rem',
-                        marginTop: '0.4rem',
+                        padding: '0.4rem 0.85rem',
+                        marginTop: '0.5rem',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.35rem',
+                        gap: '0.4rem',
                         borderRadius: '20px',
                       }}
                       onClick={() => handleActionClick(m.action!.hash)}
@@ -261,36 +341,37 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
 
           {/* Indicador de escritura animado */}
           {isTyping && (
-            <div style={{ display: 'flex', gap: '0.625rem', alignSelf: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'flex-start' }}>
               <div
                 style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
                   color: '#ffffff',
+                  flexShrink: 0,
                 }}
               >
                 <Sparkles size={16} />
               </div>
               <div
                 style={{
-                  padding: '0.65rem 1rem',
-                  borderRadius: '4px 16px 16px 16px',
+                  padding: '0.75rem 1.1rem',
+                  borderRadius: '4px 18px 18px 18px',
                   background: 'var(--color-surface-hover)',
                   border: '1px solid var(--color-border)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: '0.45rem',
                 }}
               >
                 <span
                   style={{
-                    width: '6px',
-                    height: '6px',
+                    width: '7px',
+                    height: '7px',
                     borderRadius: '50%',
                     background: 'var(--color-accent-cyan)',
                     display: 'inline-block',
@@ -299,8 +380,8 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                 />
                 <span
                   style={{
-                    width: '6px',
-                    height: '6px',
+                    width: '7px',
+                    height: '7px',
                     borderRadius: '50%',
                     background: 'var(--color-accent-blue)',
                     display: 'inline-block',
@@ -309,8 +390,8 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                 />
                 <span
                   style={{
-                    width: '6px',
-                    height: '6px',
+                    width: '7px',
+                    height: '7px',
                     borderRadius: '50%',
                     background: 'var(--color-accent-purple)',
                     display: 'inline-block',
@@ -327,10 +408,10 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         <div
           style={{
             display: 'flex',
-            gap: '0.4rem',
+            gap: '0.5rem',
             overflowX: 'auto',
-            padding: '0.25rem 0',
-            scrollbarWidth: 'none',
+            padding: '0.35rem 0',
+            scrollbarWidth: 'thin',
           }}
         >
           {QUICK_PROMPTS.map((p) => (
@@ -341,11 +422,12 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
               style={{
                 fontSize: '0.75rem',
                 whiteSpace: 'nowrap',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '16px',
+                padding: '0.4rem 0.85rem',
+                borderRadius: '18px',
                 cursor: 'pointer',
                 background: 'var(--color-surface-sunken)',
                 border: '1px solid var(--color-border)',
+                flexShrink: 0,
               }}
               onClick={() => handleSend(p.query)}
             >
@@ -354,18 +436,18 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           ))}
         </div>
 
-        {/* Input bar flotante moderno */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {/* Input bar moderna */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribile a tu bóveda (ej. ¿cuánto gasté?, ¿qué pastillas tomo?)..."
+            placeholder="Preguntale a tu asistente (ej. ¿va a llover hoy?, mi historia clínica, ¿cuánto gasté?)..."
             style={{
               flex: 1,
               borderRadius: '24px',
-              padding: '0.75rem 1.25rem',
+              padding: '0.85rem 1.35rem',
               background: 'var(--color-surface-sunken)',
               border: '1px solid var(--color-border-strong)',
               color: 'var(--color-text-primary)',
@@ -378,8 +460,8 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             disabled={!input.trim()}
             style={{
               borderRadius: '50%',
-              width: '42px',
-              height: '42px',
+              width: '44px',
+              height: '44px',
               padding: 0,
               display: 'flex',
               alignItems: 'center',
@@ -388,7 +470,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             }}
             title="Enviar mensaje"
           >
-            <Send size={16} />
+            <Send size={17} />
           </button>
         </form>
       </div>
