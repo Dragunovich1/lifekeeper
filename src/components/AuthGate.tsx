@@ -27,9 +27,9 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
   const { data, masterPassword, hasVault, unlock, createVault, error } = useAppDataUnsafe()
   const { preferences } = usePreferences()
   const isLightMode = preferences.mode === 'light'
-  const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png' : '/brand/logo-login.png'
-  const markSrc = isLightMode ? '/brand/isotipo-light.png' : '/brand/isotipo.png'
-  const wordmarkSrc = isLightMode ? '/brand/wordmark-light.png' : '/brand/wordmark.png'
+  const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png?v=2' : '/brand/logo-login.png?v=2'
+  const markSrc = isLightMode ? '/brand/isotipo-light.png?v=2' : '/brand/isotipo.png?v=2'
+  const wordmarkSrc = isLightMode ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'
   const [mode, setMode] = useState<AuthMode>(hasVault ? 'unlock' : 'create')
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')

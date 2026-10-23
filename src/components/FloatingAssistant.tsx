@@ -74,7 +74,7 @@ export const FloatingAssistant = ({ onClick }: FloatingAssistantProps) => {
       >
         <div className="floating-assistant-avatar-inner">
           <img
-            src="/brand/assistant.png"
+            src="/brand/assistant.png?v=2"
             alt="Asistente LifeKeeper"
           />
         </div>

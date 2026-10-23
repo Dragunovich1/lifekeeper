@@ -366,7 +366,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                     )
                   ) : (
                     <img
-                      src="/brand/assistant.png"
+                      src="/brand/assistant.png?v=2"
                       alt="Asistente LifeKeeper"
                       style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                     />
@@ -458,7 +458,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                 }}
               >
                 <img
-                  src="/brand/assistant.png"
+                  src="/brand/assistant.png?v=2"
                   alt="Asistente LifeKeeper"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                 />

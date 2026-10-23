@@ -268,12 +268,12 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
                       {logo.id === 'full' ? (
                         <>
                           <img
-                            src={preferences.mode === 'light' ? '/brand/isotipo-light.png' : '/brand/isotipo.png'}
+                            src={preferences.mode === 'light' ? '/brand/isotipo-light.png?v=2' : '/brand/isotipo.png?v=2'}
                             alt=""
                             className="mark"
                           />
                           <img
-                            src={preferences.mode === 'light' ? '/brand/wordmark-light.png' : '/brand/wordmark.png'}
+                            src={preferences.mode === 'light' ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'}
                             alt=""
                             className="wordmark"
                           />
@@ -281,14 +281,14 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
                       ) : null}
                       {logo.id === 'mark' ? (
                         <img
-                          src={preferences.mode === 'light' ? '/brand/isotipo-light.png' : '/brand/isotipo.png'}
+                          src={preferences.mode === 'light' ? '/brand/isotipo-light.png?v=2' : '/brand/isotipo.png?v=2'}
                           alt=""
                           className="mark"
                         />
                       ) : null}
                       {logo.id === 'wordmark' ? (
                         <img
-                          src={preferences.mode === 'light' ? '/brand/wordmark-light.png' : '/brand/wordmark.png'}
+                          src={preferences.mode === 'light' ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'}
                           alt=""
                           className="wordmark"
                         />
