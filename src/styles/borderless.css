@@ -1,0 +1,50 @@
+/* === CONTAINERS BORDERLESS ===
+   La separación se resuelve con fondos, blur y sombras; no con bordes. */
+
+.panel,
+.subpanel,
+.card,
+.stat-card,
+.dashboard-hero,
+.kpi-tile,
+.quick-card,
+.task-list li,
+.calendar-cell,
+.calendar-event,
+.sos-card li,
+.recent-list li,
+.empty-state,
+.app-nav-dropdown,
+.app-user-menu,
+.app-mobile-menu,
+.app-header-user,
+.pref-account,
+.appearance-theme,
+.appearance-background,
+.appearance-controls,
+.appearance-logo {
+  border: none;
+}
+
+/* El evento del calendario conserva su marca lateral como sombra interna */
+.calendar-event {
+  box-shadow: inset 2px 0 0 var(--color-text-muted);
+}
+
+/* Estados activos de Apariencia: anillo en vez de borde */
+.appearance-theme.active,
+.appearance-background.active,
+.appearance-logo.active {
+  box-shadow: 0 0 0 1px var(--color-accent-blue);
+}
+
+/* === MODALES: borde con el mismo gradiente del header/footer === */
+.legal-modal,
+.pref-modal,
+.app-alerts-popover,
+.sos-card {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    var(--gradient-hairline) border-box;
+}

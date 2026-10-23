@@ -1,9 +1,14 @@
-import type { EmergencyContact, EmergencyProfile } from '../../types'
+import { useEffect, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
+import { v4 as uuid } from 'uuid'
+import { ConfirmModal } from '../../components/ConfirmModal'
+import { DatePicker } from '../../components/DatePicker'
 import { SectionHeader } from '../../components/SectionHeader'
+import { Select } from '../../components/Select'
 import { TagInput } from '../../components/TagInput'
 import { useAppData } from '../../hooks/useAppData'
-import { useEffect, useMemo, useState } from 'react'
-import { v4 as uuid } from 'uuid'
+import type { EmergencyContact, EmergencyProfile } from '../../types'
+import { safeParseDate, toLocalDateKey } from '../../utils/dates'
 
 const emptyContact: EmergencyContact = {
   id: '',
@@ -12,7 +17,43 @@ const emptyContact: EmergencyContact = {
   phone: '',
 }
 
-type ProfileWithoutArrays = Pick<EmergencyProfile, 'fullName' | 'bloodType' | 'notes' | 'birthDate'>
+const BLOOD_TYPE_OPTIONS = [
+  { value: '', label: 'Sin especificar' },
+  { value: 'O+', label: 'O+' },
+  { value: 'O-', label: 'O-' },
+  { value: 'A+', label: 'A+' },
+  { value: 'A-', label: 'A-' },
+  { value: 'B+', label: 'B+' },
+  { value: 'B-', label: 'B-' },
+  { value: 'AB+', label: 'AB+' },
+  { value: 'AB-', label: 'AB-' },
+]
+
+const COMMON_ALLERGIES = [
+  'Penicilina',
+  'Ibuprofeno',
+  'Aspirina',
+  'Látex',
+  'Mariscos',
+  'Maní',
+  'Sulfamidas',
+  'Polen',
+]
+
+const COMMON_CONDITIONS = [
+  'Hipertensión',
+  'Asma',
+  'Diabetes',
+  'Celiaquía',
+  'Hipotiroidismo',
+  'Migraña',
+  'Arritmia',
+]
+
+type ProfileWithoutArrays = Pick<
+  EmergencyProfile,
+  'fullName' | 'bloodType' | 'notes' | 'birthDate'
+>
 
 export const EmergencySection = () => {
   const { data, updateData } = useAppData()
@@ -28,6 +69,9 @@ export const EmergencySection = () => {
   const [conditions, setConditions] = useState<string[]>([...profile.conditions])
   const [contacts, setContacts] = useState<EmergencyContact[]>([...profile.emergencyContacts])
   const [contactDraft, setContactDraft] = useState<EmergencyContact>({ ...emptyContact })
+  const [editingContactId, setEditingContactId] = useState<string | null>(null)
+  const [pendingDeleteContact, setPendingDeleteContact] = useState<EmergencyContact | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [sosVisible, setSosVisible] = useState(false)
 
   useEffect(() => {
@@ -43,11 +87,30 @@ export const EmergencySection = () => {
     setContacts([...profile.emergencyContacts])
   }, [profile])
 
+  useEffect(() => {
+    if (!sosVisible) {
+      return
+    }
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSosVisible(false)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [sosVisible])
+
+  const medicationSuggestions = useMemo(() => {
+    return data.health.medications
+      .filter((m) => m.active)
+      .map((m) => (m.dosage ? `${m.name} (${m.dosage})` : m.name))
+  }, [data.health.medications])
+
   const profileAge = useMemo(() => {
-    if (!profile.birthDate) {
+    const birth = safeParseDate(profile.birthDate)
+    if (!birth) {
       return null
     }
-    const birth = new Date(profile.birthDate)
     const diff = new Date(Date.now() - birth.getTime())
     return Math.abs(diff.getUTCFullYear() - 1970)
   }, [profile.birthDate])
@@ -56,7 +119,7 @@ export const EmergencySection = () => {
     const updatedProfile: EmergencyProfile = {
       ...profile,
       ...editState,
-      birthDate: editState.birthDate || undefined,
+      birthDate: toLocalDateKey(editState.birthDate) || undefined,
       allergies,
       medications,
       conditions,
@@ -71,23 +134,103 @@ export const EmergencySection = () => {
         emergencyProfile: updatedProfile,
       },
     }))
+
+    setStatusMessage('Ficha de emergencia actualizada correctamente')
+  }
+
+  const handleSyncFromProfileAndMedications = () => {
+    const nextFullName = editState.fullName.trim() || data.profile.fullName || ''
+    const nextBirthDate =
+      toLocalDateKey(editState.birthDate) || toLocalDateKey(data.profile.birthDate) || ''
+
+    const activeMedLabels = data.health.medications
+      .filter((med) => med.active)
+      .map((med) => (med.dosage ? `${med.name} (${med.dosage})` : med.name))
+
+    const mergedMeds = [...medications]
+    activeMedLabels.forEach((label) => {
+      const exists = mergedMeds.some((existing) => existing.toLowerCase() === label.toLowerCase())
+      if (!exists) {
+        mergedMeds.push(label)
+      }
+    })
+
+    const nextEditState = {
+      ...editState,
+      fullName: nextFullName,
+      birthDate: nextBirthDate,
+    }
+
+    setEditState(nextEditState)
+    setMedications(mergedMeds)
+
+    const updatedProfile: EmergencyProfile = {
+      ...profile,
+      ...nextEditState,
+      birthDate: nextBirthDate || undefined,
+      allergies,
+      medications: mergedMeds,
+      conditions,
+      emergencyContacts: contacts,
+      notes: nextEditState.notes,
+    }
+
+    updateData((previous) => ({
+      ...previous,
+      health: {
+        ...previous.health,
+        emergencyProfile: updatedProfile,
+      },
+    }))
+
+    setStatusMessage('Datos sincronizados desde tu perfil y medicaciones activas')
+  }
+
+  const resetContactDraft = () => {
+    setContactDraft({ ...emptyContact })
+    setEditingContactId(null)
   }
 
   const handleAddContact = () => {
-    if (!contactDraft.name || !contactDraft.phone) {
+    if (!contactDraft.name.trim() || !contactDraft.phone.trim()) {
       return
     }
 
-    const entry: EmergencyContact = {
-      ...contactDraft,
-      id: uuid(),
+    if (editingContactId) {
+      setContacts((prev) =>
+        prev.map((contact) =>
+          contact.id === editingContactId
+            ? {
+                id: editingContactId,
+                name: contactDraft.name.trim(),
+                relationship: contactDraft.relationship.trim(),
+                phone: contactDraft.phone.trim(),
+              }
+            : contact,
+        ),
+      )
+    } else {
+      const entry: EmergencyContact = {
+        id: uuid(),
+        name: contactDraft.name.trim(),
+        relationship: contactDraft.relationship.trim(),
+        phone: contactDraft.phone.trim(),
+      }
+      setContacts((prev) => [entry, ...prev])
     }
 
-    setContacts((prev) => [entry, ...prev])
-    setContactDraft({ ...emptyContact })
+    resetContactDraft()
+  }
+
+  const startEditContact = (contact: EmergencyContact) => {
+    setEditingContactId(contact.id)
+    setContactDraft({ ...contact })
   }
 
   const handleRemoveContact = (id: string) => {
+    if (editingContactId === id) {
+      resetContactDraft()
+    }
     setContacts((prev) => prev.filter((contact) => contact.id !== id))
   }
 
@@ -95,11 +238,20 @@ export const EmergencySection = () => {
     <div>
       <SectionHeader
         title="Emergencia"
-        subtitle="Tarjeta rapida con datos criticos y contactos a un toque"
+        subtitle="Tarjeta rápida con datos críticos y contactos a un toque"
         actions={
-          <button className="primary-button" type="button" onClick={() => setSosVisible(true)}>
-            Mostrar SOS
-          </button>
+          <div className="section-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={handleSyncFromProfileAndMedications}
+            >
+              Sincronizar desde Perfil y Medicaciones
+            </button>
+            <button className="danger-button" type="button" onClick={() => setSosVisible(true)}>
+              Mostrar SOS
+            </button>
+          </div>
         }
       />
 
@@ -111,42 +263,55 @@ export const EmergencySection = () => {
               Guardar cambios
             </button>
           </div>
+          {statusMessage ? <p className="panel-subtitle">{statusMessage}</p> : null}
           <div className="form-grid two-columns">
             <div className="field">
               <label htmlFor="profile-name">Nombre completo</label>
               <input
                 id="profile-name"
                 value={editState.fullName}
-                onChange={(event) => setEditState({ ...editState, fullName: event.target.value })}
+                onChange={(event) => {
+                  setEditState({ ...editState, fullName: event.target.value })
+                  setStatusMessage(null)
+                }}
                 placeholder="Nombre para mostrar"
               />
             </div>
             <div className="field">
-              <label htmlFor="profile-blood">Grupo sanguineo</label>
-              <input
+              <label htmlFor="profile-blood">Grupo sanguíneo</label>
+              <Select
                 id="profile-blood"
                 value={editState.bloodType}
-                onChange={(event) => setEditState({ ...editState, bloodType: event.target.value })}
-                placeholder="Ej. O+, A-, AB"
+                onChange={(value) => {
+                  setEditState({ ...editState, bloodType: value })
+                  setStatusMessage(null)
+                }}
+                options={BLOOD_TYPE_OPTIONS}
+                placeholder="Sin especificar"
+                ariaLabel="Grupo sanguíneo"
               />
             </div>
             <div className="field">
               <label htmlFor="profile-birth">Fecha de nacimiento</label>
-              <input
+              <DatePicker
                 id="profile-birth"
-                type="date"
-                value={editState.birthDate ? editState.birthDate.slice(0, 10) : ''}
-                onChange={(event) =>
-                  setEditState({ ...editState, birthDate: event.target.value || '' })
-                }
+                value={toLocalDateKey(editState.birthDate)}
+                onChange={(value) => {
+                  setEditState({ ...editState, birthDate: toLocalDateKey(value) })
+                  setStatusMessage(null)
+                }}
+                ariaLabel="Fecha de nacimiento"
               />
             </div>
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
+            <div className="field field-full">
               <label htmlFor="profile-notes">Notas generales</label>
               <textarea
                 id="profile-notes"
                 value={editState.notes ?? ''}
-                onChange={(event) => setEditState({ ...editState, notes: event.target.value })}
+                onChange={(event) => {
+                  setEditState({ ...editState, notes: event.target.value })
+                  setStatusMessage(null)
+                }}
                 placeholder="Consideraciones adicionales"
               />
             </div>
@@ -160,23 +325,35 @@ export const EmergencySection = () => {
               <label>Alergias</label>
               <TagInput
                 values={allergies}
-                onChange={setAllergies}
-                placeholder="Ingresa alergias y presiona Enter"
+                onChange={(next) => {
+                  setAllergies(next)
+                  setStatusMessage(null)
+                }}
+                suggestions={COMMON_ALLERGIES}
+                placeholder="Ingresá alergias y presioná Enter"
               />
             </div>
             <div className="field">
               <label>Medicaciones habituales</label>
               <TagInput
                 values={medications}
-                onChange={setMedications}
+                onChange={(next) => {
+                  setMedications(next)
+                  setStatusMessage(null)
+                }}
+                suggestions={medicationSuggestions}
                 placeholder="Medicamentos permanentes"
               />
             </div>
             <div className="field">
-              <label>Condiciones medicas</label>
+              <label>Condiciones médicas</label>
               <TagInput
                 values={conditions}
-                onChange={setConditions}
+                onChange={(next) => {
+                  setConditions(next)
+                  setStatusMessage(null)
+                }}
+                suggestions={COMMON_CONDITIONS}
                 placeholder="Enfermedades, antecedentes"
               />
             </div>
@@ -198,50 +375,70 @@ export const EmergencySection = () => {
               />
             </div>
             <div className="field">
-              <label htmlFor="contact-relation">Relacion</label>
+              <label htmlFor="contact-relation">Relación</label>
               <input
                 id="contact-relation"
                 value={contactDraft.relationship}
                 onChange={(event) =>
                   setContactDraft({ ...contactDraft, relationship: event.target.value })
                 }
-                placeholder="Familiar, amigo, medico"
+                placeholder="Familiar, amigo, médico"
               />
             </div>
             <div className="field">
-              <label htmlFor="contact-phone">Telefono</label>
+              <label htmlFor="contact-phone">Teléfono</label>
               <input
                 id="contact-phone"
                 value={contactDraft.phone}
-                onChange={(event) => setContactDraft({ ...contactDraft, phone: event.target.value })}
-                placeholder="Numero directo"
+                onChange={(event) =>
+                  setContactDraft({ ...contactDraft, phone: event.target.value })
+                }
+                placeholder="Número directo"
               />
             </div>
-            <button className="secondary-button" type="button" onClick={handleAddContact}>
-              Agregar contacto
-            </button>
+            <div className="form-actions field-full">
+              <button className="secondary-button" type="button" onClick={handleAddContact}>
+                {editingContactId ? 'Actualizar contacto' : 'Agregar contacto'}
+              </button>
+              {editingContactId ? (
+                <button className="secondary-button" type="button" onClick={resetContactDraft}>
+                  Cancelar edición
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {contacts.length === 0 ? (
-            <div className="empty-state">Carga al menos un contacto para emergencias.</div>
+            <div className="empty-state">Cargá al menos un contacto para emergencias.</div>
           ) : (
             <div className="section-body">
               {contacts.map((contact) => (
-                <div key={contact.id} className="panel">
+                <div key={contact.id} className="subpanel">
                   <div className="panel-header">
                     <div>
                       <h4 className="panel-title">{contact.name}</h4>
-                      <span className="panel-subtitle">{contact.relationship || 'Relacion no indicada'}</span>
+                      <span className="panel-subtitle">
+                        {contact.relationship || 'Relación no indicada'}
+                      </span>
                     </div>
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      onClick={() => handleRemoveContact(contact.id)}
-                    >
-                      Eliminar
-                    </button>
+                    <div className="section-actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => startEditContact(contact)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => setPendingDeleteContact(contact)}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
-                  <p>{contact.phone}</p>
+                  <p>Teléfono: {contact.phone}</p>
                 </div>
               ))}
             </div>
@@ -251,16 +448,44 @@ export const EmergencySection = () => {
 
       {sosVisible ? (
         <div className="sos-overlay" onClick={() => setSosVisible(false)}>
-          <div className="sos-card">
+          <div
+            className="sos-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Tarjeta SOS"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="sos-close"
+              onClick={() => setSosVisible(false)}
+              aria-label="Cerrar tarjeta SOS"
+            >
+              <X size={18} aria-hidden />
+            </button>
             <h2>SOS</h2>
             <h3>{profile.fullName || 'Nombre no cargado'}</h3>
-            <p>Grupo sanguineo: {profile.bloodType || 'N/D'}</p>
-            {profileAge !== null ? <p>Edad estimada: {profileAge} anos</p> : null}
-            {profile.allergies.length > 0 ? (
-              <p>Alergias: {profile.allergies.join(', ')}</p>
-            ) : (
-              <p>Alergias: ninguna registrada</p>
-            )}
+            <p>Grupo sanguíneo: {profile.bloodType || 'Sin especificar'}</p>
+            {profileAge !== null ? <p>Edad estimada: {profileAge} años</p> : null}
+            <p>
+              Alergias:{' '}
+              {profile.allergies.length > 0
+                ? profile.allergies.join(', ')
+                : 'ninguna registrada'}
+            </p>
+            <p>
+              Medicaciones habituales:{' '}
+              {profile.medications.length > 0
+                ? profile.medications.join(', ')
+                : 'ninguna registrada'}
+            </p>
+            <p>
+              Condiciones médicas:{' '}
+              {profile.conditions.length > 0
+                ? profile.conditions.join(', ')
+                : 'ninguna registrada'}
+            </p>
+            {profile.notes ? <p>Notas: {profile.notes}</p> : null}
             <div>
               <h4>Contactos</h4>
               {profile.emergencyContacts.length === 0 ? (
@@ -269,7 +494,13 @@ export const EmergencySection = () => {
                 <ul>
                   {profile.emergencyContacts.map((contact) => (
                     <li key={contact.id}>
-                      {contact.name} ({contact.relationship || 'sin relacion'}) - {contact.phone}
+                      <span>
+                        {contact.name} ({contact.relationship || 'sin relación'}) — Teléfono:{' '}
+                        {contact.phone}
+                      </span>{' '}
+                      <a className="secondary-button" href={`tel:${contact.phone}`}>
+                        Llamar
+                      </a>
                     </li>
                   ))}
                 </ul>
@@ -278,6 +509,23 @@ export const EmergencySection = () => {
           </div>
         </div>
       ) : null}
+
+      <ConfirmModal
+        open={Boolean(pendingDeleteContact)}
+        title="Eliminar contacto de emergencia"
+        message={
+          pendingDeleteContact
+            ? `¿Seguro que querés quitar a "${pendingDeleteContact.name}" de tus contactos de emergencia?`
+            : ''
+        }
+        confirmLabel="Eliminar"
+        onConfirm={() => {
+          if (pendingDeleteContact) {
+            handleRemoveContact(pendingDeleteContact.id)
+          }
+        }}
+        onClose={() => setPendingDeleteContact(null)}
+      />
     </div>
   )
 }

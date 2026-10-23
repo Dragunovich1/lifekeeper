@@ -1,55 +1,68 @@
-import type { ReactElement } from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import './App.css'
+import type { ComponentType } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import './styles/app.css'
+import './styles/themes.css'
 import { AuthGate } from './components/AuthGate'
-import { Sidebar } from './components/Sidebar'
-import { TopBar } from './components/TopBar'
+import { BackgroundFX } from './components/BackgroundFX'
+import { Header } from './components/Header'
+import { PrivacyCurtain } from './components/PrivacyCurtain'
+import { wipeSensitiveSessionData } from './services/crypto/memorySanitizer'
 import { useAppData } from './hooks/useAppData'
+import { Loading } from './components/Loading'
+import { Footer } from './components/Footer'
 import { navigation } from './navigation'
-import {
-  BackupsSection,
-  CalendarSection,
-  ClinicalHistorySection,
-  ConsultationsSection,
-  DiaryNotesSection,
-  DiarySearchExportSection,
-  EmergencySection,
-  FinancesSection,
-  MedicationsSection,
-  MoodTrackerSection,
-  PasswordManagerSection,
-  PrivateNotesSection,
-  ProfileSection,
-  ProjectsSection,
-  RemindersSection,
-  SensitiveDocumentsSection,
-  VaccinesSection,
-  VehiclesSection,
-} from './sections'
+import { PageScrollbar } from './scrollbar/PageScrollbar'
+import { useScrollActivity } from './scrollbar/useScrollActivity'
+import { usePreferences } from './preferences/context'
+import { PreferencesProvider } from './preferences/PreferencesProvider'
 
 type MainSectionKey = (typeof navigation)[number]['key']
 type SubSectionKey = (typeof navigation)[number]['subSections'][number]['key']
 
+// Lazy load sections for better performance
+const LazyProfileSettings = lazy(() => import('./sections/profile/index').then(m => ({ default: m.ProfileSection })))
+const LazyHealthVaccines = lazy(() => import('./sections/health/index').then(m => ({ default: m.VaccinesSection })))
+const LazyHealthConsultations = lazy(() => import('./sections/health/index').then(m => ({ default: m.ConsultationsSection })))
+const LazyHealthMedications = lazy(() => import('./sections/health/index').then(m => ({ default: m.MedicationsSection })))
+const LazyHealthHydration = lazy(() => import('./sections/health/index').then(m => ({ default: m.HydrationSection })))
+const LazyHealthHistory = lazy(() => import('./sections/health/index').then(m => ({ default: m.ClinicalHistorySection })))
+const LazyHealthEmergency = lazy(() => import('./sections/health/index').then(m => ({ default: m.EmergencySection })))
+const LazyDiaryNotes = lazy(() => import('./sections/diary/index').then(m => ({ default: m.DiaryNotesSection })))
+const LazyDiaryMood = lazy(() => import('./sections/diary/index').then(m => ({ default: m.MoodTrackerSection })))
+const LazyDiarySearch = lazy(() => import('./sections/diary/index').then(m => ({ default: m.DiarySearchExportSection })))
+const LazySecurityPasswords = lazy(() => import('./sections/security/index').then(m => ({ default: m.PasswordManagerSection })))
+const LazySecurityDocuments = lazy(() => import('./sections/security/index').then(m => ({ default: m.SensitiveDocumentsSection })))
+const LazySecurityPrivateNotes = lazy(() => import('./sections/security/index').then(m => ({ default: m.PrivateNotesSection })))
+const LazyPersonalFinances = lazy(() => import('./sections/personal/index').then(m => ({ default: m.FinancesSection })))
+const LazyPersonalProjects = lazy(() => import('./sections/personal/index').then(m => ({ default: m.ProjectsSection })))
+const LazyPersonalVehicles = lazy(() => import('./sections/personal/index').then(m => ({ default: m.VehiclesSection })))
+const LazyPersonalWorkouts = lazy(() => import('./sections/personal/index').then(m => ({ default: m.WorkoutsSection })))
+const LazyUtilitiesReminders = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.RemindersSection })))
+const LazyUtilitiesCalendar = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.CalendarSection })))
+const LazyUtilitiesBackups = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.BackupsSection })))
+
 const sectionComponents = {
-  'profile:settings': ProfileSection,
-  'health:vaccines': VaccinesSection,
-  'health:consultations': ConsultationsSection,
-  'health:medications': MedicationsSection,
-  'health:history': ClinicalHistorySection,
-  'health:emergency': EmergencySection,
-  'diary:notes': DiaryNotesSection,
-  'diary:mood': MoodTrackerSection,
-  'diary:search': DiarySearchExportSection,
-  'security:passwords': PasswordManagerSection,
-  'security:documents': SensitiveDocumentsSection,
-  'security:private-notes': PrivateNotesSection,
-  'personal:finances': FinancesSection,
-  'personal:projects': ProjectsSection,
-  'personal:vehicles': VehiclesSection,
-  'utilities:reminders': RemindersSection,
-  'utilities:calendar': CalendarSection,
-  'utilities:backups': BackupsSection,
-} satisfies Record<string, () => ReactElement>
+  'profile:settings': LazyProfileSettings,
+  'health:vaccines': LazyHealthVaccines,
+  'health:consultations': LazyHealthConsultations,
+  'health:medications': LazyHealthMedications,
+  'health:hydration': LazyHealthHydration,
+  'health:history': LazyHealthHistory,
+  'health:emergency': LazyHealthEmergency,
+  'diary:notes': LazyDiaryNotes,
+  'diary:mood': LazyDiaryMood,
+  'diary:search': LazyDiarySearch,
+  'security:passwords': LazySecurityPasswords,
+  'security:documents': LazySecurityDocuments,
+  'security:private-notes': LazySecurityPrivateNotes,
+  'personal:finances': LazyPersonalFinances,
+  'personal:projects': LazyPersonalProjects,
+  'personal:vehicles': LazyPersonalVehicles,
+  'personal:workouts': LazyPersonalWorkouts,
+  'utilities:reminders': LazyUtilitiesReminders,
+  'utilities:calendar': LazyUtilitiesCalendar,
+  'utilities:backups': LazyUtilitiesBackups,
+} satisfies Record<string, ComponentType>
 
 type SectionComponentKey = keyof typeof sectionComponents
 
@@ -59,9 +72,10 @@ const DefaultSection = () => <DashboardSection />
 
 const VaultApp = () => {
   const { data, lock } = useAppData()
+  const { preferences } = usePreferences()
   const [activeSection, setActiveSection] = useState<MainSectionKey | null>(null)
   const [activeSubSection, setActiveSubSection] = useState<SubSectionKey>('settings')
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false)
+  const initialStartSection = useRef(preferences.startSection)
 
   const navigateTo = (section: MainSectionKey | null, sub?: SubSectionKey) => {
     setActiveSection(section)
@@ -98,6 +112,47 @@ const VaultApp = () => {
     return () => window.removeEventListener('hashchange', syncFromHash)
   }, [])
 
+  // Retomar en la última sección visitada (si está configurado)
+  useEffect(() => {
+    if (window.location.hash || initialStartSection.current !== 'last') {
+      return
+    }
+    const stored = localStorage.getItem('lifekeeper:last-route')
+    if (stored) {
+      window.location.hash = stored
+    }
+  }, [])
+
+  useEffect(() => {
+    const route = activeSection ? `#${activeSection}:${activeSubSection}` : ''
+    localStorage.setItem('lifekeeper:last-route', route)
+  }, [activeSection, activeSubSection])
+
+  const handleLock = () => {
+    wipeSensitiveSessionData()
+    lock()
+  }
+
+  // Auto-bloqueo por inactividad
+  useEffect(() => {
+    const minutes = preferences.autoLockMinutes
+    if (!minutes) {
+      return
+    }
+    let timer: number | undefined
+    const reset = () => {
+      if (timer) window.clearTimeout(timer)
+      timer = window.setTimeout(() => handleLock(), minutes * 60_000)
+    }
+    const activityEvents = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, reset, { passive: true }))
+    reset()
+    return () => {
+      if (timer) window.clearTimeout(timer)
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, reset))
+    }
+  }, [preferences.autoLockMinutes, lock])
+
   const componentKey = activeSection ? `${activeSection}:${activeSubSection}` as SectionComponentKey : null
   const Component = useMemo(() => (componentKey ? sectionComponents[componentKey] : null) ?? DefaultSection, [componentKey])
 
@@ -106,50 +161,45 @@ const VaultApp = () => {
 
   return (
     <div className="app-shell">
-      <Sidebar
+      <PrivacyCurtain enabled={true} />
+      <Header
         sections={navigation}
         activeSection={activeSection}
         activeSubSection={activeSubSection}
-        onSectionChange={(key) => {
-          const next = activeSection === key ? null : key
-          if (next) {
-            const first = navigation.find((item) => item.key === next)!.subSections[0].key as SubSectionKey
-            navigateTo(next, first)
-          } else {
-            navigateTo(null)
-          }
-        }}
-        onSubSectionChange={(sectionKey, subKey) => {
-          navigateTo(sectionKey, subKey)
-          setIsSidebarVisible(false)
-        }}
-        visible={isSidebarVisible}
+        onHome={() => navigateTo(null)}
+        onNavigate={(section, subSection) =>
+          navigateTo(section as MainSectionKey, subSection as SubSectionKey)
+        }
+        onLock={handleLock}
+        userName={userName}
+        userEmail={data.profile.auth.email}
+        avatarSrc={data.profile.avatar}
       />
       <div className="app-main">
-        <TopBar
-          onToggleSidebar={() => setIsSidebarVisible((prev) => !prev)}
-          onLock={lock}
-          userName={userName}
-          avatarSrc={data.profile.avatar}
-        />
         <main className="app-content">
-          {/* Default renders Dashboard */}
-          <Component />
+          <div className="page-container">
+            <Suspense fallback={<Loading message="Cargando sección..." />}>
+              <Component />
+            </Suspense>
+          </div>
         </main>
       </div>
-      <div
-        className={isSidebarVisible ? 'sidebar-overlay show' : 'sidebar-overlay'}
-        onClick={() => setIsSidebarVisible(false)}
-      />
+      <Footer />
     </div>
   )
 }
 
 function App() {
+  useScrollActivity()
+
   return (
-    <AuthGate>
-      <VaultApp />
-    </AuthGate>
+    <PreferencesProvider>
+      <BackgroundFX />
+      <PageScrollbar />
+      <AuthGate>
+        <VaultApp />
+      </AuthGate>
+    </PreferencesProvider>
   )
 }
 

@@ -37,6 +37,8 @@ export const createEmptyAppData = (): AppData => ({
     medications: [],
     clinicalNotes: [],
     emergencyProfile: createEmptyEmergencyProfile(),
+    hydrationLogs: [],
+    hydrationTargetMl: 2500,
   },
   diary: {
     entries: [],
@@ -48,8 +50,10 @@ export const createEmptyAppData = (): AppData => ({
   },
   personal: {
     finances: [],
+    budgets: {},
     projects: [],
     vehicles: [],
+    workouts: [],
   },
   utilities: {
     reminders: [],
@@ -97,6 +101,11 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
       medications: data.health?.medications ? [...data.health.medications] : [],
       clinicalNotes: data.health?.clinicalNotes ? [...data.health.clinicalNotes] : [],
       emergencyProfile: cloneEmergencyProfile(data.health?.emergencyProfile),
+      hydrationLogs: data.health?.hydrationLogs ? [...data.health.hydrationLogs] : [],
+      hydrationTargetMl:
+        typeof data.health?.hydrationTargetMl === 'number'
+          ? data.health.hydrationTargetMl
+          : defaults.health.hydrationTargetMl,
     },
     diary: {
       entries: data.diary?.entries ? [...data.diary.entries] : [],
@@ -108,8 +117,10 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
     },
     personal: {
       finances: data.personal?.finances ? [...data.personal.finances] : [],
+      budgets: data.personal?.budgets ? { ...data.personal.budgets } : {},
       projects: data.personal?.projects ? [...data.personal.projects] : [],
       vehicles: data.personal?.vehicles ? [...data.personal.vehicles] : [],
+      workouts: data.personal?.workouts ? [...data.personal.workouts] : [],
     },
     utilities: {
       reminders: data.utilities?.reminders ? [...data.utilities.reminders] : [],

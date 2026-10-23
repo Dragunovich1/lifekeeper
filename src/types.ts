@@ -28,6 +28,7 @@ export interface MedicalConsultation {
   diagnosis?: string
   treatment?: string
   notes?: string
+  nextVisitDate?: string
   attachments?: Attachment[]
 }
 
@@ -46,6 +47,7 @@ export interface Medication {
   endDate?: string
   instructions?: string
   active: boolean
+  intakeLog?: string[]
 }
 
 export interface ClinicalNote {
@@ -97,6 +99,8 @@ export interface SensitiveDocument {
   id: string
   name: string
   description?: string
+  category?: string
+  expiresAt?: string
   fileName: string
   mimeType: string
   dataUrl: string
@@ -128,12 +132,15 @@ export interface ProjectTask {
   id: string
   description: string
   completed: boolean
+  priority?: 'alta' | 'media' | 'baja'
+  dueDate?: string
 }
 
 export interface Project {
   id: string
   name: string
   description?: string
+  dueDate?: string
   tasks: ProjectTask[]
   createdAt: string
 }
@@ -145,8 +152,18 @@ export interface VehicleService {
   date: string
   cost: number
   mileage?: number
+  nextServiceDate?: string
+  nextServiceMileage?: number
   notes?: string
 }
+
+export type ReminderSourceType =
+  | 'vaccine'
+  | 'medication'
+  | 'consultation'
+  | 'vehicle'
+  | 'document'
+  | 'project'
 
 export interface Reminder {
   id: string
@@ -156,6 +173,8 @@ export interface Reminder {
   category: 'salud' | 'diario' | 'seguridad' | 'personal' | 'general'
   done: boolean
   snoozedUntil?: string
+  sourceId?: string
+  sourceType?: ReminderSourceType
 }
 
 export interface CalendarPreferences {
@@ -185,8 +204,16 @@ export interface UserProfile {
   birthDate?: string
   country?: string
   avatar?: string
+  heightCm?: number
+  weightKg?: number
   auth: UserAuthInfo
   updatedAt?: string
+}
+
+export interface HydrationLogEntry {
+  date: string
+  amountMl: number
+  targetMl?: number
 }
 
 export interface HealthData {
@@ -195,6 +222,8 @@ export interface HealthData {
   medications: Medication[]
   clinicalNotes: ClinicalNote[]
   emergencyProfile: EmergencyProfile
+  hydrationLogs?: HydrationLogEntry[]
+  hydrationTargetMl?: number
 }
 
 export interface DiaryData {
@@ -207,10 +236,48 @@ export interface SecurityData {
   privateNotes: PrivateNote[]
 }
 
+export type WorkoutType =
+  | 'fuerza'
+  | 'cardio'
+  | 'running'
+  | 'funcional'
+  | 'ciclismo'
+  | 'natacion'
+  | 'flexibilidad'
+  | 'otro'
+
+export interface WorkoutExerciseSet {
+  reps: number
+  weight?: number
+  rpe?: number
+  done?: boolean
+}
+
+export interface WorkoutExercise {
+  id: string
+  name: string
+  sets: WorkoutExerciseSet[]
+  notes?: string
+}
+
+export interface WorkoutSession {
+  id: string
+  date: string
+  title: string
+  type: WorkoutType
+  durationMinutes?: number
+  distanceKm?: number
+  calories?: number
+  exercises: WorkoutExercise[]
+  notes?: string
+}
+
 export interface PersonalData {
   finances: FinanceTransaction[]
+  budgets?: Record<string, number>
   projects: Project[]
   vehicles: VehicleService[]
+  workouts?: WorkoutSession[]
 }
 
 export interface UtilitiesData {

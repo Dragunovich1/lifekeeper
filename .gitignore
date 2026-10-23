@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local temporary and backup folders
+00.bkp/
+.dsh-artifacts/
+lifekeeper_motion_fx_pack.html
+public/LifeKeeper_Logo_Kit/
+public/LifeKeeper_Logo_Kit_alt/
+
+

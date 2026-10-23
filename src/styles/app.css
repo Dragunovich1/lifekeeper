@@ -1,0 +1,13 @@
+/* Design system de la app (post-login) */
+@import "./layout.css";
+@import "./header.css";
+@import "./components.css";
+@import "./dashboard.css";
+@import "./sections.css";
+@import "./legal.css";
+@import "./preferences.css";
+@import "./auth.css";
+@import "./responsive.css";
+@import "../scrollbar/scrollbar.css";
+@import "./borderless.css";
+@import "./controls.css";

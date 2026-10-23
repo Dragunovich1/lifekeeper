@@ -1,19 +1,17 @@
 import type { FormEvent, ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fingerprint, HeartPulse, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { useAppDataUnsafe } from '../hooks/useAppData'
 import { loadProfileMeta, storeProfileMeta, type StoredProfileMeta } from '../utils/storage'
-
-const passwordHints = [
-  'Activa recordatorios de respaldo periódicos.',
-  'Guardá tu contraseña maestra en un gestor externo confiable.',
-  'Actualizá tus datos de contacto para recuperar acceso rápidamente.',
-]
-
-const socialProviders = [
-  { key: 'google', label: 'Google', icon: '🟢' },
-  { key: 'facebook', label: 'Facebook', icon: '🔵' },
-  { key: 'apple', label: 'Apple', icon: '⚪️' },
-] as const
+import { Footer } from './Footer'
+import { usePreferences } from '../preferences/context'
+import {
+  isBiometricsAvailable,
+  isBiometricsEnrolled,
+  authenticateWithBiometrics,
+  enrollBiometrics,
+} from '../services/crypto/webAuthn'
+import { downloadEmergencyKitPdf } from '../services/crypto/emergencyKit'
 
 type AuthMode = 'unlock' | 'create'
 
@@ -27,16 +25,37 @@ const initialSignup = {
 
 export const AuthGate = ({ children }: { children: ReactNode }) => {
   const { data, masterPassword, hasVault, unlock, createVault, error, updateData } = useAppDataUnsafe()
+  const { preferences } = usePreferences()
+  const isLightMode = preferences.mode === 'light'
+  const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png' : '/brand/logo-login.png'
+  const markSrc = isLightMode ? '/brand/isotipo-light.png' : '/brand/isotipo.png'
+  const wordmarkSrc = isLightMode ? '/brand/wordmark-light.png' : '/brand/wordmark.png'
   const [mode, setMode] = useState<AuthMode>(hasVault ? 'unlock' : 'create')
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [signup, setSignup] = useState(initialSignup)
   const [storedMeta, setStoredMeta] = useState<StoredProfileMeta | null>(null)
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [failedAttempts, setFailedAttempts] = useState<number>(() => {
+    try {
+      return parseInt(localStorage.getItem('lifekeeper_failed_attempts') || '0', 10) || 0
+    } catch {
+      return 0
+    }
+  })
+  const [biometricsReady, setBiometricsReady] = useState(false)
+  const cardRef = useRef<HTMLElement | null>(null)
+  const previousRect = useRef<DOMRect | null>(null)
+  const morphAnimation = useRef<Animation | null>(null)
 
   const showApp = Boolean(masterPassword && data)
+
+  useEffect(() => {
+    void isBiometricsAvailable().then((avail) => {
+      setBiometricsReady(avail && isBiometricsEnrolled())
+    })
+  }, [])
 
   useEffect(() => {
     const meta = loadProfileMeta()
@@ -50,16 +69,46 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     setMode(hasVault ? 'unlock' : 'create')
   }, [hasVault])
 
-  const hint = useMemo(() => passwordHints[Math.floor(Math.random() * passwordHints.length)], [])
-
   const resetMessages = () => {
     setLocalError(null)
-    setStatusMessage(null)
   }
 
-  const handleSocialClick = (provider: string) => {
-    setStatusMessage(`La integración directa con ${provider} estará disponible próximamente.`)
+  const switchMode = () => {
+    if (cardRef.current) {
+      previousRect.current = cardRef.current.getBoundingClientRect()
+    }
+    setMode((prev) => (prev === 'unlock' ? 'create' : 'unlock'))
+    resetMessages()
+    setLoginPassword('')
   }
+
+  // Morphea el contenedor al pasar entre login y creación de bóveda
+  useLayoutEffect(() => {
+    const card = cardRef.current
+    const previous = previousRect.current
+    previousRect.current = null
+    if (!card || !previous) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+    const next = card.getBoundingClientRect()
+    if (Math.abs(previous.width - next.width) < 1 && Math.abs(previous.height - next.height) < 1) {
+      return
+    }
+
+    morphAnimation.current?.cancel()
+    card.classList.add('is-morphing')
+    const animation = card.animate(
+      [
+        { width: `${previous.width}px`, height: `${previous.height}px` },
+        { width: `${next.width}px`, height: `${next.height}px` },
+      ],
+      { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    )
+    morphAnimation.current = animation
+    animation.finished
+      .catch(() => undefined)
+      .finally(() => card.classList.remove('is-morphing'))
+  }, [mode])
 
   if (showApp) {
     return <>{children}</>
@@ -89,10 +138,32 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       try {
         setIsLoading(true)
         await unlock(loginPassword)
-        setStatusMessage(`Bienvenido de nuevo, ${loginUsername.trim()}!`)
+        setFailedAttempts(0)
+        localStorage.removeItem('lifekeeper_failed_attempts')
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'No pudimos procesar el ingreso'
-        setLocalError(message)
+        const nextAttempts = failedAttempts + 1
+        setFailedAttempts(nextAttempts)
+        try {
+          localStorage.setItem('lifekeeper_failed_attempts', String(nextAttempts))
+        } catch {
+          // Ignore
+        }
+
+        if (nextAttempts >= 10) {
+          // Autodestrucción por seguridad tras 10 intentos
+          localStorage.clear()
+          sessionStorage.clear()
+          setLocalError(
+            '⚠️ PROTOCOLO DE AUTODESTRUCCIÓN: Se alcanzó el límite de 10 intentos fallidos. Todos los datos locales de la bóveda han sido eliminados permanentemente por seguridad.',
+          )
+        } else if (nextAttempts >= 5) {
+          setLocalError(
+            `Contraseña incorrecta. ⚠️ ADVERTENCIA: Te quedan ${10 - nextAttempts} intentos antes de que la bóveda local sea eliminada.`,
+          )
+        } else {
+          const message = err instanceof Error ? err.message : 'No pudimos procesar el ingreso'
+          setLocalError(message)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -143,11 +214,22 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
           updatedAt: new Date().toISOString(),
         },
       }))
+
+      // Descarga automática del Emergency Kit PDF
+      void downloadEmergencyKitPdf({
+        userEmail: signup.email.trim(),
+        userName: signup.fullName.trim(),
+      })
+
+      // Si el navegador soporta biometría, enrolar
+      if (biometricsReady) {
+        void enrollBiometrics(signup.username.trim(), signup.email.trim())
+      }
+
       setSignup(initialSignup)
       setMode('unlock')
       setLoginUsername(meta.username)
       setLoginPassword('')
-      setStatusMessage('Bóveda creada con éxito. Iniciá sesión con tus nuevas credenciales.')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No pudimos crear la bóveda'
       setLocalError(message)
@@ -158,200 +240,237 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="auth-layout">
-      <div className="auth-hero">
-        <div className="auth-hero-content">
-          <h1 className="auth-hero-title">LifeKeeper</h1>
-          <p className="auth-hero-description">
-            Tu centro privado para salud, finanzas y recuerdos. Organizado, cifrado y siempre disponible.
-          </p>
-          <ul className="auth-benefits">
-            <li>🛡️ Bóveda cifrada con contraseña maestra</li>
-            <li>🩺 Historial clínico, medicamentos y contactos SOS</li>
-            <li>🔐 Gestor de contraseñas con borrado automático del portapapeles</li>
-            <li>📊 Finanzas, proyectos y recordatorios sincronizados</li>
-          </ul>
-        </div>
-      </div>
+      <div className="auth-stage">
+        <section
+          ref={cardRef}
+          className={`auth-card${mode === 'create' ? ' auth-card-create' : ''}`}
+          aria-labelledby="auth-title"
+        >
+          <aside className="auth-brand-panel">
+            <div className={`auth-brand-logo is-${preferences.logo}`}>
+              {preferences.logo === 'full' ? (
+                <img src={logoLoginSrc} alt="LifeKeeper" />
+              ) : null}
+              {preferences.logo === 'mark' ? (
+                <img src={markSrc} alt="LifeKeeper" />
+              ) : null}
+              {preferences.logo === 'wordmark' ? (
+                <img src={wordmarkSrc} alt="LifeKeeper" />
+              ) : null}
+            </div>
 
-      <div className="auth-card">
-        <div className="auth-tabs" role="tablist" aria-label="Acciones de autenticación">
-          <button
-            type="button"
-            className={`auth-tab ${mode === 'unlock' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('unlock')
-              resetMessages()
-            }}
-            role="tab"
-            aria-selected={mode === 'unlock'}
-          >
-            Iniciar sesión
-          </button>
-          <button
-            type="button"
-            className={`auth-tab ${mode === 'create' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('create')
-              resetMessages()
-            }}
-            role="tab"
-            aria-selected={mode === 'create'}
-          >
-            Crear bóveda
-          </button>
-        </div>
+            <p className="auth-brand-tagline">
+              Tu centro privado para salud, finanzas y recuerdos.
+            </p>
 
-        <div>
-          <h2 className="auth-title">
-            {mode === 'unlock' ? 'Bienvenido nuevamente' : 'Crea tu espacio seguro'}
-          </h2>
-          <p className="auth-subtitle">
-            {mode === 'unlock'
-              ? 'Accede con tu usuario y contraseña maestra para continuar.'
-              : 'Ingresa tus datos principales para iniciar tu bóveda protegida.'}
-          </p>
-        </div>
+            <ul className="auth-brand-points">
+              <li>
+                <ShieldCheck size={16} aria-hidden />
+                <span>Cifrado local AES con contraseña maestra</span>
+              </li>
+              <li>
+                <LockKeyhole size={16} aria-hidden />
+                <span>Tus datos nunca salen de este dispositivo</span>
+              </li>
+              <li>
+                <HeartPulse size={16} aria-hidden />
+                <span>Salud, finanzas y recordatorios en un solo lugar</span>
+              </li>
+            </ul>
+          </aside>
 
-        {statusMessage ? <p className="auth-status">{statusMessage}</p> : null}
+          <div className="auth-form-panel" key={mode}>
+            <header className="auth-header">
+              <h1 className="auth-title" id="auth-title">
+                {mode === 'unlock' ? 'Iniciar sesión' : 'Crear tu bóveda'}
+              </h1>
+              {mode === 'create' ? (
+                <p className="auth-subtitle">
+                  Completá tus datos y definí una contraseña maestra para empezar.
+                </p>
+              ) : null}
+            </header>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {mode === 'unlock' ? (
-            <>
-              <label className="auth-label" htmlFor="login-username">
-                Usuario
-              </label>
-              <input
-                id="login-username"
-                className="auth-input"
-                autoComplete="username"
-                value={loginUsername}
-                onChange={(event) => setLoginUsername(event.target.value)}
-                placeholder="Usuario registrado"
-              />
-              <label className="auth-label" htmlFor="login-password">
-                Contraseña maestra
-              </label>
-              <input
-                id="login-password"
-                className="auth-input"
-                type="password"
-                autoComplete="current-password"
-                value={loginPassword}
-                onChange={(event) => setLoginPassword(event.target.value)}
-                placeholder="Contraseña maestra"
-              />
-            </>
-          ) : (
-            <>
-              <label className="auth-label" htmlFor="signup-fullname">
-                Nombre completo
-              </label>
-              <input
-                id="signup-fullname"
-                className="auth-input"
-                autoComplete="name"
-                value={signup.fullName}
-                onChange={(event) => setSignup((prev) => ({ ...prev, fullName: event.target.value }))}
-                placeholder="Ej. Ana Gómez"
-              />
-              <label className="auth-label" htmlFor="signup-username">
-                Usuario
-              </label>
-              <input
-                id="signup-username"
-                className="auth-input"
-                autoComplete="username"
-                value={signup.username}
-                onChange={(event) => setSignup((prev) => ({ ...prev, username: event.target.value }))}
-                placeholder="Elige un alias único"
-              />
-              <label className="auth-label" htmlFor="signup-email">
-                Email de contacto
-              </label>
-              <input
-                id="signup-email"
-                className="auth-input"
-                type="email"
-                autoComplete="email"
-                value={signup.email}
-                onChange={(event) => setSignup((prev) => ({ ...prev, email: event.target.value }))}
-                placeholder="correo@dominio.com"
-              />
-              <label className="auth-label" htmlFor="signup-password">
-                Contraseña maestra
-              </label>
-              <input
-                id="signup-password"
-                className="auth-input"
-                type="password"
-                autoComplete="new-password"
-                value={signup.password}
-                onChange={(event) => setSignup((prev) => ({ ...prev, password: event.target.value }))}
-                placeholder="Mínimo 12 caracteres"
-              />
-              <label className="auth-label" htmlFor="signup-confirm">
-                Confirma tu contraseña
-              </label>
-              <input
-                id="signup-confirm"
-                className="auth-input"
-                type="password"
-                autoComplete="new-password"
-                value={signup.confirm}
-                onChange={(event) => setSignup((prev) => ({ ...prev, confirm: event.target.value }))}
-                placeholder="Repite la contraseña"
-              />
-            </>
-          )}
-
-          {(localError || error) && <p className="auth-error">{localError || error}</p>}
-
-          <button className="auth-submit" type="submit" disabled={isLoading}>
-            {isLoading
-              ? 'Procesando...'
-              : mode === 'unlock'
-              ? 'Iniciar sesión'
-              : 'Crear bóveda segura'}
-          </button>
-        </form>
-
-        <div className="auth-divider">
-          <span>o continua con</span>
-        </div>
-
-        <div className="auth-socials">
-          {socialProviders.map((provider) => (
-            <button
-              key={provider.key}
-              type="button"
-              className="auth-social-button"
-              onClick={() => handleSocialClick(provider.label)}
+            <form
+              className={`auth-form${mode === 'create' ? ' auth-form-create' : ''}`}
+              onSubmit={handleSubmit}
+              noValidate
             >
-              <span className="auth-social-icon" aria-hidden>
-                {provider.icon}
-              </span>
-              {provider.label}
-            </button>
-          ))}
-        </div>
+              {mode === 'unlock' ? (
+                <>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="login-username">
+                      Usuario
+                    </label>
+                    <input
+                      id="login-username"
+                      className="auth-input"
+                      autoComplete="username"
+                      spellCheck={false}
+                      value={loginUsername}
+                      onChange={(event) => setLoginUsername(event.target.value)}
+                      placeholder="Usuario registrado"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="login-password">
+                      Contraseña maestra
+                    </label>
+                    <input
+                      id="login-password"
+                      className="auth-input"
+                      type="password"
+                      autoComplete="current-password"
+                      value={loginPassword}
+                      onChange={(event) => setLoginPassword(event.target.value)}
+                      placeholder="Contraseña maestra"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="signup-fullname">
+                      Nombre completo
+                    </label>
+                    <input
+                      id="signup-fullname"
+                      className="auth-input"
+                      autoComplete="name"
+                      value={signup.fullName}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, fullName: event.target.value }))}
+                      placeholder="Ej. Ana Gómez"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="signup-username">
+                      Usuario
+                    </label>
+                    <input
+                      id="signup-username"
+                      className="auth-input"
+                      autoComplete="username"
+                      spellCheck={false}
+                      value={signup.username}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, username: event.target.value }))}
+                      placeholder="Elige un alias único"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="signup-email">
+                      Email de contacto
+                    </label>
+                    <input
+                      id="signup-email"
+                      className="auth-input"
+                      type="email"
+                      autoComplete="email"
+                      value={signup.email}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, email: event.target.value }))}
+                      placeholder="correo@dominio.com"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="signup-password">
+                      Contraseña maestra
+                    </label>
+                    <input
+                      id="signup-password"
+                      className="auth-input"
+                      type="password"
+                      autoComplete="new-password"
+                      value={signup.password}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, password: event.target.value }))}
+                      placeholder="Mínimo 12 caracteres"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="signup-confirm">
+                      Confirma tu contraseña
+                    </label>
+                    <input
+                      id="signup-confirm"
+                      className="auth-input"
+                      type="password"
+                      autoComplete="new-password"
+                      value={signup.confirm}
+                      onChange={(event) => setSignup((prev) => ({ ...prev, confirm: event.target.value }))}
+                      placeholder="Repite la contraseña"
+                    />
+                  </div>
+                </>
+              )}
 
-        <div className="auth-footer">
-          <p className="auth-hint">{hint}</p>
-          <button
-            className="auth-switch"
-            type="button"
-            onClick={() => {
-              setMode((prev) => (prev === 'unlock' ? 'create' : 'unlock'))
-              resetMessages()
-              setLoginPassword('')
-            }}
-          >
-            {mode === 'unlock'
-              ? '¿No tenés cuenta? Creá una bóveda ahora'
-              : 'Ya tengo una bóveda, volver al inicio de sesión'}
-          </button>
-        </div>
+              {(localError || error) && (
+                <p className={`auth-error${mode === 'create' ? ' auth-field-full' : ''}`} role="alert">
+                  {localError || error}
+                </p>
+              )}
+
+              <button className="auth-submit" type="submit" disabled={isLoading}>
+                {isLoading
+                  ? 'Procesando...'
+                  : mode === 'unlock'
+                    ? 'Iniciar sesión'
+                    : 'Crear bóveda segura'}
+              </button>
+
+              {mode === 'unlock' && biometricsReady ? (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={async () => {
+                    resetMessages()
+                    setIsLoading(true)
+                    try {
+                      const success = await authenticateWithBiometrics()
+                      if (success) {
+                        const cachedPwd = sessionStorage.getItem('lifekeeper_bio_pwd')
+                        if (cachedPwd) {
+                          await unlock(cachedPwd)
+                        } else {
+                          setLocalError(
+                            'Identidad biométrica confirmada. Ingresá tu contraseña maestra para reactivar la sesión completa.',
+                          )
+                        }
+                      } else {
+                        setLocalError('No se pudo verificar la identidad biométrica.')
+                      }
+                    } catch {
+                      setLocalError('Error al autenticar por biometría.')
+                    } finally {
+                      setIsLoading(false)
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    width: '100%',
+                    padding: '0.65rem 1rem',
+                    fontSize: '0.875rem',
+                    marginTop: '0.5rem',
+                  }}
+                >
+                  <Fingerprint size={18} />
+                  <span>Desbloquear con Windows Hello / Huella</span>
+                </button>
+              ) : null}
+            </form>
+
+            <div className="auth-card-footer">
+              <button className="auth-switch" type="button" onClick={switchMode}>
+                {mode === 'unlock'
+                  ? '¿No tenés cuenta? Creá una bóveda ahora'
+                  : 'Ya tengo una bóveda, volver al inicio de sesión'}
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
+
+      <Footer />
     </div>
   )
 }

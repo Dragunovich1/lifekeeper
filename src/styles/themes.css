@@ -1,0 +1,171 @@
+/* === TEMAS DE COLOR ===
+   Cada tema redefine acentos y el desplazamiento de tono de los fondos.
+   Las superficies oscuras/claras siguen viniendo de index.css. */
+
+:root[data-theme] {
+  --color-accent-soft: color-mix(in srgb, var(--color-accent-blue) 12%, transparent);
+  --color-accent-soft-cyan: color-mix(in srgb, var(--color-accent-cyan) 10%, transparent);
+  --color-border-focus: color-mix(in srgb, var(--color-accent-blue) 60%, transparent);
+  --color-focus-ring: color-mix(in srgb, var(--color-accent-blue) 24%, transparent);
+  --gradient-accent: linear-gradient(120deg, var(--color-accent-blue), var(--color-accent-cyan));
+  --gradient-hero: radial-gradient(
+      circle at 0% 0%,
+      color-mix(in srgb, var(--color-accent-blue) 22%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 100% 110%,
+      color-mix(in srgb, var(--color-accent-cyan) 16%, transparent),
+      transparent 55%
+    );
+}
+
+:root[data-theme='medianoche'] {
+  --color-accent-blue: #5b8cff;
+  --color-accent-cyan: #2ee6c0;
+  --color-accent-purple: #b388ff;
+  --fx-hue: 0deg;
+  --fx-saturation: 1;
+  --fx-brightness: 1;
+  --fx-light-hue: 200deg;
+}
+
+:root[data-theme='oceano'] {
+  --color-accent-blue: #38bdf8;
+  --color-accent-cyan: #22d3ee;
+  --color-accent-purple: #818cf8;
+  --fx-hue: -6deg;
+  --fx-saturation: 1.05;
+  --fx-brightness: 1.05;
+  --fx-light-hue: 195deg;
+}
+
+:root[data-theme='aurora'] {
+  --color-accent-blue: #34d399;
+  --color-accent-cyan: #2ee6c0;
+  --color-accent-purple: #a3e635;
+  --fx-hue: -55deg;
+  --fx-saturation: 1;
+  --fx-brightness: 1.03;
+  --fx-light-hue: 120deg;
+}
+
+:root[data-theme='violeta'] {
+  --color-accent-blue: #8b5cf6;
+  --color-accent-cyan: #22d3ee;
+  --color-accent-purple: #c084fc;
+  --fx-hue: 25deg;
+  --fx-saturation: 1.05;
+  --fx-brightness: 1.04;
+  --fx-light-hue: 285deg;
+}
+
+:root[data-theme='coral'] {
+  --color-accent-blue: #fb7185;
+  --color-accent-cyan: #fb923c;
+  --color-accent-purple: #f472b6;
+  --fx-hue: 150deg;
+  --fx-saturation: 1;
+  --fx-brightness: 0.94;
+  --fx-light-hue: 20deg;
+}
+
+:root[data-theme='hielo'] {
+  --color-accent-blue: #7dd3fc;
+  --color-accent-cyan: #bae6fd;
+  --color-accent-purple: #c4b5fd;
+  --fx-hue: -18deg;
+  --fx-saturation: 0.85;
+  --fx-brightness: 1.16;
+  --fx-light-hue: 190deg;
+}
+
+:root[data-theme='menta'] {
+  --color-accent-blue: #2dd4bf;
+  --color-accent-cyan: #6ee7b7;
+  --color-accent-purple: #5eead4;
+  --fx-hue: -38deg;
+  --fx-saturation: 1;
+  --fx-brightness: 1.05;
+  --fx-light-hue: 130deg;
+}
+
+:root[data-theme='ambar'] {
+  --color-accent-blue: #f59e0b;
+  --color-accent-cyan: #fbbf24;
+  --color-accent-purple: #fb923c;
+  --fx-hue: 160deg;
+  --fx-saturation: 1;
+  --fx-brightness: 0.94;
+  --fx-light-hue: 35deg;
+}
+
+/* === VARIANTES DE TEMA PARA MODO CLARO ===
+   Tonos más profundos y saturados para garantizar alto contraste sobre superficies blancas. */
+
+:root.light-theme[data-theme] {
+  --color-accent-ink: #ffffff;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent-blue) 11%, transparent);
+  --color-accent-soft-cyan: color-mix(in srgb, var(--color-accent-cyan) 11%, transparent);
+  --color-border-focus: color-mix(in srgb, var(--color-accent-blue) 58%, transparent);
+  --color-focus-ring: color-mix(in srgb, var(--color-accent-blue) 20%, transparent);
+  --gradient-accent: linear-gradient(120deg, var(--color-accent-blue), var(--color-accent-cyan));
+  --gradient-hero: radial-gradient(
+      circle at 0% 0%,
+      color-mix(in srgb, var(--color-accent-blue) 14%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 100% 110%,
+      color-mix(in srgb, var(--color-accent-cyan) 12%, transparent),
+      transparent 55%
+    );
+}
+
+:root.light-theme[data-theme='medianoche'] {
+  --color-accent-blue: #2563eb;
+  --color-accent-cyan: #0d9488;
+  --color-accent-purple: #6d28d9;
+}
+
+:root.light-theme[data-theme='oceano'] {
+  --color-accent-blue: #0284c7;
+  --color-accent-cyan: #0891b2;
+  --color-accent-purple: #4f46e5;
+}
+
+:root.light-theme[data-theme='aurora'] {
+  --color-accent-blue: #059669;
+  --color-accent-cyan: #0d9488;
+  --color-accent-purple: #4d7c0f;
+}
+
+:root.light-theme[data-theme='violeta'] {
+  --color-accent-blue: #6d28d9;
+  --color-accent-cyan: #0891b2;
+  --color-accent-purple: #9333ea;
+}
+
+:root.light-theme[data-theme='coral'] {
+  --color-accent-blue: #e11d48;
+  --color-accent-cyan: #ea580c;
+  --color-accent-purple: #db2777;
+}
+
+:root.light-theme[data-theme='hielo'] {
+  --color-accent-blue: #0369a1;
+  --color-accent-cyan: #0284c7;
+  --color-accent-purple: #5b21b6;
+}
+
+:root.light-theme[data-theme='menta'] {
+  --color-accent-blue: #0d9488;
+  --color-accent-cyan: #059669;
+  --color-accent-purple: #0f766e;
+}
+
+:root.light-theme[data-theme='ambar'] {
+  --color-accent-blue: #d97706;
+  --color-accent-cyan: #b45309;
+  --color-accent-purple: #ea580c;
+}

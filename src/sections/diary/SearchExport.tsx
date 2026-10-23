@@ -1,10 +1,19 @@
 import { jsPDF } from 'jspdf'
 import { saveAs } from 'file-saver'
+import {
+  CheckSquare,
+  FileDown,
+  FileText,
+  RotateCcw,
+  Search,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { DatePicker } from '../../components/DatePicker'
 import { SectionHeader } from '../../components/SectionHeader'
+import { Select } from '../../components/Select'
 import { useAppData } from '../../hooks/useAppData'
 import type { DiaryEntry } from '../../types'
-import { formatDate } from '../../utils/dates'
+import { formatDate, toLocalDateKey } from '../../utils/dates'
 
 interface Filters {
   keyword: string
@@ -35,7 +44,9 @@ export const DiarySearchExportSection = () => {
   const filteredEntries = useMemo(() => applyFilters(entries, filters), [entries, filters])
 
   const toggleSelection = (id: string) => {
-    setSelectedEntries((prev) => (prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]))
+    setSelectedEntries((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
+    )
   }
 
   const selectAll = () => setSelectedEntries(filteredEntries.map((entry) => entry.id))
@@ -66,7 +77,7 @@ export const DiarySearchExportSection = () => {
         cursorY += text.length * 14
         if (entry.tags.length > 0) {
           doc.setFontSize(10)
-          doc.text(`Tags: ${entry.tags.join(', ')}`, margin, cursorY)
+          doc.text(`Etiquetas: ${entry.tags.join(', ')}`, margin, cursorY)
           cursorY += 12
         }
         if (index < selected.length - 1) {
@@ -86,7 +97,7 @@ export const DiarySearchExportSection = () => {
         const header = `Fecha: ${formatDate(entry.date)} - ${entry.mood}`
         const title = entry.title ? `${entry.title}\n` : ''
         const body = entry.content || '-'
-        const tagsLine = entry.tags.length > 0 ? `\nTags: ${entry.tags.join(', ')}` : ''
+        const tagsLine = entry.tags.length > 0 ? `\nEtiquetas: ${entry.tags.join(', ')}` : ''
         return `${header}\n${title}${body}${tagsLine}`
       })
       .join('\n\n-----\n\n')
@@ -98,86 +109,137 @@ export const DiarySearchExportSection = () => {
   return (
     <div>
       <SectionHeader
-        title="Busqueda y exportacion"
-        subtitle="Filtra por fecha o palabra clave y prepara tus notas para exportar en PDF o texto"
+        title="Búsqueda y exportación"
+        subtitle="Filtrá por fecha o palabra clave y prepará tus notas para exportar en PDF o texto"
       />
 
       <div className="section-body">
         <div className="panel">
-          <h3 className="panel-title">Filtros rapidos</h3>
-          <div className="form-grid three-columns">
+          <div className="panel-header">
+            <div>
+              <h3 className="panel-title">Filtros de búsqueda</h3>
+              <p className="panel-subtitle">
+                Combiná palabras clave, rango de fechas y etiquetas para aislar las notas deseadas
+              </p>
+            </div>
+            {(filters.keyword || filters.startDate || filters.endDate || filters.tag) ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setFilters(initialFilters)}
+              >
+                <RotateCcw size={14} aria-hidden />
+                Restablecer filtros
+              </button>
+            ) : null}
+          </div>
+
+          <div className="search-export-filters-grid">
             <div className="field">
               <label htmlFor="filter-keyword">Palabra clave</label>
-              <input
-                id="filter-keyword"
-                value={filters.keyword}
-                onChange={(event) => setFilters({ ...filters, keyword: event.target.value })}
-                placeholder="Busqueda libre"
-              />
+              <div className="search-input-wrap">
+                <Search size={15} className="search-input-icon" aria-hidden />
+                <input
+                  id="filter-keyword"
+                  value={filters.keyword}
+                  onChange={(event) => setFilters({ ...filters, keyword: event.target.value })}
+                  placeholder="Buscar en título, contenido o etiquetas..."
+                />
+              </div>
             </div>
             <div className="field">
               <label htmlFor="filter-start">Desde</label>
-              <input
+              <DatePicker
                 id="filter-start"
-                type="date"
                 value={filters.startDate}
-                onChange={(event) => setFilters({ ...filters, startDate: event.target.value })}
+                onChange={(value) => setFilters({ ...filters, startDate: value })}
+                placeholder="Fecha inicial"
+                allowClear
+                ariaLabel="Fecha desde"
               />
             </div>
             <div className="field">
               <label htmlFor="filter-end">Hasta</label>
-              <input
+              <DatePicker
                 id="filter-end"
-                type="date"
                 value={filters.endDate}
-                onChange={(event) => setFilters({ ...filters, endDate: event.target.value })}
+                onChange={(value) => setFilters({ ...filters, endDate: value })}
+                placeholder="Fecha final"
+                allowClear
+                ariaLabel="Fecha hasta"
               />
             </div>
             <div className="field">
               <label htmlFor="filter-tag">Etiqueta</label>
-              <select
+              <Select
                 id="filter-tag"
                 value={filters.tag}
-                onChange={(event) => setFilters({ ...filters, tag: event.target.value })}
-              >
-                <option value="">Todas</option>
-                {tags.map((tag) => (
-                  <option key={tag} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="section-actions">
-              <button className="secondary-button" type="button" onClick={selectAll}>
-                Seleccionar todo
-              </button>
-              <button className="secondary-button" type="button" onClick={clearSelection}>
-                Limpiar seleccion
-              </button>
-              <button className="secondary-button" type="button" onClick={() => exportSelection('pdf')}>
-                Exportar PDF
-              </button>
-              <button className="secondary-button" type="button" onClick={() => exportSelection('txt')}>
-                Exportar TXT
-              </button>
+                onChange={(value) => setFilters({ ...filters, tag: value })}
+                options={[
+                  { value: '', label: 'Todas las etiquetas' },
+                  ...tags.map((tag) => ({ value: tag, label: tag })),
+                ]}
+                ariaLabel="Filtrar por etiqueta"
+              />
             </div>
           </div>
         </div>
 
         <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Resultados ({filteredEntries.length})</h3>
+          <div className="panel-header" style={{ alignItems: 'center' }}>
+            <div>
+              <h3 className="panel-title">
+                Resultados ({filteredEntries.length})
+                {selectedEntries.length > 0 ? (
+                  <span className="panel-subtitle" style={{ marginLeft: '0.625rem' }}>
+                    · {selectedEntries.length} {selectedEntries.length === 1 ? 'seleccionada' : 'seleccionadas'}
+                  </span>
+                ) : null}
+              </h3>
+            </div>
+            <div className="section-actions">
+              <button className="secondary-button" type="button" onClick={selectAll}>
+                <CheckSquare size={14} aria-hidden />
+                Seleccionar todo
+              </button>
+              {selectedEntries.length > 0 ? (
+                <button className="secondary-button" type="button" onClick={clearSelection}>
+                  Limpiar selección
+                </button>
+              ) : null}
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={selectedEntries.length === 0}
+                onClick={() => exportSelection('pdf')}
+                title={selectedEntries.length === 0 ? 'Seleccioná al menos una nota' : 'Descargar PDF'}
+              >
+                <FileDown size={14} aria-hidden />
+                Exportar PDF
+              </button>
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={selectedEntries.length === 0}
+                onClick={() => exportSelection('txt')}
+                title={selectedEntries.length === 0 ? 'Seleccioná al menos una nota' : 'Descargar TXT'}
+              >
+                <FileText size={14} aria-hidden />
+                Exportar TXT
+              </button>
+            </div>
           </div>
           {filteredEntries.length === 0 ? (
-            <div className="empty-state">Sin entradas que coincidan con los filtros seleccionados.</div>
+            <div className="empty-state">
+              Sin entradas que coincidan con los filtros seleccionados.
+            </div>
           ) : (
             <table className="table">
               <thead>
                 <tr>
                   <th></th>
                   <th>Fecha</th>
-                  <th>Titulo</th>
+                  <th>Título</th>
                   <th>Estado</th>
                   <th>Etiquetas</th>
                 </tr>
@@ -190,10 +252,11 @@ export const DiarySearchExportSection = () => {
                         type="checkbox"
                         checked={selectedEntries.includes(entry.id)}
                         onChange={() => toggleSelection(entry.id)}
+                        aria-label={`Seleccionar "${entry.title || 'Sin título'}"`}
                       />
                     </td>
                     <td>{formatDate(entry.date)}</td>
-                    <td>{entry.title || 'Sin titulo'}</td>
+                    <td>{entry.title || 'Sin título'}</td>
                     <td>{entry.mood}</td>
                     <td>
                       <div className="chip-list">
@@ -216,19 +279,24 @@ export const DiarySearchExportSection = () => {
 }
 
 const applyFilters = (entries: DiaryEntry[], filters: Filters) => {
-  return entries.filter((entry) => {
-    const keywordMatch = filters.keyword
-      ? [entry.title, entry.content]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(filters.keyword.toLowerCase()))
-      : true
+  const term = filters.keyword.trim().toLowerCase()
+  const startKey = filters.startDate ? toLocalDateKey(filters.startDate) : ''
+  const endKey = filters.endDate ? toLocalDateKey(filters.endDate) : ''
 
-    const startMatch = filters.startDate
-      ? new Date(entry.date) >= new Date(filters.startDate)
-      : true
-    const endMatch = filters.endDate ? new Date(entry.date) <= new Date(filters.endDate) : true
-    const tagMatch = filters.tag ? entry.tags.includes(filters.tag) : true
+  return [...entries]
+    .filter((entry) => {
+      const keywordMatch = term
+        ? [entry.title, entry.content, entry.tags.join(' ')]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase().includes(term))
+        : true
 
-    return keywordMatch && startMatch && endMatch && tagMatch
-  })
+      const entryDateKey = toLocalDateKey(entry.date)
+      const startMatch = startKey ? entryDateKey >= startKey : true
+      const endMatch = endKey ? entryDateKey <= endKey : true
+      const tagMatch = filters.tag ? entry.tags.includes(filters.tag) : true
+
+      return keywordMatch && startMatch && endMatch && tagMatch
+    })
+    .sort((a, b) => (a.date > b.date ? -1 : 1))
 }

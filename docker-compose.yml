@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    container_name: lifekeeper-web
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lifekeeper-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: lifekeeper_vault
+      POSTGRES_USER: lifekeeper_admin
+      POSTGRES_PASSWORD: lifekeeper_secure_password_2026
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifekeeper_admin -d lifekeeper_vault"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

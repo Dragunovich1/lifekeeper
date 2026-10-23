@@ -1,0 +1,478 @@
+/* === CLINICAL HISTORY: chart + actions === */
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clinical-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.clinical-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.clinical-chart-grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.clinical-chart-axis {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.clinical-chart-label {
+  fill: var(--color-text-muted);
+  font-size: 9px;
+  font-family: inherit;
+  text-transform: capitalize;
+}
+
+.clinical-chart-stem {
+  stroke-width: 1;
+  opacity: 0.35;
+}
+
+.clinical-chart-point {
+  stroke: var(--color-bg-secondary);
+  stroke-width: 1.5;
+  transition: filter var(--transition-fast), opacity var(--transition-fast);
+}
+
+.clinical-chart-event:hover .clinical-chart-point {
+  filter: drop-shadow(0 0 5px currentColor);
+  opacity: 1;
+}
+
+/* === TASK LIST (Proyectos) === */
+.task-list {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.task-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.task-list li:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-active);
+}
+
+.task-list label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.task-list label span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-list input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent-blue);
+  cursor: pointer;
+}
+
+.task-completed {
+  text-decoration: line-through;
+  color: var(--color-text-muted) !important;
+}
+
+.task-list .secondary-button {
+  flex: 0 0 auto;
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.75rem;
+}
+
+/* === CALENDAR === */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.calendar-header-cell {
+  padding: 0.375rem 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.calendar-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 108px;
+  padding: 0.375rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.calendar-cell:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.calendar-cell.is-selected {
+  background: color-mix(in srgb, var(--color-accent-blue) 9%, var(--color-surface-hover));
+  box-shadow: inset 0 0 0 2px var(--color-accent-blue);
+}
+
+.calendar-cell-out {
+  opacity: 0.42;
+}
+
+.calendar-day {
+  align-self: flex-start;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-events {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  margin-top: 0.25rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.calendar-events::-webkit-scrollbar {
+  display: none;
+}
+
+.calendar-event {
+  padding: 0.125rem 0.3125rem 0.125rem 0.375rem;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-text-muted);
+  border-radius: 4px;
+  background: var(--color-surface-hover);
+  cursor: default;
+  transition: background var(--transition-fast);
+}
+
+.calendar-event:hover {
+  background: var(--color-surface-active);
+}
+
+.calendar-event strong {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event span {
+  display: block;
+  font-size: 0.5625rem;
+  line-height: 1.3;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* === MOOD === */
+.mood-bar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--color-surface-active);
+}
+
+.mood-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width var(--transition-slow);
+}
+
+.mood-history {
+  display: grid;
+  gap: 0;
+}
+
+.mood-history li {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) minmax(88px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.mood-history li:last-child {
+  border-bottom: none;
+}
+
+.mood-history li > span:first-child {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.mood-history li > span:nth-child(2) {
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.mood-history li > span:nth-child(3) {
+  color: var(--color-text-tertiary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* === SOS OVERLAY (Emergencia) === */
+.sos-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-backdrop);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(3, 3, 5, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fadeIn var(--transition-fast);
+}
+
+.sos-card {
+  position: relative;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  max-width: 500px;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 1.75rem;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: var(--radius-2xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xl), 0 0 48px rgba(248, 113, 113, 0.16);
+  animation: scaleIn var(--transition-base);
+}
+
+.sos-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.sos-close:hover {
+  background: var(--color-error-soft);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: var(--color-error);
+}
+
+.sos-card h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--color-error);
+  text-transform: uppercase;
+}
+
+.sos-card h3 {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.sos-card p {
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.sos-card > div {
+  margin-top: 0.375rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.sos-card h4 {
+  margin-bottom: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.sos-card ul {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.sos-card li {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* === MISC SECTIONS === */
+.recent-list {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.recent-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  font-size: 0.8125rem;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--color-surface-active);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-accent);
+  border-radius: 4px;
+  transition: width var(--transition-slow);
+}
+
+/* === BLOQUES INTELIGENTES EN SECCIONES === */
+.smart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.smart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+}
+
+.dose-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.dose-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dose-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.dose-item.is-taken {
+  background: var(--color-success-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 26%, transparent);
+}
+
+.password-strength {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--color-surface-active);
+}
+
+.password-strength-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  transition: width var(--transition-base), background-color var(--transition-base);
+}
+
+/* === SEARCH & EXPORT (Diario) === */
+.search-export-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.875rem 1rem;
+  align-items: end;
+}
+

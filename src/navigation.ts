@@ -24,8 +24,9 @@ export const navigation: NavSection[] = [
     subSections: [
       { key: 'vaccines', label: 'Vacunas' },
       { key: 'consultations', label: 'Consultas' },
-      { key: 'medications', label: 'Medicaciones' },
-      { key: 'history', label: 'Historial clinico' },
+      { key: 'medications', label: 'Medicación' },
+      { key: 'hydration', label: 'Hidratación' },
+      { key: 'history', label: 'Historial clínico' },
       { key: 'emergency', label: 'Emergencia' },
     ],
   },
@@ -35,8 +36,8 @@ export const navigation: NavSection[] = [
     icon: 'Book',
     subSections: [
       { key: 'notes', label: 'Notas diarias' },
-      { key: 'mood', label: 'Estado de animo' },
-      { key: 'search', label: 'Busqueda y exportacion' },
+      { key: 'mood', label: 'Estado de ánimo' },
+      { key: 'search', label: 'Búsqueda y exportación' },
     ],
   },
   {
@@ -44,7 +45,7 @@ export const navigation: NavSection[] = [
     label: 'Seguridad',
     icon: 'Shield',
     subSections: [
-      { key: 'passwords', label: 'Gestor de contrasenas' },
+      { key: 'passwords', label: 'Gestor de contraseñas' },
       { key: 'documents', label: 'Documentos sensibles' },
       { key: 'private-notes', label: 'Notas privadas' },
     ],
@@ -56,7 +57,8 @@ export const navigation: NavSection[] = [
     subSections: [
       { key: 'finances', label: 'Finanzas' },
       { key: 'projects', label: 'Proyectos e ideas' },
-      { key: 'vehicles', label: 'Vehiculos' },
+      { key: 'vehicles', label: 'Vehículos' },
+      { key: 'workouts', label: 'Entrenamientos' },
     ],
   },
   {
@@ -66,7 +68,7 @@ export const navigation: NavSection[] = [
     subSections: [
       { key: 'reminders', label: 'Recordatorios' },
       { key: 'calendar', label: 'Calendario' },
-      { key: 'backups', label: 'Respaldos y exportacion' },
+      { key: 'backups', label: 'Respaldos y exportación' },
     ],
   },
 ]

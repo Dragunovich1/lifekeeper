@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lifekeeper-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: lifekeeper_vault
+      POSTGRES_USER: lifekeeper_admin
+      POSTGRES_PASSWORD: lifekeeper_dev_password_change_in_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifekeeper_admin -d lifekeeper_vault"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+    driver: local

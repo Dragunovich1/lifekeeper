@@ -1,0 +1,112 @@
+/* Scrollbar overlay de página (adaptada del kit DN a la paleta LifeKeeper) */
+.lk-page-scrollbar {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html.lk-overlay-scroll {
+    scrollbar-width: none;
+    scrollbar-gutter: auto;
+  }
+
+  html.lk-overlay-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+  }
+
+  .lk-page-scrollbar {
+    display: block;
+    position: fixed;
+    inset: 4px 2px 4px auto;
+    width: 9px;
+    z-index: 1035;
+    pointer-events: none;
+  }
+
+  .lk-page-scroll-thumb {
+    width: 6px;
+    margin-left: 2px;
+    border-radius: var(--radius-full);
+    background: var(--scrollbar-thumb);
+    opacity: 0;
+    transition: opacity 450ms ease, background-color var(--transition-fast);
+    pointer-events: auto;
+    touch-action: none;
+    cursor: default;
+  }
+
+  html.lk-scrolling .lk-page-scroll-thumb,
+  .lk-page-scroll-thumb:hover,
+  .lk-page-scroll-thumb.dragging {
+    opacity: 1;
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-page-scroll-thumb {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  html.lk-overlay-scroll {
+    scrollbar-width: auto;
+  }
+
+  html.lk-overlay-scroll::-webkit-scrollbar {
+    display: block;
+    width: auto;
+  }
+
+  .lk-page-scrollbar {
+    display: none;
+  }
+}
+
+/* Oculta la scrollbar nativa de los contenedores que usan overlay */
+.lk-hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.lk-hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Overlay genérico para contenedores con scroll propio */
+.lk-overlay-scrollbar {
+  position: fixed;
+  width: 9px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+.lk-overlay-scrollbar.visible {
+  opacity: 1;
+}
+
+.lk-overlay-thumb {
+  width: 6px;
+  margin-left: 2px;
+  border-radius: var(--radius-full);
+  background: var(--scrollbar-thumb);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: default;
+  transition: background-color var(--transition-fast);
+}
+
+.lk-overlay-thumb:hover,
+.lk-overlay-thumb.dragging {
+  background: var(--scrollbar-thumb-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-overlay-scrollbar,
+  .lk-overlay-thumb {
+    transition: none;
+  }
+}
