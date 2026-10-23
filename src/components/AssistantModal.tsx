@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react'
-import { Send, ArrowUpRight, ShieldCheck, Sparkles, Bot, User, Trash2 } from 'lucide-react'
+import { Send, ArrowUpRight, ShieldCheck, Sparkles, Bot, User, Trash2, Cpu } from 'lucide-react'
 import { Modal } from './Modal'
 import { useAppData } from '../hooks/useAppData'
 import { processAssistantQuery, type AssistantMessage } from '../services/assistant/localAssistant'
+import { checkOllamaStatus, queryOllama, type OllamaStatus } from '../services/assistant/ollamaClient'
 
 interface AssistantModalProps {
   open: boolean
@@ -13,7 +14,7 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
   {
     id: 'welcome',
     sender: 'assistant',
-    text: '¡Hola! Soy tu **Asistente LifeKeeper**. Conozco tu bóveda de forma 100% privada y local en tu dispositivo.\n\nPodés preguntarme sobre tu **historia clínica**, **medicación**, **gastos y finanzas**, **clima y lluvias**, o pedirme un **resumen general**.\n\n¿En qué te puedo ayudar hoy?',
+    text: '¡Hola! Soy tu **Asistente Inteligente de LifeKeeper**.\n\nPodés preguntarme lo que quieras, como se te ocurra: sobre tu **salud e historia clínica**, **medicación**, **finanzas y gastos**, **si va a llover hoy o esta semana**, o pedirme consejos sobre tu día a día.\n\n¿En qué te puedo ayudar hoy?',
     timestamp: 'Ahora',
   },
 ]
@@ -27,7 +28,7 @@ const QUICK_PROMPTS = [
   { label: '💧 ¿Cuánta agua tomé?', query: '¿Cuánta agua tomé hoy?' },
   { label: '🔐 ¿Mis claves están seguras?', query: '¿Tengo contraseñas débiles?' },
   { label: '🗓️ ¿Qué tengo que hacer hoy?', query: '¿Qué tengo que hacer hoy?' },
-  { label: '📋 Resumen general', query: 'Haceme un resumen general' },
+  { label: '📋 Resumen general', query: 'Haceme un resumen general de mi bóveda' },
 ]
 
 /**
@@ -44,8 +45,8 @@ function renderFormattedMessage(content: string) {
           return <div key={lineIdx} style={{ height: '0.4rem' }} />
         }
 
-        const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ')
-        const cleanLine = isBullet ? trimmed.replace(/^[•\-]\s*/, '') : line
+        const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || /^\d+\.\s/.test(trimmed)
+        const cleanLine = isBullet ? trimmed.replace(/^[•\-]\s*|^\d+\.\s*/, '') : line
 
         const parts = cleanLine.split(/(\*\*.*?\*\*)/g)
         const renderedText = parts.map((part, partIdx) => {
@@ -103,6 +104,11 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const [messages, setMessages] = useState<AssistantMessage[]>(INITIAL_MESSAGES)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({
+    online: false,
+    models: [],
+    activeModel: null,
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -110,8 +116,13 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Comprobar disponibilidad de Ollama al abrir el modal
   useEffect(() => {
     if (open) {
+      checkOllamaStatus()
+        .then((status) => setOllamaStatus(status))
+        .catch(() => setOllamaStatus({ online: false, models: [], activeModel: null }))
+
       setTimeout(() => {
         scrollToBottom()
         inputRef.current?.focus()
@@ -134,6 +145,34 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     setInput('')
     setIsTyping(true)
 
+    // Intento 1: LLM Real en Servidor (Ollama)
+    if (ollamaStatus.online && ollamaStatus.activeModel) {
+      try {
+        const history = messages
+          .filter((m) => m.id !== 'welcome')
+          .map((m) => ({
+            role: m.sender,
+            content: m.text,
+          }))
+
+        const llmResponse = await queryOllama(text, history, data, ollamaStatus.activeModel)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}`,
+            sender: 'assistant',
+            text: llmResponse,
+            timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+          },
+        ])
+        setIsTyping(false)
+        return
+      } catch (err) {
+        console.warn('Ollama falló o está ocupado, usando fallback semántico local:', err)
+      }
+    }
+
+    // Intento 2: Fallback semántico local
     try {
       const response = await processAssistantQuery(text, data)
       setMessages((prev) => [...prev, response])
@@ -143,7 +182,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         {
           id: `err-${Date.now()}`,
           sender: 'assistant',
-          text: 'Ocurrió un error al procesar tu consulta en local. Por favor probá nuevamente.',
+          text: 'Ocurrió un error al procesar tu consulta. Por favor probá nuevamente.',
           timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
         },
       ])
@@ -166,12 +205,18 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     setMessages(INITIAL_MESSAGES)
   }
 
+  const isLlmActive = ollamaStatus.online && Boolean(ollamaStatus.activeModel)
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Asistente LifeKeeper"
-      subtitle="Inteligencia semántica local · Cifrado Zero-Knowledge · Meteorología en vivo"
+      subtitle={
+        isLlmActive
+          ? `Motor LLM Local (${ollamaStatus.activeModel}) · Cifrado Zero-Knowledge`
+          : 'Inteligencia semántica local · Cifrado Zero-Knowledge · Meteorología en vivo'
+      }
       maxWidth="840px"
     >
       <div
@@ -182,23 +227,35 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           gap: '0.75rem',
         }}
       >
-        {/* Banner de Privacidad y Estado */}
+        {/* Banner de Estado del Motor */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0.6rem 1rem',
-            background: 'rgba(14, 165, 233, 0.08)',
-            border: '1px solid rgba(14, 165, 233, 0.2)',
+            background: isLlmActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(14, 165, 233, 0.08)',
+            border: isLlmActive ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(14, 165, 233, 0.2)',
             borderRadius: 'var(--radius-lg)',
             fontSize: '0.75rem',
             color: 'var(--color-text-secondary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <ShieldCheck size={16} color="var(--color-accent-cyan)" />
-            <span>Consultas procesadas 100% en tu dispositivo. Tu bóveda permanece cifrada.</span>
+            {isLlmActive ? (
+              <>
+                <Cpu size={16} color="var(--color-success)" />
+                <span style={{ fontWeight: 500, color: 'var(--color-success)' }}>
+                  LLM Local Activo ({ollamaStatus.activeModel})
+                </span>
+                <span style={{ opacity: 0.8 }}>· Razonamiento natural en tu servidor Dell</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck size={16} color="var(--color-accent-cyan)" />
+                <span>Consultas procesadas 100% en tu servidor/dispositivo. Bóveda cifrada.</span>
+              </>
+            )}
           </div>
           {messages.length > 1 && (
             <button
@@ -263,13 +320,15 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                     flexShrink: 0,
                     background: isUser
                       ? 'var(--color-accent-blue)'
+                      : isLlmActive
+                      ? 'linear-gradient(135deg, #10b981, #06b6d4)'
                       : 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
                     color: '#ffffff',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                     marginTop: '2px',
                   }}
                 >
-                  {isUser ? <User size={16} /> : <Bot size={18} />}
+                  {isUser ? <User size={16} /> : isLlmActive ? <Cpu size={18} /> : <Bot size={18} />}
                 </div>
 
                 {/* Burbuja de contenido */}
@@ -350,7 +409,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
+                  background: isLlmActive
+                    ? 'linear-gradient(135deg, #10b981, #06b6d4)'
+                    : 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
                   color: '#ffffff',
                   flexShrink: 0,
                 }}
@@ -443,13 +504,17 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Preguntale a tu asistente (ej. ¿va a llover hoy?, mi historia clínica, ¿cuánto gasté?)..."
+            placeholder={
+              isLlmActive
+                ? 'Preguntale a tu LLM local lo que quieras (interpretación libre y natural)...'
+                : 'Preguntale a tu asistente (ej. ¿va a llover hoy?, mi historia clínica, ¿cuánto gasté?)...'
+            }
             style={{
               flex: 1,
               borderRadius: '24px',
               padding: '0.85rem 1.35rem',
               background: 'var(--color-surface-sunken)',
-              border: '1px solid var(--color-border-strong)',
+              border: isLlmActive ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--color-border-strong)',
               color: 'var(--color-text-primary)',
               fontSize: '0.875rem',
             }}
