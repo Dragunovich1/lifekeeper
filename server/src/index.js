@@ -338,6 +338,105 @@ app.post('/api/mail/send', async (req, res) => {
   }
 })
 
+// -----------------------------------------------------------------------------
+// 7. SIMULAR CORREO DE BIENVENIDA (Test Template)
+// -----------------------------------------------------------------------------
+app.post('/api/mail/test-welcome', async (req, res) => {
+  const { to, name = 'Daniel' } = req.body
+
+  if (!to) {
+    return res.status(400).json({ error: 'El campo "to" (email de destino) es requerido' })
+  }
+
+  const subject = 'Bienvenido a LifeKeeper — Tu bóveda privada está lista'
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #060b18; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0; }
+    .wrapper { width: 100%; table-layout: fixed; background-color: #060b18; padding: 40px 10px; }
+    .main-card { max-width: 580px; margin: 0 auto; background: linear-gradient(180deg, #0e1a38 0%, #0a1329 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4); overflow: hidden; }
+    .header { padding: 32px 36px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+    .brand-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: #ffffff; margin: 0; }
+    .brand-accent { color: #38bdf8; }
+    .body { padding: 32px 36px; font-size: 15px; line-height: 1.6; color: #cbd5e1; }
+    .h1-title { font-size: 20px; font-weight: 600; color: #ffffff; margin-top: 0; margin-bottom: 16px; }
+    .callout { background: rgba(255, 255, 255, 0.03); border-left: 4px solid #1d63dc; border-radius: 8px; padding: 16px 18px; margin: 24px 0; font-size: 14px; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #1d63dc 0%, #0284c7 100%); color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 600; padding: 13px 28px; border-radius: 10px; margin: 20px 0; text-align: center; box-shadow: 0 4px 14px rgba(29, 99, 220, 0.35); }
+    .footer { padding: 24px 36px 32px; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #64748b; text-align: center; }
+    .footer a { color: #38bdf8; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <table class="main-card" role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="header">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align: middle;">
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding-right: 12px; vertical-align: middle;">
+                      <img src="https://app.lifekeeper.lat/brand/isotipo.png?v=2" alt="LifeKeeper" width="36" height="36" style="display: block; border-radius: 8px;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <h1 class="brand-title">Life<span class="brand-accent">Keeper</span></h1>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td align="right" style="font-size: 11px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">
+                Cero Conocimiento E2EE
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td class="body">
+          <h2 class="h1-title">¡Hola, ${name}! 👋</h2>
+          <p>Tu bóveda personal en <strong>LifeKeeper</strong> ha sido creada exitosamente. A partir de hoy, tus registros de salud, finanzas, contraseñas y diario personal están protegidos bajo cifrado de extremo a extremo.</p>
+          
+          <div class="callout">
+            <strong style="color: #38bdf8;">🛡️ Regla de Oro de Conocimiento Cero (Zero-Knowledge):</strong>
+            <p style="margin: 8px 0 0;">Tu contraseña maestra nunca viaja por la red ni se guarda en nuestros servidores. <strong>Nadie más que vos puede descifrar tu información.</strong></p>
+          </div>
+
+          <p><strong>Paso fundamental:</strong> Si no descargaste tu <strong>Kit de Emergencia (PDF de 24 palabras)</strong> durante el registro, ingresá ahora a tu perfil o a la sección de Respaldos para generarlo e imprimirlo.</p>
+
+          <div style="text-align: center;">
+            <a href="https://app.lifekeeper.lat/#profile:settings" class="btn">Abrir mi Bóveda</a>
+          </div>
+
+          <p style="font-size: 13px; color: #94a3b8;">Si tenés alguna duda sobre el funcionamiento del cifrado o la soberanía de tus datos, estamos a tu disposición.</p>
+        </td>
+      </tr>
+      <tr>
+        <td class="footer">
+          <p style="margin: 0 0 8px;">Este es un mensaje de seguridad automatizado enviado por <strong>LifeKeeper Vault</strong>.</p>
+          <p style="margin: 0 0 8px;">Por arquitectura de conocimiento cero, nosotros nunca te pediremos contraseñas ni frases de rescate.</p>
+          <p style="margin: 0;"><a href="https://app.lifekeeper.lat">https://app.lifekeeper.lat</a> • Servidor Soberano y Seguro</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>`
+
+  const text = `¡Hola, ${name}!\n\nTu bóveda en LifeKeeper ha sido creada exitosamente bajo arquitectura Zero-Knowledge E2EE.\n\nRecuerda guardar tu Kit de Emergencia de 24 palabras en un lugar físico seguro.\n\nIngresá a tu bóveda: https://app.lifekeeper.lat`
+
+  try {
+    const result = await sendEmail({ to, subject, html, text })
+    res.json({ success: true, template: 'welcome', result })
+  } catch (err) {
+    res.status(500).json({ error: 'Error al enviar simulación de bienvenida', details: err.message })
+  }
+})
+
 // Arrancar servidor
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[API SERVER] LifeKeeper API backend corriendo en http://0.0.0.0:${PORT}`)
