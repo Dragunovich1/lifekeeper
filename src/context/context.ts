@@ -12,6 +12,7 @@ export interface AppDataContextValue {
   resetVault: () => void
   updateData: (updater: (previous: AppData) => AppData) => void
   replaceData: (next: AppData) => void
+  restoreFromCloud?: (email: string, password: string) => Promise<boolean>
 }
 
 export const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)

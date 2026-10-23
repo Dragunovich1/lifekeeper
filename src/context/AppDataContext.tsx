@@ -11,6 +11,7 @@ import {
   storeMasterHash,
 } from '../utils/storage'
 import { AppDataContext } from './context'
+import { syncService } from '../services/sync/syncService'
 
 
 const stampAutomaticBackup = (payload: AppData): AppData => ({
@@ -101,6 +102,34 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       persist(empty, password)
       setMasterPassword(password)
       setError(undefined)
+
+      // Registrar y respaldar en la nube (PostgreSQL Zero-Knowledge) de forma asíncrona
+      if (initialProfile?.email) {
+        void syncService.registerCloudAccount(initialProfile.email, password, empty)
+      }
+    },
+    [persist],
+  )
+
+  const restoreFromCloud = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const res = await syncService.loginCloudAccount(email, password)
+        if (!res.success || !res.data) {
+          throw new Error(res.error || 'No pudimos recuperar la bóveda de la nube')
+        }
+        const hashed = hashPassword(password)
+        storeMasterHash(hashed)
+        setHasVault(true)
+        persist(res.data, password)
+        setMasterPassword(password)
+        setError(undefined)
+        return true
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Error al sincronizar con la nube'
+        setError(message)
+        throw err
+      }
     },
     [persist],
   )
@@ -129,6 +158,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         const updated = ensureAppDataShape(updater(base))
         const stamped = stampAutomaticBackup(updated)
         storeEncryptedPayload(encryptObject(stamped, masterPassword))
+        // Sincronización continua en la nube (PostgreSQL)
+        void syncService.pushVault(stamped, masterPassword)
         return stamped
       })
     },
@@ -142,6 +173,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       persist(ensureAppDataShape(next), masterPassword)
+      void syncService.pushVault(next, masterPassword)
     },
     [masterPassword, persist],
   )
@@ -158,8 +190,9 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       resetVault,
       updateData,
       replaceData,
+      restoreFromCloud,
     }),
-    [createVault, data, error, hasVault, lock, replaceData, resetVault, unlock, updateData, masterPassword],
+    [createVault, data, error, hasVault, lock, replaceData, resetVault, unlock, updateData, restoreFromCloud, masterPassword],
   )
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>

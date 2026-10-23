@@ -13,7 +13,7 @@ import {
 } from '../services/crypto/webAuthn'
 import { downloadEmergencyKitPdf } from '../services/crypto/emergencyKit'
 
-type AuthMode = 'unlock' | 'create'
+type AuthMode = 'unlock' | 'create' | 'restore'
 
 const initialSignup = {
   fullName: '',
@@ -24,7 +24,7 @@ const initialSignup = {
 }
 
 export const AuthGate = ({ children }: { children: ReactNode }) => {
-  const { data, masterPassword, hasVault, unlock, createVault, error } = useAppDataUnsafe()
+  const { data, masterPassword, hasVault, unlock, createVault, restoreFromCloud, error } = useAppDataUnsafe()
   const { preferences } = usePreferences()
   const isLightMode = preferences.mode === 'light'
   const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png?v=2' : '/brand/logo-login.png?v=2'
@@ -73,11 +73,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     setLocalError(null)
   }
 
-  const switchMode = () => {
+  const switchMode = (target?: AuthMode) => {
     if (cardRef.current) {
       previousRect.current = cardRef.current.getBoundingClientRect()
     }
-    setMode((prev) => (prev === 'unlock' ? 'create' : 'unlock'))
+    setMode((prev) => target ?? (prev === 'unlock' ? 'create' : 'unlock'))
     resetMessages()
     setLoginPassword('')
   }
@@ -117,6 +117,30 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     resetMessages()
+
+    if (mode === 'restore') {
+      if (!loginUsername.trim()) {
+        setLocalError('Ingresa tu correo electrónico registrado')
+        return
+      }
+      if (!loginPassword.trim()) {
+        setLocalError('Ingresa tu contraseña maestra')
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        if (restoreFromCloud) {
+          await restoreFromCloud(loginUsername.trim(), loginPassword)
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'No pudimos restaurar la bóveda desde la nube'
+        setLocalError(message)
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
 
     if (mode === 'unlock') {
       if (!loginUsername.trim()) {
@@ -268,11 +292,19 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
           <div className="auth-form-panel" key={mode}>
             <header className="auth-header">
               <h1 className="auth-title" id="auth-title">
-                {mode === 'unlock' ? 'Iniciar sesión' : 'Crear tu bóveda'}
+                {mode === 'unlock'
+                  ? 'Iniciar sesión'
+                  : mode === 'restore'
+                    ? 'Restaurar desde la nube'
+                    : 'Crear tu bóveda'}
               </h1>
               {mode === 'create' ? (
                 <p className="auth-subtitle">
                   Completá tus datos y definí una contraseña maestra para empezar.
+                </p>
+              ) : mode === 'restore' ? (
+                <p className="auth-subtitle">
+                  Ingresá tu correo y contraseña maestra para sincronizar tu bóveda desde PostgreSQL.
                 </p>
               ) : null}
             </header>
@@ -282,7 +314,39 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
               onSubmit={handleSubmit}
               noValidate
             >
-              {mode === 'unlock' ? (
+              {mode === 'restore' ? (
+                <>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="restore-email">
+                      Correo electrónico registrado
+                    </label>
+                    <input
+                      id="restore-email"
+                      className="auth-input"
+                      type="email"
+                      autoComplete="email"
+                      spellCheck={false}
+                      value={loginUsername}
+                      onChange={(event) => setLoginUsername(event.target.value)}
+                      placeholder="correo@dominio.com"
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label className="auth-label" htmlFor="restore-password">
+                      Contraseña maestra
+                    </label>
+                    <input
+                      id="restore-password"
+                      className="auth-input"
+                      type="password"
+                      autoComplete="current-password"
+                      value={loginPassword}
+                      onChange={(event) => setLoginPassword(event.target.value)}
+                      placeholder="Contraseña maestra de tu cuenta"
+                    />
+                  </div>
+                </>
+              ) : mode === 'unlock' ? (
                 <>
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="login-username">
@@ -398,7 +462,9 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                   ? 'Procesando...'
                   : mode === 'unlock'
                     ? 'Iniciar sesión'
-                    : 'Crear bóveda segura'}
+                    : mode === 'restore'
+                      ? 'Restaurar y sincronizar'
+                      : 'Crear bóveda segura'}
               </button>
 
               {mode === 'unlock' && biometricsReady ? (
@@ -445,12 +511,26 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
               ) : null}
             </form>
 
-            <div className="auth-card-footer">
-              <button className="auth-switch" type="button" onClick={switchMode}>
+            <div className="auth-card-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', alignItems: 'center' }}>
+              <button
+                className="auth-switch"
+                type="button"
+                onClick={() => switchMode(mode === 'unlock' ? 'create' : 'unlock')}
+              >
                 {mode === 'unlock'
                   ? '¿No tenés cuenta? Creá una bóveda ahora'
-                  : 'Ya tengo una bóveda, volver al inicio de sesión'}
+                  : 'Ya tengo una bóveda local, volver al inicio'}
               </button>
+              {mode !== 'restore' && (
+                <button
+                  className="auth-switch"
+                  type="button"
+                  onClick={() => switchMode('restore')}
+                  style={{ fontSize: '0.8125rem', opacity: 0.85 }}
+                >
+                  ☁️ ¿Accediendo desde otro dispositivo? Restaurar desde la nube
+                </button>
+              )}
             </div>
           </div>
         </section>
