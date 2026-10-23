@@ -84,26 +84,26 @@
 
 .app-header-brand-mark {
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   filter: drop-shadow(0 2px 7px rgba(0, 0, 0, 0.55));
 }
 
 .app-header-brand-wordmark {
   display: block;
-  height: 28px;
+  height: 34px;
   width: auto;
   filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.45));
 }
 
 .app-header-brand.logo-mark .app-header-brand-mark {
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
 }
 
 .app-header-brand.logo-wordmark .app-header-brand-wordmark {
-  height: 32px;
+  height: 38px;
 }
 
 /* Sobre fondo claro: los assets dedicados (-light.png) conservan sus colores originales */

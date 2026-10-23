@@ -303,16 +303,16 @@ export const Header = ({
                 src={markSrc}
                 alt=""
                 aria-hidden="true"
-                width={44}
-                height={44}
+                width={52}
+                height={52}
                 decoding="async"
               />
               <img
                 className="app-header-brand-wordmark"
                 src={wordmarkSrc}
                 alt="LifeKeeper"
-                width={100}
-                height={20}
+                width={120}
+                height={34}
                 decoding="async"
               />
             </>
@@ -322,8 +322,8 @@ export const Header = ({
               className="app-header-brand-mark"
               src={markSrc}
               alt="LifeKeeper"
-              width={46}
-              height={46}
+              width={54}
+              height={54}
               decoding="async"
             />
           ) : null}
@@ -332,8 +332,8 @@ export const Header = ({
               className="app-header-brand-wordmark"
               src={wordmarkSrc}
               alt="LifeKeeper"
-              width={112}
-              height={23}
+              width={134}
+              height={38}
               decoding="async"
             />
           ) : null}
