@@ -11,7 +11,7 @@ export interface EmailPayload {
 }
 
 const BRAND_COLOR_PRIMARY = '#1d63dc'
-const BRAND_DOMAIN = 'lifekeeper.lat'
+const BRAND_DOMAIN = 'app.lifekeeper.lat'
 
 /**
  * Envoltorio HTML base para todos los correos de LifeKeeper.
@@ -121,10 +121,19 @@ function emailLayout(title: string, bodyContent: string, isAlert = false): strin
         <td class="header">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td>
-                <h1 class="brand-title">Life<span class="brand-accent">Keeper</span></h1>
+              <td style="vertical-align: middle;">
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding-right: 12px; vertical-align: middle;">
+                      <img src="https://app.lifekeeper.lat/brand/isotipo.png?v=2" alt="LifeKeeper" width="36" height="36" style="display: block; border-radius: 8px;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <h1 class="brand-title">Life<span class="brand-accent">Keeper</span></h1>
+                    </td>
+                  </tr>
+                </table>
               </td>
-              <td align="right" style="font-size: 11px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">
+              <td align="right" style="font-size: 11px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">
                 Cero Conocimiento E2EE
               </td>
             </tr>

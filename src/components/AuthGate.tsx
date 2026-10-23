@@ -12,6 +12,7 @@ import {
   enrollBiometrics,
 } from '../services/crypto/webAuthn'
 import { downloadEmergencyKitPdf } from '../services/crypto/emergencyKit'
+import { notifyWelcome, notifyNewLoginAlert, notifyBruteForceAlert } from '../services/mail/mailService'
 
 type AuthMode = 'unlock' | 'create' | 'restore'
 
@@ -164,6 +165,21 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
         await unlock(loginPassword)
         setFailedAttempts(0)
         localStorage.removeItem('lifekeeper_failed_attempts')
+
+        // Alerta de nuevo inicio de sesión en equipo no registrado previamente
+        try {
+          const deviceKey = `lifekeeper_dev_${navigator.userAgent.slice(0, 40)}`
+          if (storedMeta?.email && !localStorage.getItem(deviceKey)) {
+            localStorage.setItem(deviceKey, '1')
+            void notifyNewLoginAlert(storedMeta.email, {
+              device: `${navigator.platform || 'Dispositivo'} • Navegador Web`,
+              ip: 'Cliente Web',
+              timestamp: new Date().toLocaleString('es-AR'),
+            })
+          }
+        } catch {
+          // Ignore
+        }
       } catch (err) {
         const nextAttempts = failedAttempts + 1
         setFailedAttempts(nextAttempts)
@@ -171,6 +187,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
           localStorage.setItem('lifekeeper_failed_attempts', String(nextAttempts))
         } catch {
           // Ignore
+        }
+
+        // Alerta crítica por intentos fallidos de contraseña maestra
+        if (nextAttempts >= 3 && storedMeta?.email) {
+          void notifyBruteForceAlert(storedMeta.email, nextAttempts, 'Cliente Web')
         }
 
         if (nextAttempts >= 10) {
@@ -231,6 +252,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
         userEmail: signup.email.trim(),
         userName: signup.fullName.trim(),
       })
+
+      // Envío de correo de bienvenida oficial con template LifeKeeper
+      if (signup.email.trim()) {
+        void notifyWelcome(signup.fullName.trim(), signup.email.trim())
+      }
 
       // Si el navegador soporta biometría, enrolar
       if (biometricsReady) {
