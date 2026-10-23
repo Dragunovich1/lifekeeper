@@ -519,16 +519,15 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
               >
                 {mode === 'unlock'
                   ? '¿No tenés cuenta? Creá una bóveda ahora'
-                  : 'Ya tengo una bóveda local, volver al inicio'}
+                  : 'Volver a iniciar sesión'}
               </button>
               {mode !== 'restore' && (
                 <button
                   className="auth-switch"
                   type="button"
                   onClick={() => switchMode('restore')}
-                  style={{ fontSize: '0.8125rem', opacity: 0.85 }}
                 >
-                  ☁️ ¿Accediendo desde otro dispositivo? Restaurar desde la nube
+                  Restaurar desde la nube
                 </button>
               )}
             </div>
