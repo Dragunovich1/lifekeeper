@@ -103,6 +103,7 @@ export interface Preferences {
   startSection: StartSection
   currency: CurrencyCode
   unitSystem: UnitSystem
+  privacyCurtain: boolean
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -117,6 +118,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   startSection: 'dashboard',
   currency: 'ARS',
   unitSystem: 'metric',
+  privacyCurtain: false,
 }
 
 export const AUTO_LOCK_OPTIONS = [

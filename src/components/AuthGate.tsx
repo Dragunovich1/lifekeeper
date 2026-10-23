@@ -193,27 +193,14 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
 
     try {
       setIsLoading(true)
-      await createVault(signup.password)
       const meta = { username: signup.username.trim(), email: signup.email.trim() }
+      await createVault(signup.password, {
+        fullName: signup.fullName.trim(),
+        username: signup.username.trim(),
+        email: signup.email.trim(),
+      })
       storeProfileMeta(meta)
       setStoredMeta(meta)
-      updateData((previous) => ({
-        ...previous,
-        profile: {
-          ...previous.profile,
-          fullName: signup.fullName.trim(),
-          nickName: signup.username.trim(),
-          avatar: previous.profile.avatar,
-          auth: {
-            ...previous.profile.auth,
-            username: signup.username.trim(),
-            email: signup.email.trim(),
-            phone: previous.profile.auth.phone,
-            twoFactorEnabled: false,
-          },
-          updatedAt: new Date().toISOString(),
-        },
-      }))
 
       // Descarga automática del Emergency Kit PDF
       void downloadEmergencyKitPdf({
@@ -227,7 +214,6 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
       }
 
       setSignup(initialSignup)
-      setMode('unlock')
       setLoginUsername(meta.username)
       setLoginPassword('')
     } catch (err) {

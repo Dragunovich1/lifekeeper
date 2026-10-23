@@ -161,7 +161,7 @@ const VaultApp = () => {
 
   return (
     <div className="app-shell">
-      <PrivacyCurtain enabled={true} />
+      <PrivacyCurtain enabled={preferences.privacyCurtain} />
       <Header
         sections={navigation}
         activeSection={activeSection}

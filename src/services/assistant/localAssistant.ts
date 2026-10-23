@@ -1,10 +1,10 @@
 /**
  * Asistente Inteligente Conversacional Local de LifeKeeper (100% privado y offline).
- * Interpreta consultas en lenguaje natural en español y responde con datos reales de la bóveda.
+ * Interpreta consultas en lenguaje natural en español rioplatense/neutro sin depender de tildes o sintaxis estricta.
  */
 
 import type { AppData } from '../../types'
-import { toLocalDateKey } from '../../utils/dates'
+import { toLocalDateKey, formatDate } from '../../utils/dates'
 import { computeVaultHealthScore } from '../../utils/vaultScore'
 
 export interface AssistantMessage {
@@ -18,8 +18,21 @@ export interface AssistantMessage {
   }
 }
 
+/**
+ * Normaliza texto eliminando acentos, tildes, signos de puntuación y espacios redundantes.
+ */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita diacríticos: á->a, é->e, í->i, ó->o, ú->u, ñ->n
+    .replace(/[¿?¡!.,;:()_"\'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function processAssistantQuery(query: string, data: AppData): AssistantMessage {
-  const q = query.trim().toLowerCase()
+  const norm = normalizeText(query)
   const now = new Date()
   const todayKey = toLocalDateKey(now)
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -32,184 +45,295 @@ export function processAssistantQuery(query: string, data: AppData): AssistantMe
     action,
   })
 
-  // 1. SALUDOS Y AYUDA
-  if (['hola', 'buen día', 'buenas', 'que tal', 'inicio', 'hello'].some((g) => q.startsWith(g))) {
+  // 1. SALUDOS Y AYUDA INICIAL
+  if (
+    ['hola', 'buen dia', 'buenas', 'que tal', 'inicio', 'hello', 'hey', 'quien sos', 'ayuda'].some((g) =>
+      norm.startsWith(g) || norm === g,
+    )
+  ) {
     const name = data.profile.nickName || data.profile.fullName || 'amigo'
     return createMsg(
-      `¡Hola ${name}! Soy tu asistente personal de LifeKeeper. Podés preguntarme cosas como:\n• "¿Cuánto gasté este mes?"\n• "¿Qué pastilla tengo que tomar hoy?"\n• "¿Cuánta agua tomé hoy?"\n• "¿Tengo contraseñas débiles o hackeadas?"\n• "¿Cómo está el puntaje de mi bóveda?"`,
+      `¡Hola ${name}! 👋 Soy tu asistente personal de LifeKeeper.\n\nPodés preguntarme de forma natural sobre cualquier aspecto de tu vida:\n• "¿Cuánto gasté este mes?" o "¿cómo vengo con la plata?"\n• "¿Qué pastillas tomo hoy?" o "¿a qué hora tomo el remedio?"\n• "¿Cuánta agua tomé?" o "¿estoy bien hidratado?"\n• "¿Tengo contraseñas débiles?" o "¿mis claves están seguras?"\n• "¿Qué tengo que hacer hoy?" o "¿qué recordatorios tengo?"\n• "¿Cómo está el puntaje de mi bóveda?"`,
     )
   }
 
-  // 2. FINANZAS / GASTOS
+  // 2. FINANZAS / GASTOS / PLATA / DINERO
   if (
-    q.includes('gasto') ||
-    q.includes('gasté') ||
-    q.includes('gastos') ||
-    q.includes('plata') ||
-    q.includes('dinero') ||
-    q.includes('finanza') ||
-    q.includes('balance') ||
-    q.includes('ingreso')
+    norm.includes('gast') || // gasté, gaste, gasto, gastos, gastar
+    norm.includes('plat') || // plata
+    norm.includes('diner') || // dinero
+    norm.includes('financ') || // finanzas, financiero
+    norm.includes('ingres') || // ingreso, ingresos
+    norm.includes('balanc') || // balance
+    norm.includes('cuanto tengo') ||
+    norm.includes('cuanto me queda') ||
+    norm.includes('egres') ||
+    norm.includes('sueldo')
   ) {
     const monthTxs = data.personal.finances.filter((t) => t.date.startsWith(currentMonth))
     const income = monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const expense = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     const balance = income - expense
 
-    // Búsqueda por categoría específica
+    // Chequear si preguntó por una categoría específica (ej. "cuanto gasté en comida", "salidas", "super")
     const categories = Array.from(new Set(monthTxs.map((t) => t.category.toLowerCase())))
-    const mentionedCat = categories.find((c) => q.includes(c))
+    const mentionedCat = categories.find((c) => norm.includes(normalizeText(c)))
 
     if (mentionedCat) {
       const catSpent = monthTxs
         .filter((t) => t.type === 'expense' && t.category.toLowerCase() === mentionedCat)
         .reduce((s, t) => s + t.amount, 0)
       return createMsg(
-        `En lo que va del mes, registrás un gasto de $${catSpent.toLocaleString('es-AR')} en la categoría "${mentionedCat}".`,
-        { label: 'Ver movimientos de finanzas', hash: '#personal:finances' },
+        `💳 En lo que va del mes actual, registrás un total gastado de **$${catSpent.toLocaleString('es-AR')}** en la categoría **"${mentionedCat}"**.`,
+        { label: 'Ver movimientos en Finanzas', hash: '#personal:finances' },
       )
     }
 
+    const state = balance >= 0 ? '🟢 Superávit' : '🔴 Déficit'
     return createMsg(
-      `Resumen financiero del mes actual:\n• Ingresos: $${income.toLocaleString('es-AR')}\n• Egresos: $${expense.toLocaleString('es-AR')}\n• Balance neto: ${balance >= 0 ? '+' : ''}$${balance.toLocaleString('es-AR')} (${balance >= 0 ? 'Superávit' : 'Déficit'}).`,
+      `📊 **Resumen financiero de este mes:**\n\n• **Ingresos totales:** $${income.toLocaleString('es-AR')}\n• **Gastos / Egresos:** $${expense.toLocaleString('es-AR')}\n• **Balance neto:** ${balance >= 0 ? '+' : ''}$${balance.toLocaleString('es-AR')} (${state})\n\n¿Querés revisar los movimientos detallados o cargar un nuevo gasto?`,
       { label: 'Ir a Finanzas', hash: '#personal:finances' },
     )
   }
 
-  // 3. MEDICACIÓN / TOMAS
+  // 3. MEDICACIÓN / PASTILLAS / REMEDIOS / TRATAMIENTOS
   if (
-    q.includes('pastilla') ||
-    q.includes('remedio') ||
-    q.includes('medicacion') ||
-    q.includes('medicación') ||
-    q.includes('tomar') ||
-    q.includes('dosis')
+    norm.includes('pastill') || // pastilla, pastillas
+    norm.includes('remedi') || // remedio, remedios
+    norm.includes('medic') || // medicación, medicacion, medicamento, medicamentos
+    norm.includes('tomar') ||
+    norm.includes('tomo') ||
+    norm.includes('tomas') ||
+    norm.includes('dosis') ||
+    norm.includes('tratamiento')
   ) {
     const activeMeds = data.health.medications.filter((m) => m.active)
     if (activeMeds.length === 0) {
-      return createMsg('No tenés tratamientos médicos activos registrados en este momento.', {
-        label: 'Ver Medicaciones',
-        hash: '#health:medications',
-      })
+      return createMsg(
+        '💊 No tenés tratamientos médicos activos registrados en este momento.\n\nPodés ingresar a la sección de Medicación para cargar un tratamiento con sus horarios programados.',
+        { label: 'Cargar Medicación', hash: '#health:medications' },
+      )
     }
 
     const lines: string[] = []
     activeMeds.forEach((m) => {
       const schedules = m.schedules.map((s) => s.time).join(', ')
-      lines.push(`• ${m.name} (${m.dosage}): horarios ${schedules || 'a demanda'}`)
+      lines.push(`• **${m.name}** (${m.dosage}) — Horarios: ${schedules || 'A demanda'}`)
     })
 
     return createMsg(
-      `Tenés ${activeMeds.length} tratamiento(s) activo(s) para hoy:\n${lines.join('\n')}`,
-      { label: 'Gestionar tomas', hash: '#health:medications' },
+      `💊 **Tenés ${activeMeds.length} tratamiento(s) médico(s) activo(s):**\n\n${lines.join('\n')}\n\nRecordá registrar cada toma para mantener la constancia en tu historial.`,
+      { label: 'Gestionar tomas de hoy', hash: '#health:medications' },
     )
   }
 
-  // 4. HIDRATACIÓN / AGUA
-  if (q.includes('agua') || q.includes('hidratacion') || q.includes('hidratación') || q.includes('liquido')) {
+  // 4. HIDRATACIÓN / AGUA / LÍQUIDOS
+  if (
+    norm.includes('agu') || // agua
+    norm.includes('hidrat') || // hidratación, hidratacion, hidratarme
+    norm.includes('liquid') || // líquido, liquido
+    norm.includes('sed') ||
+    norm.includes('vaso') ||
+    norm.includes('botella')
+  ) {
     const todayLog = (data.health.hydrationLogs ?? []).find((l) => l.date === todayKey)
     const target = data.health.hydrationTargetMl ?? 2500
     const current = todayLog?.amountMl ?? 0
     const pct = Math.round((current / target) * 100)
+    const remaining = Math.max(0, target - current)
+
+    let advice = ''
+    if (pct >= 100) {
+      advice = '🎉 ¡Felicitaciones! Ya alcanzaste el 100% de tu meta diaria de hidratación.'
+    } else if (pct >= 60) {
+      advice = `💧 Venís muy bien. Solo te faltan **${remaining} ml** (unos 2 o 3 vasos) para completar el día.`
+    } else {
+      advice = `⚠️ Llevás menos de la mitad. Te faltan **${remaining} ml** para llegar a tu meta. ¡Tomate un vaso ahora mismo!`
+    }
 
     return createMsg(
-      `Hoy llevás registrados ${current} ml de agua de tu meta de ${target} ml (${pct}% cumplido). ${
-        pct >= 100 ? '¡Excelente trabajo hidratándote hoy!' : `Te faltan ${Math.max(0, target - current)} ml para completar el objetivo.`
-      }`,
-      { label: 'Registrar agua', hash: '#health:hydration' },
+      `💧 **Monitoreo de Hidratación de Hoy:**\n\n• **Consumo actual:** ${current} ml de ${target} ml (**${pct}%**)\n\n${advice}`,
+      { label: 'Registrar agua tomada', hash: '#health:hydration' },
     )
   }
 
-  // 5. PESO / IMC / BIOMETRÍA
-  if (q.includes('peso') || q.includes('imc') || q.includes('altura') || q.includes('kilo')) {
+  // 5. PESO / IMC / BIOMETRÍA / ALTURA
+  if (
+    norm.includes('pes') || // peso, pesé, pesar
+    norm.includes('imc') ||
+    norm.includes('altur') || // altura
+    norm.includes('kilo') ||
+    norm.includes('corporal')
+  ) {
     const w = data.profile.weightKg
     const h = data.profile.heightCm
     if (!w || !h) {
-      return createMsg('Todavía no cargaste tu peso o altura en tu perfil.', {
-        label: 'Actualizar en Perfil',
-        hash: '#profile',
-      })
+      return createMsg(
+        'Todavía no tenés cargados tu peso y altura en el Perfil. Con esos datos puedo calcularte el Índice de Masa Corporal (IMC) y darte sugerencias saludables.',
+        { label: 'Cargar en mi Perfil', hash: '#profile:settings' },
+      )
     }
 
     const heightM = h / 100
     const imc = w / (heightM * heightM)
-    let cat = 'Normal'
-    if (imc < 18.5) cat = 'Bajo peso'
-    else if (imc < 25) cat = 'Normal'
-    else if (imc < 30) cat = 'Sobrepeso'
-    else cat = 'Obesidad'
+    let cat = 'Peso normal'
+    let emoji = '🟢'
+    if (imc < 18.5) {
+      cat = 'Bajo peso'
+      emoji = '🟡'
+    } else if (imc < 25) {
+      cat = 'Peso saludable'
+      emoji = '🟢'
+    } else if (imc < 30) {
+      cat = 'Sobrepeso'
+      emoji = '🟠'
+    } else {
+      cat = 'Obesidad'
+      emoji = '🔴'
+    }
 
     return createMsg(
-      `Tus datos biométricos actuales son:\n• Peso: ${w} kg\n• Altura: ${h} cm\n• Índice de Masa Corporal (IMC): ${imc.toFixed(1)} (${cat}).`,
-      { label: 'Ver perfil biométrico', hash: '#profile' },
+      `⚖️ **Tus métricas biométricas actuales:**\n\n• **Peso:** ${w} kg\n• **Altura:** ${h} cm\n• **Índice de Masa Corporal (IMC):** ${imc.toFixed(1)} kg/m² ${emoji} (${cat})\n\nPodés actualizar tu peso periódicamente desde tu perfil o desde el widget del Dashboard.`,
+      { label: 'Ver Perfil Biométrico', hash: '#profile:settings' },
     )
   }
 
-  // 6. CONTRASEÑAS / SEGURIDAD / HACKEOS
+  // 6. CONTRASEÑAS / SEGURIDAD / HACKEOS / CLAVES
   if (
-    q.includes('clave') ||
-    q.includes('contraseña') ||
-    q.includes('password') ||
-    q.includes('seguridad') ||
-    q.includes('hack') ||
-    q.includes('filtr')
+    norm.includes('clav') || // clave, claves
+    norm.includes('contrasen') || // contraseña, contrasenas, contraseñas
+    norm.includes('password') ||
+    norm.includes('segur') || // seguridad
+    norm.includes('hack') ||
+    norm.includes('filtr')
   ) {
     const pwds = data.security.passwordEntries
     const weak = pwds.filter((p) => p.password.length < 12).length
     return createMsg(
-      `Tenés un total de ${pwds.length} contraseñas cifradas en tu bóveda. ${
-        weak > 0
-          ? `Detectamos ${weak} contraseñas con menos de 12 caracteres que convendría robustecer.`
-          : 'Tus credenciales mantienen una longitud adecuada.'
-      } Podés usar la auditoría HIBP para verificar filtraciones públicas.`,
-      { label: 'Ir al Gestor de contraseñas', hash: '#security:passwords' },
+      `🔐 **Estado de tu Gestor de Contraseñas:**\n\n• **Total de credenciales guardadas:** ${pwds.length}\n• **Contraseñas cortas (<12 caracteres):** ${weak} ${weak > 0 ? '⚠️ (conviene robustecerlas)' : '✅'}\n• **Cifrado local:** AES-256-GCM Zero-Knowledge.\n\nPodés auditar si alguna de tus claves se filtró en la web con el botón de auditoría HIBP.`,
+      { label: 'Ir al Gestor de Contraseñas', hash: '#security:passwords' },
     )
   }
 
-  // 7. RECORDATORIOS / PENDIENTES
-  if (q.includes('recordatorio') || q.includes('pendiente') || q.includes('vence') || q.includes('alarma')) {
+  // 7. RECORDATORIOS / TAREAS / PENDIENTES / QUÉ TENGO QUE HACER
+  if (
+    norm.includes('record') || // recordatorio, recordatorios
+    norm.includes('pendient') || // pendiente, pendientes
+    norm.includes('hacer') ||
+    norm.includes('tengo hoy') ||
+    norm.includes('venc') || // vence, vencimiento
+    norm.includes('alarm') // alarma, alarmas
+  ) {
     const active = data.utilities.reminders.filter((r) => !r.done)
     const todayRem = active.filter((r) => toLocalDateKey(r.dateTime) === todayKey)
 
     if (todayRem.length > 0) {
-      const list = todayRem.map((r) => `• ${r.title}`).join('\n')
-      return createMsg(`Tenés ${todayRem.length} recordatorio(s) programados para hoy:\n${list}`, {
-        label: 'Ver recordatorios',
-        hash: '#utilities:reminders',
-      })
+      const list = todayRem.map((r) => `• ⏰ **${r.title}** (${r.dateTime.slice(11, 16) || 'Horario pactado'})`).join('\n')
+      return createMsg(
+        `🗓️ **Tenés ${todayRem.length} recordatorio(s) programado(s) para hoy:**\n\n${list}`,
+        { label: 'Ver todos los recordatorios', hash: '#utilities:reminders' },
+      )
     }
 
     return createMsg(
       active.length > 0
-        ? `No tenés recordatorios para hoy, pero sí ${active.length} activos a futuro.`
-        : 'Estás al día, no hay recordatorios pendientes en la lista.',
-      { label: 'Ver recordatorios', hash: '#utilities:reminders' },
+        ? `No tenés recordatorios programados para hoy, pero sí **${active.length} activos** en el calendario futuro.`
+        : '✨ ¡Estás completamente al día! No tenés recordatorios ni tareas pendientes en tu lista.',
+      { label: 'Ver Recordatorios', hash: '#utilities:reminders' },
     )
   }
 
-  // 8. VAULT SCORE / SALUD DE LA BÓVEDA
-  if (q.includes('score') || q.includes('puntaje') || q.includes('nivel') || q.includes('salud de la boveda')) {
+  // 8. CONSULTAS MÉDICAS / DOCTORES / TURNOS
+  if (norm.includes('doctor') || norm.includes('medic') || norm.includes('consult') || norm.includes('turno')) {
+    const upcoming = data.health.consultations
+      .filter((c) => toLocalDateKey(c.date) >= todayKey)
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    if (upcoming.length > 0) {
+      const next = upcoming[0]
+      return createMsg(
+        `🩺 **Tu próxima consulta médica programada:**\n\n• **Especialidad:** ${next.specialty}\n• **Profesional:** ${next.doctor}\n• **Fecha:** ${formatDate(next.date)}\n\n¿Querés revisar el historial de consultas anteriores?`,
+        { label: 'Ver Consultas Médicas', hash: '#health:consultations' },
+      )
+    }
+
+    return createMsg(
+      `🩺 Tenés un total de **${data.health.consultations.length} consultas** registradas en tu historial clínico, y ninguna pendiente a futuro próximo.`,
+      { label: 'Registrar nueva consulta', hash: '#health:consultations' },
+    )
+  }
+
+  // 9. VACUNAS
+  if (norm.includes('vacun') || norm.includes('refuerz') || norm.includes('inmun')) {
+    const total = data.health.vaccines.length
+    const nextVaccines = data.health.vaccines.filter((v) => v.nextDoseDate && toLocalDateKey(v.nextDoseDate) >= todayKey)
+
+    return createMsg(
+      `💉 **Tu libreta de vacunación:**\n\n• **Total aplicadas:** ${total}\n• **Próximos refuerzos:** ${nextVaccines.length > 0 ? nextVaccines.map((v) => `\n  • ${v.name}: ${formatDate(v.nextDoseDate!)}`).join('') : 'No tenés refuerzos próximos agendados.'}`,
+      { label: 'Ver Vacunas', hash: '#health:vaccines' },
+    )
+  }
+
+  // 10. VEHÍCULOS / AUTO / SERVICE
+  if (norm.includes('auto') || norm.includes('vehicul') || norm.includes('servic') || norm.includes('kilometr') || norm.includes('km')) {
+    const v = data.personal.vehicles
+    if (v.length === 0) {
+      return createMsg('Todavía no registraste vehículos ni mantenimientos en tu bóveda.', {
+        label: 'Cargar Vehículo',
+        hash: '#personal:vehicles',
+      })
+    }
+    const main = v[0]
+    return createMsg(
+      `🚗 **Información de tu vehículo (${main.brand} ${main.model}):**\n\n• **Patente / Placa:** ${main.plate || 'No cargada'}\n• **Kilometraje actual:** ${main.mileage.toLocaleString('es-AR')} km\n• **Historial de servicios:** ${main.services.length} registros`,
+      { label: 'Ver Mantenimiento Vehicular', hash: '#personal:vehicles' },
+    )
+  }
+
+  // 11. ESTADO DE ÁNIMO / DIARIO
+  if (norm.includes('anim') || norm.includes('humor') || norm.includes('sent') || norm.includes('diari') || norm.includes('nota')) {
+    const entries = data.diary.entries
+    const moods = data.diary.moods
+    const lastMood = moods.length > 0 ? moods[moods.length - 1] : null
+
+    return createMsg(
+      `📓 **Tu Diario Personal y Estado de Ánimo:**\n\n• **Entradas escritas:** ${entries.length}\n• **Último estado registrado:** ${lastMood ? `${lastMood.mood} (el ${formatDate(lastMood.date)})` : 'Aún no registraste tu ánimo hoy'}\n\n¿Querés dejar una reflexión o escribir cómo te sentís hoy?`,
+      { label: 'Abrir Diario', hash: '#diary:notes' },
+    )
+  }
+
+  // 12. PROYECTOS / METAS
+  if (norm.includes('proyect') || norm.includes('meta') || norm.includes('tare')) {
+    const projs = data.personal.projects
+    return createMsg(
+      `🎯 Tenés **${projs.length} proyecto(s)** en seguimiento.\n\nPodés ingresar a la sección de Proyectos para gestionar el checklist de tareas y medir el porcentaje de avance.`,
+      { label: 'Ver Proyectos', hash: '#personal:projects' },
+    )
+  }
+
+  // 13. VAULT HEALTH SCORE
+  if (norm.includes('score') || norm.includes('puntaj') || norm.includes('nivel') || norm.includes('salud de la boveda')) {
     const res = computeVaultHealthScore(data)
     return createMsg(
-      `Tu Vault Health Score actual es de ${res.totalScore}/100 (${res.levelLabel}).\n• Seguridad: ${res.pillars.security.score}/25\n• Salud: ${res.pillars.health.score}/25\n• Finanzas: ${res.pillars.finances.score}/25\n• Bienestar: ${res.pillars.wellness.score}/25\n\nConsejo principal: ${res.topRecommendations[0] || '¡Excelente estado de tu bóveda!'}`,
-      { label: 'Ver Dashboard', hash: '#dashboard' },
+      `🏆 **Tu Vault Health Score es ${res.totalScore}/100 (${res.levelLabel}):**\n\n• **Seguridad:** ${res.pillars.security.score}/25\n• **Salud:** ${res.pillars.health.score}/25\n• **Finanzas:** ${res.pillars.finances.score}/25\n• **Bienestar:** ${res.pillars.wellness.score}/25\n\n💡 **Recomendación clave:** ${res.topRecommendations[0] || '¡Excelente balance integral en tu bóveda!'}`,
+      { label: 'Ver Métricas en Dashboard', hash: '#dashboard' },
     )
   }
 
-  // 9. RESUMEN GENERAL / SEMANAL
-  if (q.includes('resumen') || q.includes('semana') || q.includes('todo')) {
+  // 14. RESUMEN GENERAL / COMPLETO
+  if (norm.includes('resumen') || norm.includes('general') || norm.includes('todo') || norm.includes('como vengo')) {
     const score = computeVaultHealthScore(data)
     const activeMeds = data.health.medications.filter((m) => m.active).length
     const activeReminders = data.utilities.reminders.filter((r) => !r.done).length
 
     return createMsg(
-      `📋 Resumen general de tu Bóveda LifeKeeper:\n• Estado integral: ${score.totalScore}/100 (${score.levelLabel})\n• Tratamientos activos: ${activeMeds}\n• Recordatorios pendientes: ${activeReminders}\n• Contraseñas protegidas: ${data.security.passwordEntries.length}\n• Notas del diario: ${data.diary.entries.length}`,
+      `📋 **Resumen Integral de tu Bóveda LifeKeeper:**\n\n• **Puntaje de salud integral:** ${score.totalScore}/100 (${score.levelLabel})\n• **Tratamientos activos:** ${activeMeds}\n• **Recordatorios pendientes:** ${activeReminders}\n• **Contraseñas resguardadas:** ${data.security.passwordEntries.length}\n• **Reflexiones en diario:** ${data.diary.entries.length}\n\n¿Querés profundizar en alguna de estas áreas?`,
       { label: 'Ir al Dashboard', hash: '#dashboard' },
     )
   }
 
-  // Fallback inteligente
+  // Fallback inteligente y orientativo
   return createMsg(
-    `Entendí tu consulta sobre "${query}". Podés preguntarme por tus **finanzas**, **medicaciones**, **agua**, **contraseñas**, **recordatorios** o pedirme un **resumen general**.`,
+    `No encontré un registro exacto para "${query}", pero puedo responderte al instante sobre:\n\n• 📊 **Finanzas:** "¿Cuánto gasté este mes?", "¿cuánto ingresé?"\n• 💊 **Medicación:** "¿Qué pastillas tomo hoy?", "¿a qué hora?"\n• 💧 **Agua:** "¿Cuánta agua tomé hoy?"\n• 🔐 **Seguridad:** "¿Cómo están mis contraseñas?"\n• 🗓️ **Recordatorios:** "¿Qué tengo pendiente para hoy?"\n• ⚖️ **Biometría:** "¿Cómo está mi peso o IMC?"\n• 🩺 **Salud:** "¿Cuándo es mi próxima consulta o vacuna?"\n• 📋 **General:** "Haceme un resumen"`,
   )
 }

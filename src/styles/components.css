@@ -386,7 +386,7 @@
 .profile-avatar {
   width: 72px;
   height: 72px;
-  border-radius: var(--radius-lg);
+  border-radius: 50% !important;
   object-fit: cover;
   border: 1px solid var(--color-border-strong);
   box-shadow: var(--shadow-md);
@@ -398,6 +398,7 @@
 }
 
 .profile-avatar.placeholder {
+  border-radius: 50% !important;
   display: flex;
   align-items: center;
   justify-content: center;

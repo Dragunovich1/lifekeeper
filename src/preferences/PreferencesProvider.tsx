@@ -61,6 +61,7 @@ const loadPreferences = (): Preferences => {
       startSection: parsed.startSection === 'last' ? 'last' : 'dashboard',
       currency: isCurrencyCode(parsed.currency) ? parsed.currency : DEFAULT_PREFERENCES.currency,
       unitSystem: isUnitSystem(parsed.unitSystem) ? parsed.unitSystem : DEFAULT_PREFERENCES.unitSystem,
+      privacyCurtain: typeof parsed.privacyCurtain === 'boolean' ? parsed.privacyCurtain : DEFAULT_PREFERENCES.privacyCurtain,
     }
   } catch {
     return DEFAULT_PREFERENCES

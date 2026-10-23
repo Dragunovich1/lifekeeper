@@ -9,39 +9,37 @@ export const PrivacyCurtain = ({ enabled = true }: PrivacyCurtainProps) => {
   const [blurred, setBlurred] = useState(false)
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      setBlurred(false)
+      return
+    }
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
         setBlurred(true)
+      } else {
+        // Al volver a la pestaña, reanudar la visualización
+        setBlurred(false)
       }
     }
 
-    const handleBlur = () => {
-      // Breve retraso para no disparar con clicks en popovers internos
-      setTimeout(() => {
-        if (!document.hasFocus()) {
-          setBlurred(true)
-        }
-      }, 300)
-    }
-
-    const handleFocus = () => {
-      // Al volver a la ventana, no quitamos el blur automáticamente de golpe
-      // para permitir al usuario hacer clic conscientemente si así lo prefiere,
-      // o quitamos si ya está visible.
-    }
-
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('blur', handleBlur)
-    window.addEventListener('focus', handleFocus)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('blur', handleBlur)
-      window.removeEventListener('focus', handleFocus)
     }
   }, [enabled])
+
+  useEffect(() => {
+    if (!blurred) return
+    const handleDismiss = () => setBlurred(false)
+    window.addEventListener('keydown', handleDismiss)
+    window.addEventListener('pointerdown', handleDismiss)
+    return () => {
+      window.removeEventListener('keydown', handleDismiss)
+      window.removeEventListener('pointerdown', handleDismiss)
+    }
+  }, [blurred])
 
   if (!blurred || !enabled) return null
 

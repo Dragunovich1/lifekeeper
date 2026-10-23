@@ -50,6 +50,9 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
     updatePreferences({ backgroundSettings: next, dotDensity: 1 })
   }
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!open) return
     previousFocus.current = document.activeElement
@@ -57,7 +60,7 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
     document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
@@ -65,7 +68,7 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
       window.removeEventListener('keydown', onKeyDown)
       if (previousFocus.current instanceof HTMLElement) previousFocus.current.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || typeof document === 'undefined') return null
 
@@ -220,9 +223,9 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
                       backgroundValues[key] ?? BACKGROUND_DEFAULTS[preferences.background]?.[key] ?? 0
                     const inputId = `background-${key}`
                     return (
-                      <label key={key} className="appearance-control" htmlFor={inputId}>
+                      <div key={key} className="appearance-control">
                         <span className="appearance-control-head">
-                          <span>{getBackgroundSettingLabel(preferences.background, key)}</span>
+                          <label htmlFor={inputId}>{getBackgroundSettingLabel(preferences.background, key)}</label>
                           <span className="appearance-control-value">
                             {formatBackgroundSettingValue(preferences.background, key, value)}
                           </span>
@@ -238,7 +241,7 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
                             updateBackgroundSetting(key, Number(event.target.value))
                           }
                         />
-                      </label>
+                      </div>
                     )
                   })}
                 </div>

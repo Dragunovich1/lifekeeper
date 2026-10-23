@@ -30,6 +30,9 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
   const bodyRef = useRef<HTMLDivElement>(null)
   const previousFocus = useRef<Element | null>(null)
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!open) return
     previousFocus.current = document.activeElement
@@ -37,7 +40,7 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
     document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
@@ -45,7 +48,7 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
       window.removeEventListener('keydown', onKeyDown)
       if (previousFocus.current instanceof HTMLElement) previousFocus.current.focus()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || typeof document === 'undefined') return null
 
@@ -109,6 +112,23 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 />
                 <p className="pref-help">
                   Cierra la bóveda automáticamente después de este tiempo sin actividad.
+                </p>
+              </div>
+
+              <div className="pref-field">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={preferences.privacyCurtain}
+                    onChange={(event) =>
+                      updatePreferences({ privacyCurtain: event.target.checked })
+                    }
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-accent-blue)' }}
+                  />
+                  <span>Cortina de privacidad activa</span>
+                </label>
+                <p className="pref-help">
+                  Difumina la pantalla al cambiar de pestaña para proteger tus datos de miradas indiscretas.
                 </p>
               </div>
 

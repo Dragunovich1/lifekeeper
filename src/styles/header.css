@@ -730,12 +730,13 @@
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-sm);
+  border-radius: 50% !important;
   object-fit: cover;
   border: 1px solid var(--color-border-strong);
 }
 
 .app-header-avatar.placeholder {
+  border-radius: 50% !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -74,13 +74,27 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   )
 
   const createVault = useCallback(
-    async (password: string) => {
+    async (password: string, initialProfile?: { fullName?: string; username?: string; email?: string }) => {
       const existingHash = loadMasterHash()
       if (existingHash) {
-        throw new Error('Ya existe una contrasena maestra configurada.')
+        throw new Error('Ya existe una contraseña maestra configurada.')
       }
 
       const empty = createEmptyAppData()
+      if (initialProfile) {
+        empty.profile = {
+          ...empty.profile,
+          fullName: initialProfile.fullName || '',
+          nickName: initialProfile.username || '',
+          auth: {
+            ...empty.profile.auth,
+            username: initialProfile.username || '',
+            email: initialProfile.email || '',
+          },
+          updatedAt: new Date().toISOString(),
+        }
+      }
+
       const hashed = hashPassword(password)
       storeMasterHash(hashed)
       setHasVault(true)

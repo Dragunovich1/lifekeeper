@@ -267,7 +267,7 @@ html.has-fx .auth-layout {
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: var(--radius-md);
+  border-radius: 50% !important;
   background: var(--gradient-accent);
   color: var(--color-accent-ink);
   font-size: 0.8125rem;
@@ -276,6 +276,7 @@ html.has-fx .auth-layout {
 }
 
 .pref-avatar-image {
+  border-radius: 50% !important;
   object-fit: cover;
   background: var(--color-surface);
 }

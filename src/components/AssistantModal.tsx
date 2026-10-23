@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react'
-import { Send, ArrowUpRight, ShieldCheck } from 'lucide-react'
+import { Send, ArrowUpRight, ShieldCheck, Sparkles, Bot, User, Trash2 } from 'lucide-react'
 import { Modal } from './Modal'
 import { useAppData } from '../hooks/useAppData'
 import { processAssistantQuery, type AssistantMessage } from '../services/assistant/localAssistant'
@@ -13,18 +13,44 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
   {
     id: 'welcome',
     sender: 'assistant',
-    text: '¡Hola! Soy tu Asistente LifeKeeper. Conozco tu bóveda de forma 100% privada y en tu dispositivo. ¿En qué te puedo ayudar hoy?',
+    text: '¡Hola! Soy tu **Asistente LifeKeeper**. Conozco tu bóveda de forma 100% privada y local en tu dispositivo.\n\n¿Qué querés consultar hoy?',
     timestamp: 'Ahora',
   },
 ]
 
 const QUICK_PROMPTS = [
-  '¿Cuánto gasté este mes?',
-  '¿Qué pastillas tengo que tomar hoy?',
-  '¿Cuánta agua tomé hoy?',
-  '¿Cómo está el puntaje de mi bóveda?',
-  'Resumen general',
+  { label: '📊 ¿Cuánto gasté este mes?', query: '¿Cuánto gasté este mes?' },
+  { label: '💊 ¿Qué pastillas tomo hoy?', query: '¿Qué pastillas tomo hoy?' },
+  { label: '💧 ¿Cuánta agua tomé?', query: '¿Cuánta agua tomé hoy?' },
+  { label: '⚖️ ¿Cómo está mi peso e IMC?', query: '¿Cómo está mi peso o IMC?' },
+  { label: '🔐 ¿Mis claves están seguras?', query: '¿Tengo contraseñas débiles?' },
+  { label: '🗓️ ¿Qué tengo pendiente hoy?', query: '¿Qué recordatorios tengo hoy?' },
+  { label: '📋 Resumen general', query: 'Haceme un resumen general' },
 ]
+
+/**
+ * Renderiza texto enriquecido con soporte simple de **negritas** y listas con viñetas.
+ */
+function renderFormattedMessage(content: string) {
+  const lines = content.split('\n')
+
+  return lines.map((line, lineIdx) => {
+    // Parser simple de **negrita**
+    const parts = line.split(/(\*\*.*?\*\*)/g)
+    const formattedLine = parts.map((part, partIdx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={partIdx} style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+      }
+      return part
+    })
+
+    return (
+      <div key={lineIdx} style={{ minHeight: line.trim() ? 'auto' : '0.5rem', margin: '0.15rem 0' }}>
+        {formattedLine}
+      </div>
+    )
+  })
+}
 
 export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const { data } = useAppData()
@@ -32,6 +58,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -39,7 +66,10 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
 
   useEffect(() => {
     if (open) {
-      setTimeout(scrollToBottom, 100)
+      setTimeout(() => {
+        scrollToBottom()
+        inputRef.current?.focus()
+      }, 150)
     }
   }, [open, messages, isTyping])
 
@@ -63,7 +93,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       const response = processAssistantQuery(text, data)
       setMessages((prev) => [...prev, response])
       setIsTyping(false)
-    }, 250)
+    }, 200)
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -76,162 +106,289 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     onClose()
   }
 
+  const clearChat = () => {
+    setMessages(INITIAL_MESSAGES)
+  }
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Asistente LifeKeeper"
       subtitle="Inteligencia semántica local · Cifrado en tu dispositivo"
-      maxWidth="620px"
+      maxWidth="680px"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', height: '480px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '520px', gap: '0.75rem' }}>
+        {/* Banner de Privacidad */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            padding: '0.4rem 0.75rem',
-            background: 'var(--color-surface-sunken)',
-            borderRadius: 'var(--radius-md)',
+            justifyContent: 'space-between',
+            padding: '0.5rem 0.875rem',
+            background: 'rgba(14, 165, 233, 0.08)',
+            border: '1px solid rgba(14, 165, 233, 0.2)',
+            borderRadius: 'var(--radius-lg)',
             fontSize: '0.75rem',
-            color: 'var(--color-text-muted)',
-            marginBottom: '0.75rem',
+            color: 'var(--color-text-secondary)',
           }}
         >
-          <ShieldCheck size={14} color="var(--color-success)" />
-          <span>Tus consultas se procesan 100% en local en tu navegador. Nada sale a la nube.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShieldCheck size={16} color="var(--color-accent-cyan)" />
+            <span>Consultas procesadas 100% en local. Nada sale a servidores externos.</span>
+          </div>
+          {messages.length > 1 && (
+            <button
+              type="button"
+              onClick={clearChat}
+              title="Limpiar conversación"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0.2rem',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
 
-        {/* Historial de mensajes */}
+        {/* Historial de Mensajes */}
         <div
           style={{
             flex: 1,
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.75rem',
-            paddingRight: '0.25rem',
+            gap: '1rem',
+            padding: '0.5rem 0.25rem',
           }}
         >
           {messages.map((m) => {
             const isUser = m.sender === 'user'
+
             return (
               <div
                 key={m.id}
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: isUser ? 'flex-end' : 'flex-start',
-                  maxWidth: '88%',
+                  gap: '0.625rem',
                   alignSelf: isUser ? 'flex-end' : 'flex-start',
+                  maxWidth: '85%',
+                  flexDirection: isUser ? 'row-reverse' : 'row',
                 }}
               >
+                {/* Avatar Icon */}
                 <div
                   style={{
-                    padding: '0.75rem 1rem',
-                    borderRadius: 'var(--radius-lg)',
-                    background: isUser ? 'var(--color-accent-blue)' : 'var(--color-surface-sunken)',
-                    color: isUser ? '#ffffff' : 'var(--color-text-primary)',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.5',
-                    whiteSpace: 'pre-line',
-                    wordBreak: 'break-word',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    background: isUser
+                      ? 'var(--color-accent-blue)'
+                      : 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
+                    color: '#ffffff',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
                   }}
                 >
-                  {m.text}
+                  {isUser ? <User size={16} /> : <Bot size={17} />}
                 </div>
 
-                {m.action && (
-                  <button
-                    type="button"
-                    className="secondary-button"
+                {/* Burbuja de contenido */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+                  <div
                     style={{
-                      fontSize: '0.75rem',
-                      padding: '0.25rem 0.6rem',
-                      marginTop: '0.35rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
+                      padding: '0.85rem 1.125rem',
+                      borderRadius: isUser ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                      background: isUser
+                        ? 'linear-gradient(135deg, var(--color-accent-blue), #2563eb)'
+                        : 'var(--color-surface-hover)',
+                      border: isUser ? 'none' : '1px solid var(--color-border)',
+                      color: isUser ? '#ffffff' : 'var(--color-text-primary)',
+                      fontSize: '0.875rem',
+                      lineHeight: '1.6',
+                      wordBreak: 'break-word',
+                      boxShadow: 'var(--shadow-sm)',
                     }}
-                    onClick={() => handleActionClick(m.action!.hash)}
                   >
-                    <span>{m.action.label}</span>
-                    <ArrowUpRight size={12} />
-                  </button>
-                )}
+                    {renderFormattedMessage(m.text)}
+                  </div>
 
-                <span
-                  style={{
-                    fontSize: '0.6875rem',
-                    color: 'var(--color-text-muted)',
-                    marginTop: '0.2rem',
-                    padding: '0 0.25rem',
-                  }}
-                >
-                  {m.timestamp}
-                </span>
+                  {/* Botón de acción contextual */}
+                  {m.action && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '0.35rem 0.75rem',
+                        marginTop: '0.4rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        borderRadius: '20px',
+                      }}
+                      onClick={() => handleActionClick(m.action!.hash)}
+                    >
+                      <span>{m.action.label}</span>
+                      <ArrowUpRight size={13} />
+                    </button>
+                  )}
+
+                  <span
+                    style={{
+                      fontSize: '0.6875rem',
+                      color: 'var(--color-text-muted)',
+                      marginTop: '0.25rem',
+                      padding: '0 0.25rem',
+                    }}
+                  >
+                    {m.timestamp}
+                  </span>
+                </div>
               </div>
             )
           })}
 
+          {/* Indicador de escritura animado */}
           {isTyping && (
-            <div
-              style={{
-                alignSelf: 'flex-start',
-                padding: '0.5rem 0.85rem',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--color-surface-sunken)',
-                fontSize: '0.8125rem',
-                color: 'var(--color-text-muted)',
-              }}
-            >
-              Consultando tu bóveda...
+            <div style={{ display: 'flex', gap: '0.625rem', alignSelf: 'flex-start' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
+                  color: '#ffffff',
+                }}
+              >
+                <Sparkles size={16} />
+              </div>
+              <div
+                style={{
+                  padding: '0.65rem 1rem',
+                  borderRadius: '4px 16px 16px 16px',
+                  background: 'var(--color-surface-hover)',
+                  border: '1px solid var(--color-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--color-accent-cyan)',
+                    display: 'inline-block',
+                    animation: 'pulse 1s infinite alternate',
+                  }}
+                />
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--color-accent-blue)',
+                    display: 'inline-block',
+                    animation: 'pulse 1s infinite alternate 0.2s',
+                  }}
+                />
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--color-accent-purple)',
+                    display: 'inline-block',
+                    animation: 'pulse 1s infinite alternate 0.4s',
+                  }}
+                />
+              </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Sugerencias rápidas */}
+        {/* Sugerencias Rápidas tipo Chips */}
         <div
           style={{
             display: 'flex',
-            gap: '0.35rem',
+            gap: '0.4rem',
             overflowX: 'auto',
-            padding: '0.5rem 0',
+            padding: '0.25rem 0',
             scrollbarWidth: 'none',
           }}
         >
-          {QUICK_PROMPTS.map((prompt) => (
+          {QUICK_PROMPTS.map((p) => (
             <button
-              key={prompt}
+              key={p.query}
               type="button"
-              className="chip"
-              style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
-              onClick={() => handleSend(prompt)}
+              className="secondary-button"
+              style={{
+                fontSize: '0.75rem',
+                whiteSpace: 'nowrap',
+                padding: '0.35rem 0.75rem',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                background: 'var(--color-surface-sunken)',
+                border: '1px solid var(--color-border)',
+              }}
+              onClick={() => handleSend(p.query)}
             >
-              {prompt}
+              {p.label}
             </button>
           ))}
         </div>
 
-        {/* Input box */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+        {/* Input bar flotante moderno */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Preguntale a tu bóveda (ej. ¿cuánto gasté este mes?)..."
-            style={{ flex: 1 }}
-            autoFocus
+            placeholder="Escribile a tu bóveda (ej. ¿cuánto gasté?, ¿qué pastillas tomo?)..."
+            style={{
+              flex: 1,
+              borderRadius: '24px',
+              padding: '0.75rem 1.25rem',
+              background: 'var(--color-surface-sunken)',
+              border: '1px solid var(--color-border-strong)',
+              color: 'var(--color-text-primary)',
+              fontSize: '0.875rem',
+            }}
           />
           <button
             type="submit"
             className="primary-button"
             disabled={!input.trim()}
-            style={{ padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            style={{
+              borderRadius: '50%',
+              width: '42px',
+              height: '42px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+            title="Enviar mensaje"
           >
-            <Send size={15} />
-            <span>Enviar</span>
+            <Send size={16} />
           </button>
         </form>
       </div>
