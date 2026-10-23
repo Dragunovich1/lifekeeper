@@ -1,9 +1,24 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react'
-import { Send, ArrowUpRight, ShieldCheck, Sparkles, Bot, User, Trash2, Cpu } from 'lucide-react'
+import {
+  Send,
+  ArrowUpRight,
+  ShieldCheck,
+  Sparkles,
+  User,
+  Trash2,
+  Cpu,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react'
 import { Modal } from './Modal'
 import { useAppData } from '../hooks/useAppData'
 import { processAssistantQuery, type AssistantMessage } from '../services/assistant/localAssistant'
-import { checkOllamaStatus, queryOllama, type OllamaStatus } from '../services/assistant/ollamaClient'
+import {
+  checkOllamaStatus,
+  queryOllamaStream,
+  streamTextTypewriter,
+  type OllamaStatus,
+} from '../services/assistant/ollamaClient'
 
 interface AssistantModalProps {
   open: boolean
@@ -104,6 +119,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const [messages, setMessages] = useState<AssistantMessage[]>(INITIAL_MESSAGES)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({
     online: false,
     models: [],
@@ -128,64 +144,86 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         inputRef.current?.focus()
       }, 150)
     }
-  }, [open, messages, isTyping])
+  }, [open])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isTyping])
 
   const handleSend = async (userText: string) => {
     const text = userText.trim()
-    if (!text) return
+    if (!text || isTyping) return
+
+    const timeStr = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 
     const userMsg: AssistantMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
       text,
-      timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: timeStr,
     }
 
-    setMessages((prev) => [...prev, userMsg])
+    const assistantMsgId = `asst-${Date.now()}`
+    const placeholderMsg: AssistantMessage = {
+      id: assistantMsgId,
+      sender: 'assistant',
+      text: '',
+      timestamp: timeStr,
+    }
+
+    setMessages((prev) => [...prev, userMsg, placeholderMsg])
     setInput('')
     setIsTyping(true)
 
-    // Intento 1: LLM Real en Servidor (Ollama)
+    // Intento 1: Streaming en tiempo real con Ollama
     if (ollamaStatus.online && ollamaStatus.activeModel) {
       try {
         const history = messages
-          .filter((m) => m.id !== 'welcome')
+          .filter((m) => m.id !== 'welcome' && m.id !== assistantMsgId)
           .map((m) => ({
             role: m.sender,
             content: m.text,
           }))
 
-        const llmResponse = await queryOllama(text, history, data, ollamaStatus.activeModel)
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-${Date.now()}`,
-            sender: 'assistant',
-            text: llmResponse,
-            timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        await queryOllamaStream(
+          text,
+          history,
+          data,
+          ollamaStatus.activeModel,
+          (_chunk, fullText) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantMsgId ? { ...m, text: fullText } : m)),
+            )
           },
-        ])
+        )
         setIsTyping(false)
         return
       } catch (err) {
-        console.warn('Ollama falló o está ocupado, usando fallback semántico local:', err)
+        console.warn('Ollama streaming falló, pasando a fallback semántico local:', err)
       }
     }
 
-    // Intento 2: Fallback semántico local
+    // Intento 2: Fallback semántico local con efecto máquina de escribir palabra a palabra
     try {
       const response = await processAssistantQuery(text, data)
-      setMessages((prev) => [...prev, response])
+      await streamTextTypewriter(response.text, (currentText) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId ? { ...m, text: currentText, action: response.action } : m,
+          ),
+        )
+      })
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err-${Date.now()}`,
-          sender: 'assistant',
-          text: 'Ocurrió un error al procesar tu consulta. Por favor probá nuevamente.',
-          timestamp: new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-        },
-      ])
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? {
+                ...m,
+                text: 'Ocurrió un error al procesar tu consulta. Por favor probá nuevamente.',
+              }
+            : m,
+        ),
+      )
     } finally {
       setIsTyping(false)
     }
@@ -206,6 +244,8 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   }
 
   const isLlmActive = ollamaStatus.online && Boolean(ollamaStatus.activeModel)
+  const userAvatar = data.profile.avatar
+  const userName = data.profile.nickName || data.profile.fullName || 'Usuario'
 
   return (
     <Modal
@@ -217,14 +257,27 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           ? `Motor LLM Local (${ollamaStatus.activeModel}) · Cifrado Zero-Knowledge`
           : 'Inteligencia semántica local · Cifrado Zero-Knowledge · Meteorología en vivo'
       }
-      maxWidth="840px"
+      maxWidth={isExpanded ? '96vw' : '880px'}
+      className={isExpanded ? 'is-expanded' : ''}
+      headerActions={
+        <button
+          type="button"
+          className="pref-modal-action-btn"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          title={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
+          aria-label={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
+        >
+          {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
+      }
     >
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          height: 'min(620px, 78vh)',
+          height: isExpanded ? 'calc(94vh - 120px)' : 'min(640px, 78vh)',
           gap: '0.75rem',
+          transition: 'height 0.25s ease',
         }}
       >
         {/* Banner de Estado del Motor */}
@@ -241,14 +294,13 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             color: 'var(--color-text-secondary)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {isLlmActive ? (
               <>
                 <Cpu size={16} color="var(--color-success)" />
-                <span style={{ fontWeight: 500, color: 'var(--color-success)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--color-success)', fontSize: '0.78125rem' }}>
                   LLM Local Activo ({ollamaStatus.activeModel})
                 </span>
-                <span style={{ opacity: 0.8 }}>· Razonamiento natural en tu servidor Dell</span>
               </>
             ) : (
               <>
@@ -281,8 +333,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           )}
         </div>
 
-        {/* Historial de Mensajes */}
+        {/* Historial de Mensajes con Scrollbar Oculta */}
         <div
+          className="app-chat-scroll"
           style={{
             flex: 1,
             minHeight: 0,
@@ -291,10 +344,16 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             flexDirection: 'column',
             gap: '1.1rem',
             padding: '0.5rem 0.5rem 0.5rem 0.25rem',
+            scrollbarWidth: 'none',
           }}
         >
           {messages.map((m) => {
             const isUser = m.sender === 'user'
+
+            // Si está vacío (mientras arranca el primer token del stream), mostramos un indicador de carga sutil
+            if (!isUser && !m.text && isTyping) {
+              return null
+            }
 
             return (
               <div
@@ -308,27 +367,40 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                   flexDirection: isUser ? 'row-reverse' : 'row',
                 }}
               >
-                {/* Avatar Icon */}
+                {/* Avatar */}
                 <div
                   style={{
-                    width: '34px',
-                    height: '34px',
+                    width: '36px',
+                    height: '36px',
                     borderRadius: '50%',
+                    overflow: 'hidden',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
-                    background: isUser
-                      ? 'var(--color-accent-blue)'
-                      : isLlmActive
-                      ? 'linear-gradient(135deg, #10b981, #06b6d4)'
-                      : 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
-                    color: '#ffffff',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+                    boxShadow: isUser ? '0 2px 8px rgba(0, 0, 0, 0.25)' : '0 2px 10px rgba(0, 200, 255, 0.25)',
+                    border: isUser ? '1.5px solid rgba(255, 255, 255, 0.15)' : '1.5px solid rgba(14, 165, 233, 0.4)',
+                    background: isUser ? 'var(--color-accent-blue)' : '#07111f',
                     marginTop: '2px',
                   }}
                 >
-                  {isUser ? <User size={16} /> : isLlmActive ? <Cpu size={18} /> : <Bot size={18} />}
+                  {isUser ? (
+                    userAvatar ? (
+                      <img
+                        src={userAvatar}
+                        alt={userName}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                      />
+                    ) : (
+                      <User size={18} color="#ffffff" />
+                    )
+                  ) : (
+                    <img
+                      src="/brand/assistant.png"
+                      alt="Asistente LifeKeeper"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                    />
+                  )}
                 </div>
 
                 {/* Burbuja de contenido */}
@@ -398,25 +470,26 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             )
           })}
 
-          {/* Indicador de escritura animado */}
-          {isTyping && (
+          {/* Indicador de escritura animado (cuando todavía no llegó el primer token) */}
+          {isTyping && messages[messages.length - 1]?.text === '' && (
             <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'flex-start' }}>
               <div
                 style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '36px',
+                  height: '36px',
                   borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: isLlmActive
-                    ? 'linear-gradient(135deg, #10b981, #06b6d4)'
-                    : 'linear-gradient(135deg, var(--color-accent-cyan), var(--color-accent-purple))',
-                  color: '#ffffff',
+                  overflow: 'hidden',
                   flexShrink: 0,
+                  boxShadow: '0 2px 10px rgba(0, 200, 255, 0.25)',
+                  border: '1.5px solid rgba(14, 165, 233, 0.4)',
+                  background: '#07111f',
                 }}
               >
-                <Sparkles size={16} />
+                <img
+                  src="/brand/assistant.png"
+                  alt="Asistente LifeKeeper"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                />
               </div>
               <div
                 style={{
@@ -429,6 +502,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                   gap: '0.45rem',
                 }}
               >
+                <Sparkles size={14} color="var(--color-accent-cyan)" />
                 <span
                   style={{
                     width: '7px',
@@ -465,14 +539,15 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Sugerencias Rápidas tipo Chips */}
+        {/* Sugerencias Rápidas tipo Chips con Scroll Oculto */}
         <div
+          className="app-chat-scroll"
           style={{
             display: 'flex',
             gap: '0.5rem',
             overflowX: 'auto',
             padding: '0.35rem 0',
-            scrollbarWidth: 'thin',
+            scrollbarWidth: 'none',
           }}
         >
           {QUICK_PROMPTS.map((p) => (
@@ -506,7 +581,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               isLlmActive
-                ? 'Preguntale a tu LLM local lo que quieras (interpretación libre y natural)...'
+                ? 'Escribile a tu LLM local (interpretación natural y fluida)...'
                 : 'Preguntale a tu asistente (ej. ¿va a llover hoy?, mi historia clínica, ¿cuánto gasté?)...'
             }
             style={{
@@ -522,7 +597,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           <button
             type="submit"
             className="primary-button"
-            disabled={!input.trim()}
+            disabled={!input.trim() || isTyping}
             style={{
               borderRadius: '50%',
               width: '44px',

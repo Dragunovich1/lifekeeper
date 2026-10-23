@@ -156,13 +156,14 @@ export interface ChatHistoryItem {
 }
 
 /**
- * Envía la conversación a Ollama y retorna la respuesta generada por el LLM.
+ * Envía la conversación a Ollama y transmite los tokens en tiempo real palabra a palabra.
  */
-export async function queryOllama(
+export async function queryOllamaStream(
   userQuery: string,
   history: ChatHistoryItem[],
   data: AppData,
   modelName: string,
+  onChunk: (chunk: string, fullText: string) => void,
 ): Promise<string> {
   let weather: WeatherData | null = null
   try {
@@ -173,7 +174,7 @@ export async function queryOllama(
 
   const systemPrompt = buildVaultSystemPrompt(data, weather)
 
-  // Tomamos hasta los últimos 6 mensajes del historial para no saturar la ventana de contexto
+  // Tomamos hasta los últimos 6 mensajes del historial
   const recentHistory = history.slice(-6).map((h) => ({
     role: h.role,
     content: h.content,
@@ -191,7 +192,7 @@ export async function queryOllama(
     body: JSON.stringify({
       model: modelName,
       messages,
-      stream: false,
+      stream: true,
       options: {
         temperature: 0.7,
         num_predict: 600,
@@ -203,13 +204,72 @@ export async function queryOllama(
     throw new Error(`Error en Ollama (${response.status}): ${response.statusText}`)
   }
 
-  const result = (await response.json()) as {
-    message?: { content: string }
+  if (!response.body) {
+    throw new Error('Respuesta sin stream de Ollama')
   }
 
-  if (!result.message?.content) {
-    throw new Error('Respuesta vacía recibida desde Ollama')
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let fullText = ''
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      try {
+        const json = JSON.parse(trimmed) as {
+          message?: { content?: string }
+          done?: boolean
+        }
+        if (json.message?.content) {
+          fullText += json.message.content
+          onChunk(json.message.content, fullText)
+        }
+      } catch {
+        // buffer incomplete chunk
+      }
+    }
   }
 
-  return result.message.content.trim()
+  if (buffer.trim()) {
+    try {
+      const json = JSON.parse(buffer.trim()) as {
+        message?: { content?: string }
+      }
+      if (json.message?.content) {
+        fullText += json.message.content
+        onChunk(json.message.content, fullText)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return fullText.trim()
+}
+
+/**
+ * Efecto máquina de escribir palabra a palabra para respuestas locales/fallback.
+ */
+export async function streamTextTypewriter(
+  fullText: string,
+  onProgress: (currentText: string) => void,
+  intervalMs = 25,
+): Promise<void> {
+  const tokens = fullText.split(/(\s+)/)
+  let current = ''
+  for (let i = 0; i < tokens.length; i += 2) {
+    const piece = tokens.slice(i, i + 2).join('')
+    current += piece
+    onProgress(current)
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
 }

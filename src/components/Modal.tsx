@@ -14,6 +14,7 @@ export interface ModalProps {
   maxWidth?: number | string
   className?: string
   ariaLabel?: string
+  headerActions?: ReactNode
 }
 
 export const Modal = ({
@@ -27,6 +28,7 @@ export const Modal = ({
   maxWidth,
   className = '',
   ariaLabel,
+  headerActions,
 }: ModalProps) => {
   const titleId = useId()
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -79,15 +81,18 @@ export const Modal = ({
             <h2 id={titleId}>{title}</h2>
             {subtitle ? <p className="pref-modal-subtitle">{subtitle}</p> : null}
           </div>
-          <button
-            ref={closeRef}
-            type="button"
-            className="pref-modal-close"
-            onClick={onClose}
-            aria-label="Cerrar ventana"
-          >
-            <X size={18} aria-hidden />
-          </button>
+          <div className="pref-modal-header-actions">
+            {headerActions}
+            <button
+              ref={closeRef}
+              type="button"
+              className="pref-modal-close"
+              onClick={onClose}
+              aria-label="Cerrar ventana"
+            >
+              <X size={18} aria-hidden />
+            </button>
+          </div>
         </header>
 
         <div className="pref-modal-body" ref={bodyRef}>

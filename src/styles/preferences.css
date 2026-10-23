@@ -233,6 +233,53 @@ html.has-fx .auth-layout {
   color: var(--color-error);
 }
 
+.pref-modal.is-expanded {
+  max-width: 96vw !important;
+  width: 96vw !important;
+  max-height: 94vh !important;
+  height: 94vh !important;
+}
+
+.pref-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.pref-modal-action-btn {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.pref-modal-action-btn:hover {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-blue);
+  color: var(--color-accent-blue);
+}
+
+.app-chat-scroll {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.app-chat-scroll::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .pref-modal-body {
   display: grid;
   align-content: start;
