@@ -85,14 +85,24 @@ function renderFormattedMessage(content: string) {
                 gap: '0.5rem',
                 paddingLeft: trimmed.startsWith('  ') ? '1.25rem' : '0.25rem',
                 lineHeight: '1.55',
+                minWidth: 0,
+                width: '100%',
               }}
             >
               <span style={{ color: 'var(--color-accent-cyan)', fontSize: '0.85rem', flexShrink: 0, marginTop: '0.1rem' }}>
                 •
               </span>
-              <span style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
                 {renderedText}
-              </span>
+              </div>
             </div>
           )
         }
@@ -102,8 +112,11 @@ function renderFormattedMessage(content: string) {
             key={lineIdx}
             style={{
               lineHeight: '1.55',
-              overflowWrap: 'break-word',
+              overflowWrap: 'anywhere',
               wordBreak: 'break-word',
+              whiteSpace: 'pre-wrap',
+              width: '100%',
+              minWidth: 0,
             }}
           >
             {renderedText}
@@ -257,8 +270,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           ? `Motor LLM Local (${ollamaStatus.activeModel}) · Cifrado Zero-Knowledge`
           : 'Inteligencia semántica local · Cifrado Zero-Knowledge · Meteorología en vivo'
       }
-      maxWidth={isExpanded ? '96vw' : '880px'}
-      className={isExpanded ? 'is-expanded' : ''}
+      className={`assistant-modal ${isExpanded ? 'is-expanded' : ''}`.trim()}
       headerActions={
         <button
           type="button"
@@ -275,9 +287,10 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          height: isExpanded ? 'calc(94vh - 120px)' : 'min(640px, 78vh)',
+          height: '100%',
+          flex: 1,
+          minHeight: 0,
           gap: '0.75rem',
-          transition: 'height 0.25s ease',
         }}
       >
         {/* Banner de Estado del Motor */}
@@ -350,7 +363,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           {messages.map((m) => {
             const isUser = m.sender === 'user'
 
-            // Si está vacío (mientras arranca el primer token del stream), mostramos un indicador de carga sutil
+            // Si está vacío (mientras arranca el primer token del stream), no mostramos burbuja vacía
             if (!isUser && !m.text && isTyping) {
               return null
             }
@@ -362,8 +375,8 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                   display: 'flex',
                   gap: '0.75rem',
                   alignSelf: isUser ? 'flex-end' : 'flex-start',
-                  maxWidth: isUser ? '82%' : '90%',
-                  width: 'auto',
+                  maxWidth: isUser ? '85%' : '100%',
+                  width: '100%',
                   flexDirection: isUser ? 'row-reverse' : 'row',
                 }}
               >
@@ -411,6 +424,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                     alignItems: isUser ? 'flex-end' : 'flex-start',
                     minWidth: 0,
                     flex: 1,
+                    maxWidth: isUser ? '100%' : 'calc(100% - 48px)',
                   }}
                 >
                   <div
@@ -424,11 +438,12 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                       color: isUser ? '#ffffff' : 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                       lineHeight: '1.6',
-                      overflowWrap: 'break-word',
+                      overflowWrap: 'anywhere',
                       wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
                       boxShadow: 'var(--shadow-sm)',
-                      width: 'fit-content',
-                      maxWidth: '100%',
+                      width: '100%',
+                      boxSizing: 'border-box',
                     }}
                   >
                     {renderFormattedMessage(m.text)}
