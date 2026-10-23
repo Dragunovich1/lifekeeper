@@ -11,7 +11,6 @@ import {
   Moon,
   Palette,
   Settings,
-  Sparkles,
   Sun,
   UserRound,
   X,
@@ -403,18 +402,6 @@ export const Header = ({
         </div>
 
         <div className="app-header-actions">
-          <button
-            type="button"
-            className="app-header-icon"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('lifekeeper:open-assistant'))
-            }}
-            aria-label="Abrir Asistente IA"
-            title="Asistente LifeKeeper (Ctrl+J)"
-          >
-            <Sparkles size={18} aria-hidden style={{ color: 'var(--color-accent-blue)' }} />
-          </button>
-
           <button
             ref={alertsBtnRef}
             type="button"

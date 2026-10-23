@@ -10,6 +10,8 @@ import { wipeSensitiveSessionData } from './services/crypto/memorySanitizer'
 import { useAppData } from './hooks/useAppData'
 import { Loading } from './components/Loading'
 import { Footer } from './components/Footer'
+import { FloatingAssistant } from './components/FloatingAssistant'
+import { AssistantModal } from './components/AssistantModal'
 import { navigation } from './navigation'
 import { PageScrollbar } from './scrollbar/PageScrollbar'
 import { useScrollActivity } from './scrollbar/useScrollActivity'
@@ -153,6 +155,27 @@ const VaultApp = () => {
     }
   }, [preferences.autoLockMinutes, lock])
 
+  const [assistantOpen, setAssistantOpen] = useState(false)
+
+  useEffect(() => {
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'j') {
+        event.preventDefault()
+        setAssistantOpen((prev) => !prev)
+      }
+    }
+    const onAssistantOpen = () => {
+      setAssistantOpen(true)
+    }
+
+    window.addEventListener('keydown', onGlobalKeyDown)
+    window.addEventListener('lifekeeper:open-assistant', onAssistantOpen)
+    return () => {
+      window.removeEventListener('keydown', onGlobalKeyDown)
+      window.removeEventListener('lifekeeper:open-assistant', onAssistantOpen)
+    }
+  }, [])
+
   const componentKey = activeSection ? `${activeSection}:${activeSubSection}` as SectionComponentKey : null
   const Component = useMemo(() => (componentKey ? sectionComponents[componentKey] : null) ?? DefaultSection, [componentKey])
 
@@ -185,6 +208,8 @@ const VaultApp = () => {
         </main>
       </div>
       <Footer />
+      <FloatingAssistant onClick={() => setAssistantOpen(true)} />
+      <AssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </div>
   )
 }

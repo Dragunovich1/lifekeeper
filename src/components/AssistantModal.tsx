@@ -2,11 +2,8 @@ import { useState, useRef, useEffect, type FormEvent } from 'react'
 import {
   Send,
   ArrowUpRight,
-  ShieldCheck,
-  Sparkles,
   User,
   Trash2,
-  Cpu,
   Maximize2,
   Minimize2,
 } from 'lucide-react'
@@ -272,15 +269,28 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       }
       className={`assistant-modal ${isExpanded ? 'is-expanded' : ''}`.trim()}
       headerActions={
-        <button
-          type="button"
-          className="pref-modal-action-btn"
-          onClick={() => setIsExpanded((prev) => !prev)}
-          title={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
-          aria-label={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
-        >
-          {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          {messages.length > 1 && (
+            <button
+              type="button"
+              className="pref-modal-action-btn"
+              onClick={clearChat}
+              title="Eliminar conversación"
+              aria-label="Eliminar conversación"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="pref-modal-action-btn"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            title={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
+            aria-label={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
+          >
+            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+          </button>
+        </div>
       }
     >
       <div
@@ -293,59 +303,6 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           gap: '0.75rem',
         }}
       >
-        {/* Banner de Estado del Motor */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.6rem 1rem',
-            background: isLlmActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(14, 165, 233, 0.08)',
-            border: isLlmActive ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(14, 165, 233, 0.2)',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: '0.75rem',
-            color: 'var(--color-text-secondary)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {isLlmActive ? (
-              <>
-                <Cpu size={16} color="var(--color-success)" />
-                <span style={{ fontWeight: 600, color: 'var(--color-success)', fontSize: '0.78125rem' }}>
-                  LLM Local Activo ({ollamaStatus.activeModel})
-                </span>
-              </>
-            ) : (
-              <>
-                <ShieldCheck size={16} color="var(--color-accent-cyan)" />
-                <span>Consultas procesadas 100% en tu servidor/dispositivo. Bóveda cifrada.</span>
-              </>
-            )}
-          </div>
-          {messages.length > 1 && (
-            <button
-              type="button"
-              onClick={clearChat}
-              title="Limpiar conversación"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                fontSize: '0.75rem',
-                padding: '0.2rem 0.4rem',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <Trash2 size={13} />
-              <span>Limpiar</span>
-            </button>
-          )}
-        </div>
-
         {/* Historial de Mensajes con Scrollbar Oculta */}
         <div
           className="app-chat-scroll"
@@ -517,37 +474,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                   gap: '0.45rem',
                 }}
               >
-                <Sparkles size={14} color="var(--color-accent-cyan)" />
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: 'var(--color-accent-cyan)',
-                    display: 'inline-block',
-                    animation: 'pulse 1s infinite alternate',
-                  }}
-                />
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: 'var(--color-accent-blue)',
-                    display: 'inline-block',
-                    animation: 'pulse 1s infinite alternate 0.2s',
-                  }}
-                />
-                <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: 'var(--color-accent-purple)',
-                    display: 'inline-block',
-                    animation: 'pulse 1s infinite alternate 0.4s',
-                  }}
-                />
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+                <span className="typing-dot" />
               </div>
             </div>
           )}

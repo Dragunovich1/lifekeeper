@@ -43,7 +43,6 @@ import {
   X,
 } from 'lucide-react'
 import { Modal } from '../../components/Modal'
-import { AssistantModal } from '../../components/AssistantModal'
 import { VaultScoreCard } from '../../components/VaultScoreCard'
 import { fetchAirQuality, type AirQualityData } from '../../services/api'
 import { useAppData } from '../../hooks/useAppData'
@@ -419,8 +418,6 @@ export const DashboardSection = () => {
     pendingTasksCount,
     search,
   } = useInsights()
-
-  const [assistantOpen, setAssistantOpen] = useState(false)
 
   const thisMonthWorkoutsCount = useMemo(() => {
     const list = data.personal.workouts ?? []
@@ -853,26 +850,18 @@ export const DashboardSection = () => {
         event.preventDefault()
         searchInputRef.current?.focus()
         openSearchDropdown()
-      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'j') {
-        event.preventDefault()
-        setAssistantOpen((prev) => !prev)
       }
     }
     const onCustomOpen = () => {
       searchInputRef.current?.focus()
       openSearchDropdown()
     }
-    const onAssistantOpen = () => {
-      setAssistantOpen(true)
-    }
 
     window.addEventListener('keydown', onGlobalKeyDown)
     window.addEventListener('lifekeeper:open-command-palette', onCustomOpen)
-    window.addEventListener('lifekeeper:open-assistant', onAssistantOpen)
     return () => {
       window.removeEventListener('keydown', onGlobalKeyDown)
       window.removeEventListener('lifekeeper:open-command-palette', onCustomOpen)
-      window.removeEventListener('lifekeeper:open-assistant', onAssistantOpen)
     }
   }, [openSearchDropdown])
 
@@ -1654,7 +1643,7 @@ export const DashboardSection = () => {
         </a>
       </div>
 
-      <VaultScoreCard onOpenAssistant={() => setAssistantOpen(true)} />
+      <VaultScoreCard />
 
       <section className="panel dashboard-insights" aria-label="Centro de atención e insights">
         <div className="panel-header">
@@ -2021,11 +2010,6 @@ export const DashboardSection = () => {
           </div>
         </form>
       </Modal>
-
-      <AssistantModal
-        open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-      />
     </div>
   )
 }

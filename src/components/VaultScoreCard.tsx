@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { ShieldCheck, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
+import { ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react'
 import { computeVaultHealthScore, type VaultHealthScoreResult } from '../utils/vaultScore'
 import { useAppData } from '../hooks/useAppData'
 
 interface VaultScoreCardProps {
-  onOpenAssistant: () => void
+  onOpenAssistant?: () => void
 }
 
-export const VaultScoreCard = ({ onOpenAssistant }: VaultScoreCardProps) => {
+export const VaultScoreCard = ({ onOpenAssistant: _onOpenAssistant }: VaultScoreCardProps) => {
   const { data } = useAppData()
   const [expanded, setExpanded] = useState(false)
   const result: VaultHealthScoreResult = computeVaultHealthScore(data)
@@ -49,15 +49,6 @@ export const VaultScoreCard = ({ onOpenAssistant }: VaultScoreCardProps) => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <button
-            type="button"
-            className="primary-button"
-            style={{ fontSize: '0.8125rem', padding: '0.35rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            onClick={onOpenAssistant}
-          >
-            <Sparkles size={14} />
-            <span>Asistente IA</span>
-          </button>
           <button
             type="button"
             className="secondary-button"
