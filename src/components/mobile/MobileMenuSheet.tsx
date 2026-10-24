@@ -10,6 +10,7 @@ import {
   Palette,
   Settings,
   Share2,
+  Sparkles,
   UserRound,
   X,
 } from 'lucide-react'
@@ -22,6 +23,7 @@ interface MobileMenuSheetProps {
   onOpenSettings: () => void
   onOpenAppearance: () => void
   onOpenShare: () => void
+  onOpenAssistant: () => void
   onLock: () => void
 }
 
@@ -32,6 +34,7 @@ export const MobileMenuSheet = ({
   onOpenSettings,
   onOpenAppearance,
   onOpenShare,
+  onOpenAssistant,
   onLock,
 }: MobileMenuSheetProps) => {
   if (!isOpen) return null
@@ -60,6 +63,31 @@ export const MobileMenuSheet = ({
             <X size={18} />
           </button>
         </div>
+
+        {/* Asistente Rápido */}
+        <button
+          className="mobile-sheet-card"
+          onClick={() => handleItemClick(onOpenAssistant)}
+          style={{
+            width: '100%',
+            marginBottom: '12px',
+            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(99, 102, 241, 0.15) 100%)',
+            borderColor: 'rgba(56, 189, 248, 0.3)',
+          }}
+        >
+          <div
+            className="mobile-sheet-card-icon"
+            style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}
+          >
+            <Sparkles size={20} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="mobile-sheet-card-label" style={{ color: '#38bdf8' }}>
+              Asistente LifeKeeper
+            </div>
+            <div className="mobile-sheet-card-sub">Consultas y sugerencias inteligentes</div>
+          </div>
+        </button>
 
         {/* 1. Vida Personal */}
         <div className="mobile-sheet-section-title">Vida Personal</div>

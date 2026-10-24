@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Bell, ChevronLeft, Moon, Sun, UserRound } from 'lucide-react'
+import { Bell, ChevronLeft, Moon, Sparkles, Sun, UserRound } from 'lucide-react'
 import type { NavSection, NavSubSection } from '../../navigation'
 import { usePreferences } from '../../preferences/context'
 import { triggerHaptic } from '../../services/platform'
@@ -12,6 +12,7 @@ interface MobileTopBarProps {
   onNavigate: (section: string, subSection: string) => void
   onOpenAlerts: () => void
   onOpenProfile: () => void
+  onOpenAssistant: () => void
   criticalCount: number
   warningCount: number
   userName?: string
@@ -26,6 +27,7 @@ export const MobileTopBar = ({
   onNavigate,
   onOpenAlerts,
   onOpenProfile,
+  onOpenAssistant,
   criticalCount,
   warningCount,
   avatarSrc,
@@ -95,6 +97,19 @@ export const MobileTopBar = ({
 
         {/* Right side: Quick actions */}
         <div className="mobile-top-actions">
+          <button
+            className="mobile-icon-btn mobile-assistant-top-btn"
+            onClick={() => {
+              triggerHaptic('light')
+              onOpenAssistant()
+            }}
+            aria-label="Abrir Asistente LifeKeeper"
+            title="Asistente"
+            style={{ color: '#38bdf8' }}
+          >
+            <Sparkles size={18} />
+          </button>
+
           <button
             className="mobile-icon-btn"
             onClick={handleToggleTheme}

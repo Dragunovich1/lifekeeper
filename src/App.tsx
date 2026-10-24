@@ -258,6 +258,7 @@ const VaultApp = () => {
           }
           onOpenAlerts={() => setAlertsOpen(true)}
           onOpenProfile={() => navigateTo('profile', 'settings')}
+          onOpenAssistant={() => setAssistantOpen(true)}
           criticalCount={criticalCount}
           warningCount={warningCount}
           userName={userName}
@@ -289,6 +290,7 @@ const VaultApp = () => {
           onOpenSettings={() => setPreferencesModal('settings')}
           onOpenAppearance={() => setPreferencesModal('appearance')}
           onOpenShare={() => setShareOpen(true)}
+          onOpenAssistant={() => setAssistantOpen(true)}
           onLock={handleLock}
         />
 
@@ -314,7 +316,6 @@ const VaultApp = () => {
         />
         <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
 
-        <FloatingAssistant onClick={() => setAssistantOpen(true)} />
         <AssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       </div>
     )
