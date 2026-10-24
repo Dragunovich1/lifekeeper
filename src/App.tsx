@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import './styles/app.css'
 import './styles/themes.css'
+import './styles/mobile.css'
 import { AuthGate } from './components/AuthGate'
 import { BackgroundFX } from './components/BackgroundFX'
 import { Header } from './components/Header'
@@ -17,6 +18,17 @@ import { PageScrollbar } from './scrollbar/PageScrollbar'
 import { useScrollActivity } from './scrollbar/useScrollActivity'
 import { usePreferences } from './preferences/context'
 import { PreferencesProvider } from './preferences/PreferencesProvider'
+import { useMobileLayout } from './hooks/useMobileLayout'
+import { useSwipeGesture } from './hooks/useSwipeGesture'
+import { MobileTopBar } from './components/mobile/MobileTopBar'
+import { MobileBottomNav } from './components/mobile/MobileBottomNav'
+import { MobileMenuSheet } from './components/mobile/MobileMenuSheet'
+import { configureNativeStatusBar } from './services/platform'
+import { ShareModal } from './components/ShareModal'
+import { SettingsModal } from './components/SettingsModal'
+import { AppearanceModal } from './components/AppearanceModal'
+import { AlertsPopover } from './components/AlertsPopover'
+import { useInsights } from './hooks/useInsights'
 
 type MainSectionKey = (typeof navigation)[number]['key']
 type SubSectionKey = (typeof navigation)[number]['subSections'][number]['key']
@@ -75,9 +87,24 @@ const DefaultSection = () => <DashboardSection />
 const VaultApp = () => {
   const { data, lock } = useAppData()
   const { preferences } = usePreferences()
+  const { isMobile } = useMobileLayout()
+  const { insights, criticalCount, warningCount, infoCount } = useInsights()
+
   const [activeSection, setActiveSection] = useState<MainSectionKey | null>(null)
   const [activeSubSection, setActiveSubSection] = useState<SubSectionKey>('settings')
   const initialStartSection = useRef(preferences.startSection)
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [preferencesModal, setPreferencesModal] = useState<'settings' | 'appearance' | null>(null)
+  const [alertsOpen, setAlertsOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const alertsBtnRef = useRef<HTMLButtonElement | null>(null)
+  const contentRef = useRef<HTMLElement | null>(null)
+
+  // Configure Native Android Status Bar according to theme
+  useEffect(() => {
+    void configureNativeStatusBar(preferences.mode === 'dark')
+  }, [preferences.mode])
 
   const navigateTo = (section: MainSectionKey | null, sub?: SubSectionKey) => {
     setActiveSection(section)
@@ -92,6 +119,40 @@ const VaultApp = () => {
       window.location.hash = ''
     }
   }
+
+  // Swipe navigation between sub-sections on mobile
+  const handleSwipeLeft = () => {
+    if (!activeSection) return
+    const currentNav = navigation.find(n => n.key === activeSection)
+    if (!currentNav || currentNav.subSections.length <= 1) return
+    const currentIndex = currentNav.subSections.findIndex(s => s.key === activeSubSection)
+    if (currentIndex >= 0 && currentIndex < currentNav.subSections.length - 1) {
+      const nextSub = currentNav.subSections[currentIndex + 1].key as SubSectionKey
+      navigateTo(activeSection, nextSub)
+    }
+  }
+
+  const handleSwipeRight = () => {
+    if (!activeSection) return
+    const currentNav = navigation.find(n => n.key === activeSection)
+    if (!currentNav || currentNav.subSections.length <= 1) return
+    const currentIndex = currentNav.subSections.findIndex(s => s.key === activeSubSection)
+    if (currentIndex > 0) {
+      const prevSub = currentNav.subSections[currentIndex - 1].key as SubSectionKey
+      navigateTo(activeSection, prevSub)
+    } else if (currentIndex === 0) {
+      navigateTo(null)
+    }
+  }
+
+  useSwipeGesture(
+    contentRef,
+    {
+      onSwipeLeft: handleSwipeLeft,
+      onSwipeRight: handleSwipeRight,
+    },
+    { enabled: isMobile && Boolean(activeSection) },
+  )
 
   // Deep-link via hash: #section:sub
   useEffect(() => {
@@ -182,6 +243,84 @@ const VaultApp = () => {
   const userName =
     data.profile.fullName || data.profile.nickName || data.health.emergencyProfile.fullName || 'Sin nombre'
 
+  // Mobile Smartphone Layout (APK or Touch/Small Screen)
+  if (isMobile) {
+    return (
+      <div className="mobile-app-shell">
+        <PrivacyCurtain enabled={preferences.privacyCurtain} />
+        <MobileTopBar
+          sections={navigation}
+          activeSection={activeSection}
+          activeSubSection={activeSubSection}
+          onHome={() => navigateTo(null)}
+          onNavigate={(section, subSection) =>
+            navigateTo(section as MainSectionKey, subSection as SubSectionKey)
+          }
+          onOpenAlerts={() => setAlertsOpen(true)}
+          onOpenProfile={() => navigateTo('profile', 'settings')}
+          criticalCount={criticalCount}
+          warningCount={warningCount}
+          userName={userName}
+          avatarSrc={data.profile.avatar}
+        />
+
+        <main className="mobile-main-content" ref={contentRef}>
+          <div className="page-container">
+            <Suspense fallback={<Loading message="Cargando sección..." />}>
+              <Component />
+            </Suspense>
+          </div>
+        </main>
+
+        <MobileBottomNav
+          activeSection={activeSection}
+          onHome={() => navigateTo(null)}
+          onNavigate={(section) => navigateTo(section as MainSectionKey)}
+          onOpenMenu={() => setMobileMenuOpen(true)}
+          isMenuOpen={mobileMenuOpen}
+        />
+
+        <MobileMenuSheet
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          onNavigate={(section, subSection) =>
+            navigateTo(section as MainSectionKey, subSection as SubSectionKey)
+          }
+          onOpenSettings={() => setPreferencesModal('settings')}
+          onOpenAppearance={() => setPreferencesModal('appearance')}
+          onOpenShare={() => setShareOpen(true)}
+          onLock={handleLock}
+        />
+
+        <AlertsPopover
+          open={alertsOpen}
+          anchorRef={alertsBtnRef}
+          insights={insights}
+          criticalCount={criticalCount}
+          warningCount={warningCount}
+          infoCount={infoCount}
+          onClose={() => setAlertsOpen(false)}
+        />
+        <SettingsModal
+          open={preferencesModal === 'settings'}
+          onClose={() => setPreferencesModal(null)}
+          userName={userName}
+          userEmail={data.profile.auth.email}
+          avatarSrc={data.profile.avatar}
+        />
+        <AppearanceModal
+          open={preferencesModal === 'appearance'}
+          onClose={() => setPreferencesModal(null)}
+        />
+        <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} />
+
+        <FloatingAssistant onClick={() => setAssistantOpen(true)} />
+        <AssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      </div>
+    )
+  }
+
+  // Desktop Web Layout (Unchanged)
   return (
     <div className="app-shell">
       <PrivacyCurtain enabled={preferences.privacyCurtain} />

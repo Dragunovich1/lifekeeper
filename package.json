@@ -12,6 +12,8 @@
   "dependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@types/uuid": "^10.0.0",
     "@vercel/speed-insights": "^1.2.0",
     "crypto-js": "^4.2.0",
