@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LifeKeeper</string>
+    <string name="title_activity_main">LifeKeeper</string>
+    <string name="package_name">lat.lifekeeper.app</string>
+    <string name="custom_url_scheme">lat.lifekeeper.app</string>
+</resources>

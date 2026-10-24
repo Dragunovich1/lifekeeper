@@ -29,5 +29,8 @@ dist-ssr
 lifekeeper_motion_fx_pack.html
 public/LifeKeeper_Logo_Kit/
 public/LifeKeeper_Logo_Kit_alt/
+*.apk
+*.aab
+
 
 
