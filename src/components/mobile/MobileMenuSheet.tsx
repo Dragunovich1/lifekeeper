@@ -10,7 +10,6 @@ import {
   Palette,
   Settings,
   Share2,
-  Sparkles,
   UserRound,
   X,
 } from 'lucide-react'
@@ -77,13 +76,31 @@ export const MobileMenuSheet = ({
         >
           <div
             className="mobile-sheet-card-icon"
-            style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}
+            style={{
+              padding: 0,
+              overflow: 'hidden',
+              borderRadius: '12px',
+              border: '1.5px solid rgba(56, 189, 248, 0.4)',
+              background: 'rgba(56, 189, 248, 0.2)',
+              position: 'relative',
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
           >
-            <Sparkles size={20} />
+            <img
+              src="/brand/assistant.png?v=2"
+              alt="Asistente LifeKeeper"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           </div>
           <div style={{ flex: 1 }}>
-            <div className="mobile-sheet-card-label" style={{ color: '#38bdf8' }}>
-              Asistente LifeKeeper
+            <div className="mobile-sheet-card-label" style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>Asistente LifeKeeper</span>
+              <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', fontWeight: 700 }}>IA</span>
             </div>
             <div className="mobile-sheet-card-sub">Consultas y sugerencias inteligentes</div>
           </div>

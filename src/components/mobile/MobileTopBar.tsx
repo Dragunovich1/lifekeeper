@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Bell, ChevronLeft, Moon, Sparkles, Sun, UserRound } from 'lucide-react'
+import { Bell, ChevronLeft, Moon, Sun, UserRound } from 'lucide-react'
 import type { NavSection, NavSubSection } from '../../navigation'
 import { usePreferences } from '../../preferences/context'
 import { triggerHaptic } from '../../services/platform'
@@ -104,10 +104,16 @@ export const MobileTopBar = ({
               onOpenAssistant()
             }}
             aria-label="Abrir Asistente LifeKeeper"
-            title="Asistente"
-            style={{ color: '#38bdf8' }}
+            title="Asistente LifeKeeper"
           >
-            <Sparkles size={18} />
+            <div className="mobile-assistant-avatar-wrapper">
+              <img
+                src="/brand/assistant.png?v=2"
+                alt="Asistente LifeKeeper"
+                className="mobile-assistant-avatar-img"
+              />
+              <span className="mobile-assistant-status-dot" aria-hidden />
+            </div>
           </button>
 
           <button
