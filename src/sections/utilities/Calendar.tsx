@@ -682,6 +682,68 @@ const buildEvents = (data: AppData, includeCompleted: boolean, currency: string 
     })
   })
 
+  // Sincronización del ciclo menstrual para usuarias
+  const cycle = data.health.menstrualCycle
+  if (data.profile.gender === 'Femenino' && cycle) {
+    const cycleEntries = cycle.entries || []
+    cycleEntries.forEach((entry) => {
+      events.push({
+        id: `cycle-${entry.id}`,
+        date: entry.startDate,
+        title: `🌸 Inicio de período menstrual${entry.flow ? ` (${entry.flow})` : ''}`,
+        description: entry.symptoms?.length ? `Síntomas: ${entry.symptoms.join(', ')}` : 'Período registrado',
+        category: 'salud',
+        targetHash: '#health:menstrual',
+      })
+      if (entry.endDate) {
+        events.push({
+          id: `cycle-end-${entry.id}`,
+          date: entry.endDate,
+          title: '🌸 Fin del período menstrual',
+          description: 'Fin del sangrado registrado',
+          category: 'salud',
+          targetHash: '#health:menstrual',
+        })
+      }
+    })
+
+    // Proyecciones estimadas de próximos ciclos y ovulación
+    if (cycleEntries.length > 0) {
+      const sorted = cycleEntries.slice().sort((a, b) => b.startDate.localeCompare(a.startDate))
+      const last = sorted[0]
+      const avgCycle = cycle.averageCycleDays || 28
+      const avgPeriod = cycle.averagePeriodDays || 5
+      let nextDate = new Date(last.startDate + 'T00:00:00')
+
+      for (let i = 1; i <= 3; i++) {
+        nextDate = new Date(nextDate.getTime() + avgCycle * 24 * 60 * 60 * 1000)
+        const nextKey = toLocalDateKey(nextDate)
+
+        events.push({
+          id: `pred-cycle-${i}`,
+          date: nextKey,
+          title: '🌸 Período menstrual estimado',
+          description: `Inicio previsto de ciclo (${avgPeriod} días de duración estimada)`,
+          category: 'salud',
+          targetHash: '#health:menstrual',
+        })
+
+        // Ovulación estimada: ~14 días antes del próximo período
+        const ovulationDate = new Date(nextDate.getTime() - 14 * 24 * 60 * 60 * 1000)
+        const ovulationKey = toLocalDateKey(ovulationDate)
+
+        events.push({
+          id: `pred-ovulation-${i}`,
+          date: ovulationKey,
+          title: '🌺 Ovulación estimada (pico fértil)',
+          description: 'Ventana de máxima probabilidad de fertilidad',
+          category: 'salud',
+          targetHash: '#health:menstrual',
+        })
+      }
+    }
+  }
+
   data.utilities.reminders.forEach((reminder) => {
     if (!includeCompleted && reminder.done) {
       return

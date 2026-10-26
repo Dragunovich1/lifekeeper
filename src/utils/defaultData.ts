@@ -21,6 +21,7 @@ const createEmptyUserProfile = (): UserProfile => ({
   birthDate: undefined,
   country: '',
   avatar: undefined,
+  gender: 'Masculino',
   auth: {
     username: '',
     email: '',
@@ -43,6 +44,12 @@ export const createEmptyAppData = (): AppData => ({
     emergencyProfile: createEmptyEmergencyProfile(),
     hydrationLogs: [],
     hydrationTargetMl: 2500,
+    menstrualCycle: {
+      enabled: false,
+      averageCycleDays: 28,
+      averagePeriodDays: 5,
+      entries: [],
+    },
   },
   diary: {
     entries: [],
@@ -58,6 +65,15 @@ export const createEmptyAppData = (): AppData => ({
     projects: [],
     vehicles: [],
     workouts: [],
+    nutrition: {
+      dailyLogs: [],
+      dailyGoals: {
+        calories: 2000,
+        proteinGrams: 140,
+        carbsGrams: 220,
+        fatsGrams: 60,
+      },
+    },
   },
   utilities: {
     reminders: [],
@@ -140,6 +156,17 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
         typeof data.health?.hydrationTargetMl === 'number'
           ? data.health.hydrationTargetMl
           : defaults.health.hydrationTargetMl,
+      menstrualCycle: data.health?.menstrualCycle
+        ? {
+            enabled: Boolean(data.health.menstrualCycle.enabled),
+            averageCycleDays: data.health.menstrualCycle.averageCycleDays || 28,
+            averagePeriodDays: data.health.menstrualCycle.averagePeriodDays || 5,
+            lastPeriodStart: data.health.menstrualCycle.lastPeriodStart,
+            entries: Array.isArray(data.health.menstrualCycle.entries)
+              ? [...data.health.menstrualCycle.entries]
+              : [],
+          }
+        : defaults.health.menstrualCycle,
     },
     diary: {
       entries: data.diary?.entries ? [...data.diary.entries] : [],
@@ -155,6 +182,14 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
       projects: data.personal?.projects ? [...data.personal.projects] : [],
       vehicles: data.personal?.vehicles ? [...data.personal.vehicles] : [],
       workouts: data.personal?.workouts ? [...data.personal.workouts] : [],
+      nutrition: data.personal?.nutrition
+        ? {
+            dailyLogs: Array.isArray(data.personal.nutrition.dailyLogs)
+              ? [...data.personal.nutrition.dailyLogs]
+              : [],
+            dailyGoals: data.personal.nutrition.dailyGoals || defaults.personal.nutrition?.dailyGoals,
+          }
+        : defaults.personal.nutrition,
     },
     utilities: {
       reminders: data.utilities?.reminders ? [...data.utilities.reminders] : [],

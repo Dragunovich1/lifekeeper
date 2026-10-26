@@ -13,7 +13,7 @@ import { Loading } from './components/Loading'
 import { Footer } from './components/Footer'
 import { FloatingAssistant } from './components/FloatingAssistant'
 import { AssistantModal } from './components/AssistantModal'
-import { navigation } from './navigation'
+import { navigation, getNavigation } from './navigation'
 import { PageScrollbar } from './scrollbar/PageScrollbar'
 import { useScrollActivity } from './scrollbar/useScrollActivity'
 import { usePreferences } from './preferences/context'
@@ -41,6 +41,7 @@ const LazyHealthMedications = lazy(() => import('./sections/health/index').then(
 const LazyHealthHydration = lazy(() => import('./sections/health/index').then(m => ({ default: m.HydrationSection })))
 const LazyHealthHistory = lazy(() => import('./sections/health/index').then(m => ({ default: m.ClinicalHistorySection })))
 const LazyHealthEmergency = lazy(() => import('./sections/health/index').then(m => ({ default: m.EmergencySection })))
+const LazyHealthMenstrual = lazy(() => import('./sections/health/index').then(m => ({ default: m.MenstrualCycleSection })))
 const LazyDiaryNotes = lazy(() => import('./sections/diary/index').then(m => ({ default: m.DiaryNotesSection })))
 const LazyDiaryMood = lazy(() => import('./sections/diary/index').then(m => ({ default: m.MoodTrackerSection })))
 const LazyDiarySearch = lazy(() => import('./sections/diary/index').then(m => ({ default: m.DiarySearchExportSection })))
@@ -51,6 +52,7 @@ const LazyPersonalFinances = lazy(() => import('./sections/personal/index').then
 const LazyPersonalProjects = lazy(() => import('./sections/personal/index').then(m => ({ default: m.ProjectsSection })))
 const LazyPersonalVehicles = lazy(() => import('./sections/personal/index').then(m => ({ default: m.VehiclesSection })))
 const LazyPersonalWorkouts = lazy(() => import('./sections/personal/index').then(m => ({ default: m.WorkoutsSection })))
+const LazyPersonalNutrition = lazy(() => import('./sections/personal/index').then(m => ({ default: m.NutritionSection })))
 const LazyUtilitiesReminders = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.RemindersSection })))
 const LazyUtilitiesCalendar = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.CalendarSection })))
 const LazyUtilitiesBackups = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.BackupsSection })))
@@ -63,6 +65,7 @@ const sectionComponents = {
   'health:hydration': LazyHealthHydration,
   'health:history': LazyHealthHistory,
   'health:emergency': LazyHealthEmergency,
+  'health:menstrual': LazyHealthMenstrual,
   'diary:notes': LazyDiaryNotes,
   'diary:mood': LazyDiaryMood,
   'diary:search': LazyDiarySearch,
@@ -73,6 +76,7 @@ const sectionComponents = {
   'personal:projects': LazyPersonalProjects,
   'personal:vehicles': LazyPersonalVehicles,
   'personal:workouts': LazyPersonalWorkouts,
+  'personal:nutrition': LazyPersonalNutrition,
   'utilities:reminders': LazyUtilitiesReminders,
   'utilities:calendar': LazyUtilitiesCalendar,
   'utilities:backups': LazyUtilitiesBackups,
@@ -89,6 +93,8 @@ const VaultApp = () => {
   const { preferences } = usePreferences()
   const { isMobile } = useMobileLayout()
   const { insights, criticalCount, warningCount, infoCount } = useInsights()
+
+  const navSections = useMemo(() => getNavigation(data?.profile), [data?.profile])
 
   const [activeSection, setActiveSection] = useState<MainSectionKey | null>(null)
   const [activeSubSection, setActiveSubSection] = useState<SubSectionKey>('settings')
@@ -112,7 +118,7 @@ const VaultApp = () => {
       setActiveSubSection(sub)
       window.location.hash = `#${section}:${sub}`
     } else if (section) {
-      const first = navigation.find(n => n.key === section)?.subSections[0].key as SubSectionKey
+      const first = navSections.find(n => n.key === section)?.subSections[0].key as SubSectionKey
       setActiveSubSection(first)
       window.location.hash = `#${section}:${first}`
     } else {
@@ -123,7 +129,7 @@ const VaultApp = () => {
   // Swipe navigation between sub-sections on mobile
   const handleSwipeLeft = () => {
     if (!activeSection) return
-    const currentNav = navigation.find(n => n.key === activeSection)
+    const currentNav = navSections.find(n => n.key === activeSection)
     if (!currentNav || currentNav.subSections.length <= 1) return
     const currentIndex = currentNav.subSections.findIndex(s => s.key === activeSubSection)
     if (currentIndex >= 0 && currentIndex < currentNav.subSections.length - 1) {
@@ -134,7 +140,7 @@ const VaultApp = () => {
 
   const handleSwipeRight = () => {
     if (!activeSection) return
-    const currentNav = navigation.find(n => n.key === activeSection)
+    const currentNav = navSections.find(n => n.key === activeSection)
     if (!currentNav || currentNav.subSections.length <= 1) return
     const currentIndex = currentNav.subSections.findIndex(s => s.key === activeSubSection)
     if (currentIndex > 0) {
@@ -163,7 +169,7 @@ const VaultApp = () => {
         return
       }
       const [sec, sub] = raw.split(':') as [MainSectionKey, SubSectionKey]
-      const valid = navigation.find(n => n.key === sec)
+      const valid = navSections.find(n => n.key === sec)
       if (valid) {
         setActiveSection(sec)
         const hasSub = valid.subSections.some(s => s.key === sub)
@@ -173,7 +179,7 @@ const VaultApp = () => {
     window.addEventListener('hashchange', syncFromHash)
     syncFromHash()
     return () => window.removeEventListener('hashchange', syncFromHash)
-  }, [])
+  }, [navSections])
 
   // Retomar en la última sección visitada (si está configurado)
   useEffect(() => {
@@ -249,7 +255,7 @@ const VaultApp = () => {
       <div className="mobile-app-shell">
         <PrivacyCurtain enabled={preferences.privacyCurtain} />
         <MobileTopBar
-          sections={navigation}
+          sections={navSections}
           activeSection={activeSection}
           activeSubSection={activeSubSection}
           onHome={() => navigateTo(null)}
@@ -326,7 +332,7 @@ const VaultApp = () => {
     <div className="app-shell">
       <PrivacyCurtain enabled={preferences.privacyCurtain} />
       <Header
-        sections={navigation}
+        sections={navSections}
         activeSection={activeSection}
         activeSubSection={activeSubSection}
         onHome={() => navigateTo(null)}

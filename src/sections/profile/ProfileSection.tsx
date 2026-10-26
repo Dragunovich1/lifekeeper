@@ -1,11 +1,12 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { Dumbbell, HeartPulse, Info, Sparkles, ShieldCheck } from 'lucide-react'
+import { CalendarHeart, Dumbbell, HeartPulse, Info, Sparkles, ShieldCheck } from 'lucide-react'
 import { DatePicker } from '../../components/DatePicker'
 import { SectionHeader } from '../../components/SectionHeader'
+import { Select } from '../../components/Select'
 import { useAppData } from '../../hooks/useAppData'
 import { usePreferences } from '../../preferences/context'
-import type { UserProfile } from '../../types'
+import type { Gender, UserProfile } from '../../types'
 import { fromLocalDateOrDateTime, toLocalDateKey } from '../../utils/dates'
 import { downloadEmergencyKitPdf } from '../../services/crypto/emergencyKit'
 
@@ -18,6 +19,7 @@ interface ProfileFormState {
   birthDate: string
   country: string
   avatar?: string
+  gender: Gender
   heightCm: number | ''
   weightKg: number | ''
   auth: {
@@ -55,6 +57,7 @@ const toFormState = (profile: UserProfile): ProfileFormState => {
     birthDate: profile.birthDate ?? '',
     country: profile.country ?? '',
     avatar: profile.avatar,
+    gender: profile.gender || 'Masculino',
     heightCm: typeof profile.heightCm === 'number' && profile.heightCm > 0 ? profile.heightCm : '',
     weightKg: typeof profile.weightKg === 'number' && profile.weightKg > 0 ? profile.weightKg : '',
     auth: {
@@ -182,6 +185,7 @@ export const ProfileSection = () => {
             : undefined,
           country: formState.country || undefined,
           avatar: formState.avatar,
+          gender: formState.gender,
           heightCm:
             typeof formState.heightCm === 'number' && formState.heightCm > 0
               ? formState.heightCm
@@ -400,6 +404,19 @@ export const ProfileSection = () => {
                 placeholder={isImperial ? 'Ej. 165' : 'Ej. 72.5'}
               />
             </div>
+            <div className="field">
+              <label htmlFor="profile-gender">Género</label>
+              <Select
+                id="profile-gender"
+                value={formState.gender}
+                onChange={(val) => setFormState((prev) => ({ ...prev, gender: val as Gender }))}
+                options={[
+                  { value: 'Masculino', label: 'Masculino' },
+                  { value: 'Femenino', label: 'Femenino' },
+                ]}
+                ariaLabel="Género del usuario"
+              />
+            </div>
             <div className="field field-full">
               <label htmlFor="profile-bio">Reseña</label>
               <textarea
@@ -572,6 +589,65 @@ export const ProfileSection = () => {
                 </div>
               )}
             </div>
+
+            {formState.gender === 'Femenino' && (
+              <div
+                className="subpanel field-full"
+                style={{
+                  marginTop: '0.75rem',
+                  background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(129, 140, 248, 0.08) 100%)',
+                  border: '1px solid rgba(244, 63, 94, 0.25)',
+                  padding: '1.25rem',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '10px',
+                        background: 'rgba(244, 63, 94, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#f43f5e',
+                      }}
+                    >
+                      <CalendarHeart size={22} />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                          Gestión del Ciclo Menstrual & Salud Femenina
+                        </h4>
+                        <span className="badge" style={{ background: 'rgba(244, 63, 94, 0.2)', color: '#f43f5e', borderColor: 'rgba(244, 63, 94, 0.4)' }}>
+                          🌸 Activo
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                        Control de fases hormonales, predicción de ovulación, registro de síntomas y sincronización con el calendario.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    className="primary-button"
+                    href="#health:menstrual"
+                    style={{ fontSize: '0.8125rem', padding: '0.4rem 0.85rem' }}
+                  >
+                    🌸 Gestionar mi Ciclo ↗
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

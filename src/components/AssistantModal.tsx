@@ -9,7 +9,11 @@ import {
 } from 'lucide-react'
 import { Modal } from './Modal'
 import { useAppData } from '../hooks/useAppData'
-import { processAssistantQuery, type AssistantMessage } from '../services/assistant/localAssistant'
+import {
+  processAssistantQuery,
+  tryExecuteAssistantMutation,
+  type AssistantMessage,
+} from '../services/assistant/localAssistant'
 import {
   checkOllamaStatus,
   queryOllamaStream,
@@ -26,20 +30,23 @@ const INITIAL_MESSAGES: AssistantMessage[] = [
   {
     id: 'welcome',
     sender: 'assistant',
-    text: '¡Hola! Soy tu **Asistente Inteligente de LifeKeeper**.\n\nPodés preguntarme lo que quieras, como se te ocurra: sobre tu **salud e historia clínica**, **medicación**, **finanzas y gastos**, **si va a llover hoy o esta semana**, o pedirme consejos sobre tu día a día.\n\n¿En qué te puedo ayudar hoy?',
+    text: '¡Hola! Soy tu **Asistente Inteligente de LifeKeeper**.\n\nTengo contexto total de tu bóveda: tu **historia clínica y salud**, **nutrición y calorías**, **ciclo menstrual**, **entrenamientos (con biseries y dropsets)**, **finanzas**, y el **clima en tiempo real**.\n\n💬 **¡Además puedo cargar datos por vos!**\nProbá diciéndome:\n• *"Anotá que tomé 500ml de agua"*\n• *"Gasté $4500 en comida"*\n• *"Anotá que comí pollo con ensalada 350 kcal"*\n• *"Anotá una serie de press banca 80kg x 8 reps con dropset"*\n\n¿En qué te puedo ayudar hoy?',
     timestamp: 'Ahora',
   },
 ]
 
 const QUICK_PROMPTS = [
+  { label: '💧 Anotá 500ml de agua', query: 'Anotá que tomé 500ml de agua' },
+  { label: '🥗 ¿Cómo voy con las calorías?', query: '¿Cómo vengo con las calorías de hoy?' },
+  { label: '🏋️ Mis entrenamientos', query: '¿Qué entrené últimamente?' },
   { label: '🌦️ ¿Va a llover hoy?', query: '¿Va a llover hoy?' },
-  { label: '🌧️ ¿Lloverá esta semana?', query: '¿Va a llover esta semana?' },
   { label: '🩺 Mi historia clínica', query: 'Decime mi historia clínica' },
   { label: '📊 ¿Cuánto gasté este mes?', query: '¿Cuánto gasté este mes?' },
   { label: '💊 ¿Qué pastillas tomo hoy?', query: '¿Qué pastillas tomo hoy?' },
-  { label: '💧 ¿Cuánta agua tomé?', query: '¿Cuánta agua tomé hoy?' },
+  { label: '🌸 Mi ciclo menstrual', query: '¿En qué fase de mi ciclo menstrual estoy?' },
   { label: '🔐 ¿Mis claves están seguras?', query: '¿Tengo contraseñas débiles?' },
   { label: '🗓️ ¿Qué tengo que hacer hoy?', query: '¿Qué tengo que hacer hoy?' },
+  { label: '🏛️ Opciones de la app', query: '¿Qué opciones y secciones tiene la app?' },
   { label: '📋 Resumen general', query: 'Haceme un resumen general de mi bóveda' },
 ]
 
@@ -125,7 +132,7 @@ function renderFormattedMessage(content: string) {
 }
 
 export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
-  const { data } = useAppData()
+  const { data, updateData } = useAppData()
   const [messages, setMessages] = useState<AssistantMessage[]>(INITIAL_MESSAGES)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -185,7 +192,24 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     setInput('')
     setIsTyping(true)
 
-    // Intento 1: Streaming en tiempo real con Ollama
+    // Intento 1: Detección y ejecución inmediata de comandos de carga / mutación de datos
+    const mutationResult = tryExecuteAssistantMutation(text, data)
+    if (mutationResult) {
+      updateData(mutationResult.updater)
+      await streamTextTypewriter(mutationResult.message.text, (currentText) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? { ...m, text: currentText, action: mutationResult.message.action }
+              : m,
+          ),
+        )
+      })
+      setIsTyping(false)
+      return
+    }
+
+    // Intento 2: Streaming en tiempo real con Ollama
     if (ollamaStatus.online && ollamaStatus.activeModel) {
       try {
         const history = messages

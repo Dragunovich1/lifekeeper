@@ -80,6 +80,7 @@ export function buildVaultSystemPrompt(data: AppData, weather: WeatherData | nul
   // 1. Perfil y Biometría
   const p = data.profile
   const name = p.nickName || p.fullName || 'Usuario'
+  const gender = p.gender || 'Masculino'
   const weight = p.weightKg ? `${p.weightKg} kg` : 'Sin registrar'
   const height = p.heightCm ? `${p.heightCm} cm` : 'Sin registrar'
   const imc = p.weightKg && p.heightCm ? (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1) : null
@@ -92,13 +93,61 @@ export function buildVaultSystemPrompt(data: AppData, weather: WeatherData | nul
   const vaccines = data.health.vaccines
   const todayHydration = (data.health.hydrationLogs ?? []).find((l) => l.date === todayKey)
 
-  // 3. Finanzas del mes
+  // 2b. Ciclo Menstrual (si aplica)
+  let menstrualText = 'No aplica o sin registros.'
+  if (gender === 'Femenino' && data.health.menstrualCycle?.entries?.length) {
+    const cycle = data.health.menstrualCycle
+    const sorted = [...cycle.entries].sort((a, b) => b.startDate.localeCompare(a.startDate))
+    const last = sorted[0]
+    const diffDays = Math.max(0, Math.floor((now.getTime() - new Date(last.startDate + 'T00:00:00').getTime()) / 86400000))
+    const dayInCycle = (diffDays % cycle.averageCycleDays) + 1
+    menstrualText = `Ciclo: día ${dayInCycle} de ${cycle.averageCycleDays}. Último inicio: ${formatDate(last.startDate)} (flujo: ${last.flow || 'moderado'}). Período prom.: ${cycle.averagePeriodDays} días.`
+  }
+
+  // 3. Nutrición de hoy
+  const nutrition = data.personal.nutrition
+  const todayNut = nutrition?.dailyLogs?.find((l) => l.date === todayKey)
+  let nutText = 'Sin comidas registradas hoy.'
+  if (todayNut && todayNut.meals.length > 0) {
+    let totKcal = 0
+    let totProt = 0
+    let totCarbs = 0
+    let totFat = 0
+    const foodList: string[] = []
+    for (const m of todayNut.meals) {
+      for (const f of m.foods) {
+        totKcal += f.calories
+        totProt += f.protein || 0
+        totCarbs += f.carbs || 0
+        totFat += f.fats || 0
+        foodList.push(`${f.name} (${f.calories} kcal)`)
+      }
+    }
+    const targetKcal = todayNut.targetCalories ?? nutrition?.dailyGoals?.calories ?? 2200
+    nutText = `${totKcal} kcal consumidas de ${targetKcal} kcal meta (${Math.round((totKcal / targetKcal) * 100)}%). Macros: Proteína ${totProt.toFixed(0)}g, Carbos ${totCarbs.toFixed(0)}g, Grasas ${totFat.toFixed(0)}g. Comidas: [${foodList.join(', ')}].`
+  }
+
+  // 3b. Entrenamientos
+  const workouts = data.personal.workouts ?? []
+  const lastWorkout = workouts.slice().sort((a, b) => b.date.localeCompare(a.date))[0]
+  let workoutText = 'Sin entrenamientos recientes.'
+  if (lastWorkout) {
+    const exList = lastWorkout.exercises
+      .map((e) => {
+        const setDetails = e.sets.map((s) => `${s.weight ?? 0}kg×${s.reps}${s.setType && s.setType !== 'normal' ? ` [${s.setType}]` : ''}${s.notes ? ` (${s.notes})` : ''}`).join(', ')
+        return `${e.name}: ${setDetails}`
+      })
+      .join('; ')
+    workoutText = `Última sesión: ${lastWorkout.title} (${lastWorkout.type}) el ${formatDate(lastWorkout.date)}. Ejercicios: ${exList}. Total sesiones mes: ${workouts.filter((w) => w.date.startsWith(currentMonth)).length}.`
+  }
+
+  // 4. Finanzas del mes
   const monthTxs = data.personal.finances.filter((t) => t.date.startsWith(currentMonth))
   const income = monthTxs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const expense = monthTxs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const balance = income - expense
 
-  // 4. Recordatorios
+  // 5. Recordatorios
   const activeReminders = data.utilities.reminders.filter((r) => !r.done)
   const todayReminders = activeReminders.filter((r) => toLocalDateKey(r.dateTime) === todayKey)
 
@@ -119,8 +168,11 @@ Entendés cualquier pregunta, modismo, falta de ortografía o frase informal sin
 
 DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
 - Fecha y hora actual: ${now.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}, ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}.
-- Usuario: ${name} (Email: ${p.auth?.email || 'No registrado'})
+- Usuario: ${name} (Género: ${gender}, Email: ${p.auth?.email || 'No registrado'})
 - Biometría: Peso: ${weight}, Altura: ${height}${imc ? `, IMC: ${imc}` : ''}.
+- Ciclo Menstrual: ${menstrualText}
+- Nutrición y Dieta (Hoy): ${nutText}
+- Actividad Física y Entrenamientos: ${workoutText}
 - Ficha Médica / Historia Clínica:
   • Grupo sanguíneo: ${ep.bloodType || 'Sin especificar'}
   • Alergias: ${ep.allergies?.length ? ep.allergies.join(', ') : 'Ninguna registrada'}
@@ -141,6 +193,14 @@ DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
 - Seguridad: ${data.security.passwordEntries.length} contraseñas resguardadas (cifrado local Zero-Knowledge).
 - Vehículos: ${data.personal.vehicles.map((v) => `${v.vehicleName} (${v.serviceType}, km: ${v.mileage || 'N/A'})`).join('; ') || 'Ninguno'}
 - Clima y Meteorología en Tiempo Real: ${weatherText}
+
+MAPA DE OPCIONES DE LA APLICACIÓN LIFEKEEPER:
+• Dashboard: Resumen biométrico, clima en vivo, puntaje de bóveda y accesos.
+• Salud: Ficha de Emergencia SOS, Historial Clínico, Medicación y tomas, Consultas, Vacunas, Hidratación diaria, Ciclo Menstrual (para mujeres).
+• Personal: Nutrición y macronutrientes, Entrenamientos con series/biseries/dropsets, Finanzas y balances, Vehículos, Proyectos, Documentos.
+• Diario: Bitácora de reflexiones y estados de ánimo con cifrado.
+• Seguridad: Gestor de contraseñas, Notas seguras, Copias de respaldo cifradas.
+• Utilidades: Recordatorios, Calendario integrado (muestra entrenamientos, eventos y ciclos menstruales), Herramientas biométricas.
 
 REGLAS DE RESPUESTA:
 1. Sé conciso, directo y útil. No escribas introducciones vacías como "Claro, con gusto te ayudo".

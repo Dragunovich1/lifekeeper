@@ -199,6 +199,8 @@ export interface UserAuthInfo {
   securityAnswerHint?: string
 }
 
+export type Gender = 'Masculino' | 'Femenino'
+
 export interface UserProfile {
   firstName?: string
   lastName?: string
@@ -208,6 +210,7 @@ export interface UserProfile {
   birthDate?: string
   country?: string
   avatar?: string
+  gender?: Gender
   heightCm?: number
   weightKg?: number
   auth: UserAuthInfo
@@ -220,6 +223,25 @@ export interface HydrationLogEntry {
   targetMl?: number
 }
 
+export type MenstrualFlow = 'ligero' | 'moderado' | 'abundante' | 'manchado'
+
+export interface MenstrualCycleEntry {
+  id: string
+  startDate: string // YYYY-MM-DD
+  endDate?: string // YYYY-MM-DD
+  flow?: MenstrualFlow
+  symptoms?: string[] // e.g. 'Cólicos', 'Dolor de cabeza', 'Cambios de humor', 'Hinchazón', 'Fatiga'
+  notes?: string
+}
+
+export interface MenstrualCycleData {
+  enabled: boolean
+  averageCycleDays: number // e.g. 28
+  averagePeriodDays: number // e.g. 5
+  lastPeriodStart?: string
+  entries: MenstrualCycleEntry[]
+}
+
 export interface HealthData {
   vaccines: VaccineRecord[]
   consultations: MedicalConsultation[]
@@ -228,6 +250,7 @@ export interface HealthData {
   emergencyProfile: EmergencyProfile
   hydrationLogs?: HydrationLogEntry[]
   hydrationTargetMl?: number
+  menstrualCycle?: MenstrualCycleData
 }
 
 export interface DiaryData {
@@ -250,11 +273,15 @@ export type WorkoutType =
   | 'flexibilidad'
   | 'otro'
 
+export type WorkoutSetType = 'normal' | 'warmup' | 'dropset' | 'biserie' | 'failure'
+
 export interface WorkoutExerciseSet {
   reps: number
   weight?: number
   rpe?: number
   done?: boolean
+  setType?: WorkoutSetType
+  notes?: string
 }
 
 export interface WorkoutExercise {
@@ -276,12 +303,52 @@ export interface WorkoutSession {
   notes?: string
 }
 
+export interface MealFoodItem {
+  id: string
+  name: string
+  calories: number
+  protein?: number // grams
+  carbs?: number // grams
+  fats?: number // grams
+  portion?: string // e.g. "150g", "1 plato", "1 scoop"
+}
+
+export type MealType = 'desayuno' | 'almuerzo' | 'merienda' | 'cena' | 'snack' | 'suplemento'
+
+export interface MealEntry {
+  id: string
+  type: MealType
+  time?: string // HH:mm
+  foods: MealFoodItem[]
+  notes?: string
+}
+
+export interface DailyNutritionLog {
+  id: string
+  date: string // YYYY-MM-DD
+  meals: MealEntry[]
+  waterMl?: number
+  targetCalories?: number
+  notes?: string
+}
+
+export interface NutritionData {
+  dailyLogs: DailyNutritionLog[]
+  dailyGoals?: {
+    calories: number
+    proteinGrams: number
+    carbsGrams: number
+    fatsGrams: number
+  }
+}
+
 export interface PersonalData {
   finances: FinanceTransaction[]
   budgets?: Record<string, number>
   projects: Project[]
   vehicles: VehicleService[]
   workouts?: WorkoutSession[]
+  nutrition?: NutritionData
 }
 
 export interface UtilitiesData {

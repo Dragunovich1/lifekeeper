@@ -2,6 +2,7 @@ import {
   Briefcase,
   Calendar,
   CalendarClock,
+  CalendarHeart,
   Car,
   DollarSign,
   Dumbbell,
@@ -11,9 +12,11 @@ import {
   Settings,
   Share2,
   UserRound,
+  Utensils,
   X,
 } from 'lucide-react'
 import { triggerHaptic } from '../../services/platform'
+import { useAppData } from '../../hooks/useAppData'
 
 interface MobileMenuSheetProps {
   isOpen: boolean
@@ -36,7 +39,10 @@ export const MobileMenuSheet = ({
   onOpenAssistant,
   onLock,
 }: MobileMenuSheetProps) => {
+  const { data } = useAppData()
   if (!isOpen) return null
+
+  const isFemale = data?.profile?.gender === 'Femenino'
 
   const handleItemClick = (action: () => void) => {
     triggerHaptic('light')
@@ -160,6 +166,34 @@ export const MobileMenuSheet = ({
               <div className="mobile-sheet-card-sub">Rutinas físicas</div>
             </div>
           </button>
+
+          <button
+            className="mobile-sheet-card"
+            onClick={() => handleItemClick(() => onNavigate('personal', 'nutrition'))}
+          >
+            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+              <Utensils size={20} />
+            </div>
+            <div>
+              <div className="mobile-sheet-card-label">Nutrición</div>
+              <div className="mobile-sheet-card-sub">Calorías y comidas</div>
+            </div>
+          </button>
+
+          {isFemale && (
+            <button
+              className="mobile-sheet-card"
+              onClick={() => handleItemClick(() => onNavigate('health', 'menstrual'))}
+            >
+              <div className="mobile-sheet-card-icon" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e' }}>
+                <CalendarHeart size={20} />
+              </div>
+              <div>
+                <div className="mobile-sheet-card-label">Ciclo Menstrual</div>
+                <div className="mobile-sheet-card-sub">Fases y bienestar</div>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* 2. Utilidades */}

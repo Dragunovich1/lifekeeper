@@ -4,3 +4,5 @@ export { MedicationsSection } from './Medications'
 export { ClinicalHistorySection } from './ClinicalHistory'
 export { EmergencySection } from './Emergency'
 export { HydrationSection } from './Hydration'
+export { MenstrualCycleSection } from './MenstrualCycleSection'
+

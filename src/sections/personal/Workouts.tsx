@@ -17,6 +17,7 @@ import { usePreferences } from '../../preferences/context'
 import type {
   WorkoutExercise,
   WorkoutSession,
+  WorkoutSetType,
   WorkoutType,
 } from '../../types'
 import {
@@ -24,6 +25,14 @@ import {
   fromLocalDateOrDateTime,
   toLocalDateKey,
 } from '../../utils/dates'
+
+const WORKOUT_SET_TYPES: Array<{ value: WorkoutSetType; label: string; badge: string; color: string; bg: string }> = [
+  { value: 'normal', label: 'Normal', badge: 'Normal', color: 'var(--color-text-muted)', bg: 'rgba(255,255,255,0.06)' },
+  { value: 'biserie', label: '🔗 Biserie (Superset)', badge: 'Biserie', color: '#818cf8', bg: 'rgba(129, 140, 248, 0.15)' },
+  { value: 'dropset', label: '⚡ Drop Set', badge: 'Drop Set', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  { value: 'warmup', label: '🔥 Calentamiento', badge: 'Calent.', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)' },
+  { value: 'failure', label: '💥 Al Fallo', badge: 'Fallo', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
+]
 
 const WORKOUT_TYPES: Array<{ value: WorkoutType; label: string }> = [
   { value: 'fuerza', label: 'Fuerza / Hipertrofia' },
@@ -101,9 +110,9 @@ export const WorkoutsSection = () => {
       id: uuid(),
       name: clean,
       sets: [
-        { reps: 10, weight: 0, rpe: 8 },
-        { reps: 10, weight: 0, rpe: 8 },
-        { reps: 10, weight: 0, rpe: 8 },
+        { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
+        { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
+        { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
       ],
     }
     setFormState((prev) => ({
@@ -121,9 +130,9 @@ export const WorkoutsSection = () => {
       id: uuid(),
       name: clean,
       sets: [
-        { reps: 10, weight: 0, rpe: 8 },
-        { reps: 10, weight: 0, rpe: 8 },
-        { reps: 10, weight: 0, rpe: 8 },
+        { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
+        { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
+        { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
       ],
     }
     setEditFormState((prev) => ({
@@ -147,11 +156,13 @@ export const WorkoutsSection = () => {
         : Number(formState.distanceKm)
     }
 
-    // Normalizar pesos de ejercicios (si es imperial se almacenan convertidos o según la unidad)
+    // Normalizar pesos de ejercicios y preservar tipo de serie y notas
     const normalizedExercises = formState.exercises.map((ex) => ({
       ...ex,
       sets: ex.sets.map((s) => ({
         ...s,
+        setType: s.setType || 'normal',
+        notes: s.notes?.trim() || undefined,
         weight:
           typeof s.weight === 'number' && s.weight > 0
             ? isImperial
@@ -196,11 +207,13 @@ export const WorkoutsSection = () => {
           : session.distanceKm
         : ''
 
-    // Convertir pesos a lb si es imperial para el formulario
+    // Convertir pesos a lb si es imperial para el formulario y preservar tipo y notas
     const displayExercises = session.exercises.map((ex) => ({
       ...ex,
       sets: ex.sets.map((s) => ({
         ...s,
+        setType: s.setType || 'normal',
+        notes: s.notes || '',
         weight:
           typeof s.weight === 'number' && s.weight > 0
             ? isImperial
@@ -239,6 +252,8 @@ export const WorkoutsSection = () => {
       ...ex,
       sets: ex.sets.map((s) => ({
         ...s,
+        setType: s.setType || 'normal',
+        notes: s.notes?.trim() || undefined,
         weight:
           typeof s.weight === 'number' && s.weight > 0
             ? isImperial
@@ -659,90 +674,150 @@ export const WorkoutsSection = () => {
                     <table className="table" style={{ margin: 0, fontSize: '0.8125rem' }}>
                       <thead>
                         <tr>
-                          <th style={{ width: '60px' }}>Serie</th>
-                          <th>Repeticiones</th>
-                          <th>Carga ({weightUnit})</th>
-                          <th>Esfuerzo (RPE 1-10)</th>
-                          <th style={{ width: '40px' }}></th>
+                          <th style={{ width: '55px' }}>Serie</th>
+                          <th style={{ width: '135px' }}>Tipo</th>
+                          <th style={{ width: '85px' }}>Reps</th>
+                          <th style={{ width: '95px' }}>Carga ({weightUnit})</th>
+                          <th style={{ width: '75px' }}>RPE (1-10)</th>
+                          <th>Notas / Comentario de la serie</th>
+                          <th style={{ width: '35px' }}></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {exercise.sets.map((set, setIndex) => (
-                          <tr key={setIndex}>
-                            <td>
-                              <span className="badge badge-info">#{setIndex + 1}</span>
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="1"
-                                value={set.reps || ''}
-                                onChange={(e) => {
-                                  const repsVal = Number(e.target.value) || 0
-                                  setFormState((prev) => {
-                                    const nextExercises = [...prev.exercises]
-                                    nextExercises[exIndex].sets[setIndex].reps = repsVal
-                                    return { ...prev, exercises: nextExercises }
-                                  })
-                                }}
-                                style={{ width: '80px', padding: '0.25rem 0.5rem' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                value={set.weight ?? ''}
-                                onChange={(e) => {
-                                  const weightVal = Number(e.target.value) || 0
-                                  setFormState((prev) => {
-                                    const nextExercises = [...prev.exercises]
-                                    nextExercises[exIndex].sets[setIndex].weight = weightVal
-                                    return { ...prev, exercises: nextExercises }
-                                  })
-                                }}
-                                style={{ width: '90px', padding: '0.25rem 0.5rem' }}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="1"
-                                max="10"
-                                value={set.rpe ?? ''}
-                                onChange={(e) => {
-                                  const rpeVal = Number(e.target.value) || undefined
-                                  setFormState((prev) => {
-                                    const nextExercises = [...prev.exercises]
-                                    nextExercises[exIndex].sets[setIndex].rpe = rpeVal
-                                    return { ...prev, exercises: nextExercises }
-                                  })
-                                }}
-                                placeholder="8"
-                                style={{ width: '70px', padding: '0.25rem 0.5rem' }}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="tag-remove"
-                                onClick={() => {
-                                  setFormState((prev) => {
-                                    const nextExercises = [...prev.exercises]
-                                    nextExercises[exIndex].sets = nextExercises[
-                                      exIndex
-                                    ].sets.filter((_, sIdx) => sIdx !== setIndex)
-                                    return { ...prev, exercises: nextExercises }
-                                  })
-                                }}
-                                title="Eliminar serie"
-                              >
-                                ×
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {exercise.sets.map((set, setIndex) => {
+                          const currentTypeObj = WORKOUT_SET_TYPES.find((t) => t.value === (set.setType || 'normal'))
+                          return (
+                            <tr key={setIndex}>
+                              <td>
+                                <span
+                                  className="badge badge-info"
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    padding: '2px 6px',
+                                    background: currentTypeObj?.bg,
+                                    color: currentTypeObj?.color,
+                                    borderColor: currentTypeObj?.color,
+                                  }}
+                                >
+                                  #{setIndex + 1}
+                                </span>
+                              </td>
+                              <td>
+                                <select
+                                  value={set.setType || 'normal'}
+                                  onChange={(e) => {
+                                    const val = e.target.value as WorkoutSetType
+                                    setFormState((prev) => {
+                                      const nextExercises = [...prev.exercises]
+                                      nextExercises[exIndex].sets[setIndex].setType = val
+                                      return { ...prev, exercises: nextExercises }
+                                    })
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.25rem 0.35rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    color: 'inherit',
+                                    border: '1px solid rgba(255,255,255,0.12)',
+                                  }}
+                                >
+                                  {WORKOUT_SET_TYPES.map((t) => (
+                                    <option key={t.value} value={t.value}>
+                                      {t.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={set.reps || ''}
+                                  onChange={(e) => {
+                                    const repsVal = Number(e.target.value) || 0
+                                    setFormState((prev) => {
+                                      const nextExercises = [...prev.exercises]
+                                      nextExercises[exIndex].sets[setIndex].reps = repsVal
+                                      return { ...prev, exercises: nextExercises }
+                                    })
+                                  }}
+                                  style={{ width: '100%', padding: '0.25rem 0.5rem' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  step="0.5"
+                                  min="0"
+                                  value={set.weight ?? ''}
+                                  onChange={(e) => {
+                                    const weightVal = Number(e.target.value) || 0
+                                    setFormState((prev) => {
+                                      const nextExercises = [...prev.exercises]
+                                      nextExercises[exIndex].sets[setIndex].weight = weightVal
+                                      return { ...prev, exercises: nextExercises }
+                                    })
+                                  }}
+                                  style={{ width: '100%', padding: '0.25rem 0.5rem' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={set.rpe ?? ''}
+                                  onChange={(e) => {
+                                    const rpeVal = Number(e.target.value) || undefined
+                                    setFormState((prev) => {
+                                      const nextExercises = [...prev.exercises]
+                                      nextExercises[exIndex].sets[setIndex].rpe = rpeVal
+                                      return { ...prev, exercises: nextExercises }
+                                    })
+                                  }}
+                                  placeholder="8"
+                                  style={{ width: '100%', padding: '0.25rem 0.5rem' }}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={set.notes || ''}
+                                  onChange={(e) => {
+                                    const noteVal = e.target.value
+                                    setFormState((prev) => {
+                                      const nextExercises = [...prev.exercises]
+                                      nextExercises[exIndex].sets[setIndex].notes = noteVal
+                                      return { ...prev, exercises: nextExercises }
+                                    })
+                                  }}
+                                  placeholder="Ej. pausa 2s, al fallo, superset..."
+                                  style={{ width: '100%', minWidth: '140px', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                />
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="tag-remove"
+                                  onClick={() => {
+                                    setFormState((prev) => {
+                                      const nextExercises = [...prev.exercises]
+                                      nextExercises[exIndex].sets = nextExercises[
+                                        exIndex
+                                      ].sets.filter((_, sIdx) => sIdx !== setIndex)
+                                      return { ...prev, exercises: nextExercises }
+                                    })
+                                  }}
+                                  title="Eliminar serie"
+                                >
+                                  ×
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -760,11 +835,15 @@ export const WorkoutsSection = () => {
                               reps: 10,
                               weight: 0,
                               rpe: 8,
+                              setType: 'normal',
+                              notes: '',
                             }
                           nextExercises[exIndex].sets.push({
                             reps: lastSet.reps,
                             weight: lastSet.weight,
                             rpe: lastSet.rpe,
+                            setType: lastSet.setType ?? 'normal',
+                            notes: '',
                           })
                           return { ...prev, exercises: nextExercises }
                         })
@@ -903,15 +982,60 @@ export const WorkoutsSection = () => {
                             style={{ padding: '0.5rem 0.75rem', fontSize: '0.8125rem' }}
                           >
                             <strong>{ex.name}</strong>
-                            <div style={{ color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.35rem' }}>
                               {ex.sets.map((set, sIdx) => {
                                 const w = isImperial
                                   ? Math.round((set.weight || 0) * 2.20462)
                                   : set.weight || 0
+                                const typeObj = WORKOUT_SET_TYPES.find((t) => t.value === set.setType)
+                                const isSpecial = set.setType && set.setType !== 'normal'
                                 return (
-                                  <span key={sIdx} style={{ marginRight: '0.5rem' }}>
-                                    #{sIdx + 1}: {set.reps}x{w > 0 ? `${w}${weightUnit}` : 'bw'}
-                                  </span>
+                                  <div
+                                    key={sIdx}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      flexWrap: 'wrap',
+                                      gap: '0.35rem',
+                                      fontSize: '0.78rem',
+                                    }}
+                                  >
+                                    <span style={{ fontWeight: 600, color: 'var(--color-text-muted)', minWidth: '22px' }}>
+                                      #{sIdx + 1}
+                                    </span>
+                                    {isSpecial && typeObj ? (
+                                      <span
+                                        style={{
+                                          fontSize: '0.68rem',
+                                          padding: '1px 5px',
+                                          borderRadius: '4px',
+                                          background: typeObj.bg,
+                                          color: typeObj.color,
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {typeObj.label}
+                                      </span>
+                                    ) : null}
+                                    <span>
+                                      <strong>{set.reps}</strong> reps {w > 0 ? `× ${w} ${weightUnit}` : '(peso corporal)'}
+                                      {set.rpe ? ` · RPE ${set.rpe}` : ''}
+                                    </span>
+                                    {set.notes ? (
+                                      <span
+                                        style={{
+                                          fontSize: '0.72rem',
+                                          color: 'var(--color-text-muted)',
+                                          fontStyle: 'italic',
+                                          background: 'rgba(255,255,255,0.04)',
+                                          padding: '1px 6px',
+                                          borderRadius: '4px',
+                                        }}
+                                      >
+                                        💬 {set.notes}
+                                      </span>
+                                    ) : null}
+                                  </div>
                                 )
                               })}
                             </div>
@@ -1063,63 +1187,117 @@ export const WorkoutsSection = () => {
                   </button>
                 </div>
 
-                {exercise.sets.map((set, setIndex) => (
-                  <div
-                    key={setIndex}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.75rem', width: '25px' }}>#{setIndex + 1}</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={set.reps || ''}
-                      onChange={(e) => {
-                        const r = Number(e.target.value) || 0
-                        setEditFormState((prev) => {
-                          const n = [...prev.exercises]
-                          n[exIndex].sets[setIndex].reps = r
-                          return { ...prev, exercises: n }
-                        })
-                      }}
-                      placeholder="Reps"
-                      style={{ width: '70px', padding: '0.2rem 0.4rem' }}
-                    />
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={set.weight ?? ''}
-                      onChange={(e) => {
-                        const w = Number(e.target.value) || 0
-                        setEditFormState((prev) => {
-                          const n = [...prev.exercises]
-                          n[exIndex].sets[setIndex].weight = w
-                          return { ...prev, exercises: n }
-                        })
-                      }}
-                      placeholder={weightUnit}
-                      style={{ width: '80px', padding: '0.2rem 0.4rem' }}
-                    />
-                    <button
-                      type="button"
-                      className="tag-remove"
-                      onClick={() => {
-                        setEditFormState((prev) => {
-                          const n = [...prev.exercises]
-                          n[exIndex].sets = n[exIndex].sets.filter((_, sIdx) => sIdx !== setIndex)
-                          return { ...prev, exercises: n }
-                        })
+                {exercise.sets.map((set, setIndex) => {
+                  const currentTypeObj = WORKOUT_SET_TYPES.find((t) => t.value === (set.setType || 'normal'))
+                  return (
+                    <div
+                      key={setIndex}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'auto 110px 65px 75px 1fr auto',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        marginBottom: '0.35rem',
                       }}
                     >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                      <span
+                        className="badge badge-info"
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '1px 5px',
+                          background: currentTypeObj?.bg,
+                          color: currentTypeObj?.color,
+                          borderColor: currentTypeObj?.color,
+                        }}
+                      >
+                        #{setIndex + 1}
+                      </span>
+                      <select
+                        value={set.setType || 'normal'}
+                        onChange={(e) => {
+                          const val = e.target.value as WorkoutSetType
+                          setEditFormState((prev) => {
+                            const n = [...prev.exercises]
+                            n[exIndex].sets[setIndex].setType = val
+                            return { ...prev, exercises: n }
+                          })
+                        }}
+                        style={{
+                          padding: '0.2rem 0.3rem',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          background: 'rgba(255,255,255,0.06)',
+                          color: 'inherit',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                        }}
+                      >
+                        {WORKOUT_SET_TYPES.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min="1"
+                        value={set.reps || ''}
+                        onChange={(e) => {
+                          const r = Number(e.target.value) || 0
+                          setEditFormState((prev) => {
+                            const n = [...prev.exercises]
+                            n[exIndex].sets[setIndex].reps = r
+                            return { ...prev, exercises: n }
+                          })
+                        }}
+                        placeholder="Reps"
+                        style={{ padding: '0.2rem 0.35rem', fontSize: '0.75rem' }}
+                      />
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={set.weight ?? ''}
+                        onChange={(e) => {
+                          const w = Number(e.target.value) || 0
+                          setEditFormState((prev) => {
+                            const n = [...prev.exercises]
+                            n[exIndex].sets[setIndex].weight = w
+                            return { ...prev, exercises: n }
+                          })
+                        }}
+                        placeholder={weightUnit}
+                        style={{ padding: '0.2rem 0.35rem', fontSize: '0.75rem' }}
+                      />
+                      <input
+                        type="text"
+                        value={set.notes || ''}
+                        onChange={(e) => {
+                          const noteVal = e.target.value
+                          setEditFormState((prev) => {
+                            const n = [...prev.exercises]
+                            n[exIndex].sets[setIndex].notes = noteVal
+                            return { ...prev, exercises: n }
+                          })
+                        }}
+                        placeholder="Nota de serie..."
+                        style={{ padding: '0.2rem 0.35rem', fontSize: '0.75rem' }}
+                      />
+                      <button
+                        type="button"
+                        className="tag-remove"
+                        onClick={() => {
+                          setEditFormState((prev) => {
+                            const n = [...prev.exercises]
+                            n[exIndex].sets = n[exIndex].sets.filter((_, sIdx) => sIdx !== setIndex)
+                            return { ...prev, exercises: n }
+                          })
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )
+                })}
 
                 <button
                   type="button"
@@ -1128,8 +1306,8 @@ export const WorkoutsSection = () => {
                   onClick={() => {
                     setEditFormState((prev) => {
                       const n = [...prev.exercises]
-                      const last = exercise.sets[exercise.sets.length - 1] ?? { reps: 10, weight: 0 }
-                      n[exIndex].sets.push({ reps: last.reps, weight: last.weight })
+                      const last = exercise.sets[exercise.sets.length - 1] ?? { reps: 10, weight: 0, setType: 'normal', notes: '' }
+                      n[exIndex].sets.push({ reps: last.reps, weight: last.weight, setType: last.setType ?? 'normal', notes: '' })
                       return { ...prev, exercises: n }
                     })
                   }}
