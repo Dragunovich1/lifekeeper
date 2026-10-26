@@ -147,3 +147,19 @@ export const formatCurrency = (value: number, currency: string = 'ARS') => {
   const num = typeof value === 'number' && !Number.isNaN(value) ? value : 0
   return getCurrencyFormatter(currency).format(num)
 }
+
+export const formatCurrencyNoCents = (value: number, currency: string = 'ARS') => {
+  const num = typeof value === 'number' && !Number.isNaN(value) ? value : 0
+  const code = (currency || 'ARS').toUpperCase()
+  try {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: code,
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Math.round(num))
+  } catch {
+    return `$ ${Math.round(num).toLocaleString('es-AR')}`
+  }
+}

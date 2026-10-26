@@ -62,9 +62,11 @@ export const createEmptyAppData = (): AppData => ({
   personal: {
     finances: [],
     budgets: {},
+    debts: [],
     projects: [],
     vehicles: [],
     workouts: [],
+    workoutTemplates: [],
     nutrition: {
       dailyLogs: [],
       dailyGoals: {
@@ -179,9 +181,11 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
     personal: {
       finances: data.personal?.finances ? [...data.personal.finances] : [],
       budgets: data.personal?.budgets ? { ...data.personal.budgets } : {},
+      debts: data.personal?.debts ? [...data.personal.debts] : [],
       projects: data.personal?.projects ? [...data.personal.projects] : [],
       vehicles: data.personal?.vehicles ? [...data.personal.vehicles] : [],
       workouts: data.personal?.workouts ? [...data.personal.workouts] : [],
+      workoutTemplates: data.personal?.workoutTemplates ? [...data.personal.workoutTemplates] : [],
       nutrition: data.personal?.nutrition
         ? {
             dailyLogs: Array.isArray(data.personal.nutrition.dailyLogs)

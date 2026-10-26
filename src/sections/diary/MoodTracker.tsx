@@ -185,14 +185,12 @@ export const MoodTrackerSection = () => {
     }
   }, [entries])
 
-  const showMajorAlert = consecutiveLowDays >= 4 || consecutiveMalDays >= 3
+  // Más margen al usuario: no alertar ante 1 o 2 días aislados
+  const [tipDismissed, setTipDismissed] = useState(false)
+  const showMajorAlert = !tipDismissed && (consecutiveLowDays >= 6 || consecutiveMalDays >= 4)
   const showWellnessTip =
-    showMajorAlert ||
-    consecutiveLowDays === 2 ||
-    consecutiveLowDays === 3 ||
-    todayEntry?.mood === 'Regular' ||
-    todayEntry?.mood === 'Mal' ||
-    recentLowCount >= 2
+    !tipDismissed &&
+    (showMajorAlert || consecutiveLowDays >= 4 || consecutiveMalDays >= 3)
 
   const currentTip = WELLNESS_TIPS[tipIndex % WELLNESS_TIPS.length]
 
@@ -310,6 +308,14 @@ export const MoodTrackerSection = () => {
                 <a className="primary-button" href="#diary:notes">
                   Escribir en mi diario
                 </a>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setTipDismissed(true)}
+                  style={{ opacity: 0.8 }}
+                >
+                  Entendido / Cerrar
+                </button>
               </div>
             </div>
             <div className="subpanel">

@@ -22,6 +22,8 @@ import {
   Compass,
   Droplets,
   Dumbbell,
+  Eye,
+  EyeOff,
   FileText,
   HeartPulse,
   Info,
@@ -54,7 +56,7 @@ import { ScrollbarOverlay } from '../../scrollbar/ScrollbarOverlay'
 import { computeCrossDomainInsights } from '../../utils/crossDomainInsights'
 import type { GlobalSearchResult, InsightSeverity } from '../../utils/insights'
 import {
-  formatCurrency,
+  formatCurrencyNoCents,
   formatDate,
   formatDateTime,
   safeParseDate,
@@ -526,6 +528,7 @@ export const DashboardSection = () => {
   const [weightModalOpen, setWeightModalOpen] = useState(false)
   const [newWeight, setNewWeight] = useState<string>('')
   const [newHeight, setNewHeight] = useState<string>('')
+  const [showMonthBalance, setShowMonthBalance] = useState(false)
 
   const openWeightModal = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -1507,9 +1510,31 @@ export const DashboardSection = () => {
               <Wallet aria-hidden />
             </span>
             <span className="kpi-label">Balance del mes</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowMonthBalance((prev) => !prev)
+              }}
+              style={{
+                marginLeft: 'auto',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-text-muted)',
+                padding: '0.2rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+              title={showMonthBalance ? 'Ocultar monto' : 'Mostrar monto'}
+              aria-label={showMonthBalance ? 'Ocultar monto' : 'Mostrar monto'}
+            >
+              {showMonthBalance ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
           <span className={`kpi-value${currentMonthBalance < 0 ? ' is-negative' : ''}`}>
-            {formatCurrency(currentMonthBalance, currency)}
+            {showMonthBalance ? formatCurrencyNoCents(currentMonthBalance, currency) : '••••••'}
           </span>
           <div className="kpi-sub">
             {expenseDeltaPercent !== null ? (
@@ -1527,8 +1552,9 @@ export const DashboardSection = () => {
               </span>
             ) : (
               <span>
-                Ingresos {formatCurrency(currentMonthIncome, currency)} · Egresos{' '}
-                {formatCurrency(currentMonthExpense, currency)}
+                {showMonthBalance
+                  ? `Ingresos ${formatCurrencyNoCents(currentMonthIncome, currency)} · Egresos ${formatCurrencyNoCents(currentMonthExpense, currency)}`
+                  : 'Ingresos •••••• · Egresos ••••••'}
               </span>
             )}
           </div>

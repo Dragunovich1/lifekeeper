@@ -479,7 +479,7 @@ export const computeSmartSummary = (data: AppData, now = new Date()): DashboardS
     }
   }
 
-  if (consecutiveLowMoodDays >= 4) {
+  if (consecutiveLowMoodDays >= 6) {
     insights.push({
       id: 'mood-sustained-alert',
       title: `Alerta de bienestar: ${consecutiveLowMoodDays} días seguidos de ánimo bajo`,
@@ -491,7 +491,7 @@ export const computeSmartSummary = (data: AppData, now = new Date()): DashboardS
       targetHash: '#diary:mood',
       meta: 'Cuidado personal',
     })
-  } else if (consecutiveLowMoodDays >= 2) {
+  } else if (consecutiveLowMoodDays >= 4) {
     insights.push({
       id: 'mood-gentle-tip',
       title: `Acompañamiento emocional (${consecutiveLowMoodDays} días exigentes)`,

@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import { Eye, EyeOff } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -24,15 +25,18 @@ import { fetchCurrencySnapshot, type CurrencySnapshot } from '../../services/api
 import type { FinanceTransaction } from '../../types'
 import {
   formatCurrency,
+  formatCurrencyNoCents,
   formatDate,
   fromLocalDateOrDateTime,
   monthKey,
   toLocalDateKey,
 } from '../../utils/dates'
+import { DebtsSection } from './DebtsSection'
 
-const createInitialFormState = (): Omit<FinanceTransaction, 'id'> => ({
+const createInitialFormState = (defaultCurrency = 'ARS'): Omit<FinanceTransaction, 'id'> => ({
   type: 'income',
   amount: 0,
+  currency: defaultCurrency,
   category: '',
   date: new Date().toISOString(),
   description: '',
@@ -67,12 +71,16 @@ const palette = [
 export const FinancesSection = () => {
   const { data, updateData } = useAppData()
   const { preferences } = usePreferences()
-  const currency = preferences.currency
+  const currency = preferences.currency || 'ARS'
   const transactions = data.personal.finances
   const budgets = data.personal.budgets ?? {}
-  const [formState, setFormState] = useState<Omit<FinanceTransaction, 'id'>>(createInitialFormState)
+
+  const [financeTab, setFinanceTab] = useState<'transactions' | 'debts'>('transactions')
+  const [showFinancesBalance, setShowFinancesBalance] = useState(false)
+
+  const [formState, setFormState] = useState<Omit<FinanceTransaction, 'id'>>(() => createInitialFormState(currency))
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editFormState, setEditFormState] = useState<Omit<FinanceTransaction, 'id'>>(createInitialFormState)
+  const [editFormState, setEditFormState] = useState<Omit<FinanceTransaction, 'id'>>(() => createInitialFormState(currency))
   const [deletingTx, setDeletingTx] = useState<FinanceTransaction | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
   const [budgetCategory, setBudgetCategory] = useState('')
@@ -181,6 +189,7 @@ export const FinancesSection = () => {
     setEditFormState({
       type: item.type,
       amount: item.amount,
+      currency: item.currency || currency,
       category: item.category,
       date: item.date,
       description: item.description ?? '',
@@ -263,10 +272,45 @@ export const FinancesSection = () => {
     <div>
       <SectionHeader
         title="Finanzas"
-        subtitle="Registrá ingresos y egresos, controlá presupuestos y visualizá tendencias rápidas"
+        subtitle="Registrá ingresos y egresos, gestioná deudas y préstamos, controlá presupuestos y divisas"
       />
 
-      <div className="section-body">
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className={financeTab === 'transactions' ? 'primary-button' : 'secondary-button'}
+          onClick={() => setFinanceTab('transactions')}
+        >
+          💳 Movimientos y Presupuestos
+        </button>
+        <button
+          type="button"
+          className={financeTab === 'debts' ? 'primary-button' : 'secondary-button'}
+          onClick={() => setFinanceTab('debts')}
+        >
+          🤝 Deudas y Préstamos
+          {(data.personal.debts?.filter((d) => d.status !== 'cancelada').length ?? 0) > 0 ? (
+            <span
+              style={{
+                marginLeft: '0.4rem',
+                background: 'var(--color-warning)',
+                color: '#000',
+                padding: '0.1rem 0.45rem',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}
+            >
+              {data.personal.debts?.filter((d) => d.status !== 'cancelada').length}
+            </span>
+          ) : null}
+        </button>
+      </div>
+
+      {financeTab === 'debts' ? (
+        <DebtsSection />
+      ) : (
+        <div className="section-body">
         {rates && rates.dolares.length > 0 ? (
           <div className="panel" style={{ paddingBottom: '1rem' }}>
             <div className="panel-header" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -452,17 +496,34 @@ export const FinancesSection = () => {
               />
             </div>
             <div className="field">
-              <label htmlFor="fin-amount">Monto ({currency})</label>
+              <label htmlFor="fin-amount">Monto</label>
               <input
                 id="fin-amount"
                 type="number"
-                step="0.01"
+                step="any"
                 value={formState.amount || ''}
                 onChange={(event) =>
                   setFormState({ ...formState, amount: Number(event.target.value) })
                 }
                 placeholder="0.00"
                 required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="fin-currency">Moneda</label>
+              <Select
+                id="fin-currency"
+                value={formState.currency || currency || 'ARS'}
+                onChange={(val) => setFormState({ ...formState, currency: val })}
+                options={[
+                  { value: 'ARS', label: 'ARS ($ Pesos)' },
+                  { value: 'USD', label: 'USD (US$ Dólares)' },
+                  { value: 'EUR', label: 'EUR (€ Euros)' },
+                  { value: 'USDT', label: 'USDT (₮ Tether)' },
+                  { value: 'BRL', label: 'BRL (R$ Reales)' },
+                  { value: 'CLP', label: 'CLP ($ Pesos Chilenos)' },
+                ]}
+                ariaLabel="Moneda del movimiento"
               />
             </div>
             <div className="field">
@@ -582,19 +643,51 @@ export const FinancesSection = () => {
         <div className="stats-grid">
           <div className="stat-card">
             <span className="stat-title">Ingresos totales</span>
-            <span className="stat-value">{formatCurrency(totals.income, currency)}</span>
+            <span className="stat-value">
+              {showFinancesBalance ? formatCurrencyNoCents(totals.income, currency) : '••••••'}
+            </span>
           </div>
           <div className="stat-card">
             <span className="stat-title">Egresos totales</span>
-            <span className="stat-value">{formatCurrency(totals.expense, currency)}</span>
+            <span className="stat-value">
+              {showFinancesBalance ? formatCurrencyNoCents(totals.expense, currency) : '••••••'}
+            </span>
           </div>
           <div className="stat-card">
-            <span className="stat-title">Balance</span>
-            <span className="stat-value">{formatCurrency(totals.income - totals.expense, currency)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="stat-title">Balance mensual</span>
+              <button
+                type="button"
+                onClick={() => setShowFinancesBalance((prev) => !prev)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-muted)',
+                  padding: '0.2rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+                title={showFinancesBalance ? 'Ocultar montos' : 'Mostrar montos'}
+              >
+                {showFinancesBalance ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <span
+              className={`stat-value${totals.income - totals.expense < 0 ? ' is-negative' : ''}`}
+            >
+              {showFinancesBalance
+                ? formatCurrencyNoCents(totals.income - totals.expense, currency)
+                : '••••••'}
+            </span>
           </div>
           <div className="stat-card">
             <span className="stat-title">Gasto fijo mensual estimado</span>
-            <span className="stat-value">{formatCurrency(totals.fixedMonthlyExpense, currency)}</span>
+            <span className="stat-value">
+              {showFinancesBalance
+                ? formatCurrencyNoCents(totals.fixedMonthlyExpense, currency)
+                : '••••••'}
+            </span>
           </div>
         </div>
 
@@ -871,7 +964,23 @@ export const FinancesSection = () => {
                         ) : null}
                       </div>
                     </td>
-                    <td>{formatCurrency(item.amount, currency)}</td>
+                    <td>
+                      <span style={{ fontWeight: 600 }}>
+                        {formatCurrency(item.amount, item.currency || currency)}
+                      </span>
+                      {item.currency && item.currency !== currency ? (
+                        <span
+                          className="badge"
+                          style={{
+                            marginLeft: '0.4rem',
+                            fontSize: '0.7rem',
+                            padding: '0.1rem 0.35rem',
+                          }}
+                        >
+                          {item.currency}
+                        </span>
+                      ) : null}
+                    </td>
                     <td>{item.category}</td>
                     <td>{item.description || '—'}</td>
                     <td>
@@ -899,6 +1008,7 @@ export const FinancesSection = () => {
           )}
         </div>
       </div>
+      )}
 
       <Modal
         open={Boolean(editingId)}
@@ -927,11 +1037,11 @@ export const FinancesSection = () => {
             />
           </div>
           <div className="field">
-            <label htmlFor="edit-fin-amount">Monto ({currency})</label>
+            <label htmlFor="edit-fin-amount">Monto</label>
             <input
               id="edit-fin-amount"
               type="number"
-              step="0.01"
+              step="any"
               value={editFormState.amount || ''}
               onChange={(event) =>
                 setEditFormState({
@@ -942,6 +1052,23 @@ export const FinancesSection = () => {
               placeholder="0.00"
               required
               autoFocus
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="edit-fin-currency">Moneda</label>
+            <Select
+              id="edit-fin-currency"
+              value={editFormState.currency || currency || 'ARS'}
+              onChange={(val) => setEditFormState({ ...editFormState, currency: val })}
+              options={[
+                { value: 'ARS', label: 'ARS ($ Pesos)' },
+                { value: 'USD', label: 'USD (US$ Dólares)' },
+                { value: 'EUR', label: 'EUR (€ Euros)' },
+                { value: 'USDT', label: 'USDT (₮ Tether)' },
+                { value: 'BRL', label: 'BRL (R$ Reales)' },
+                { value: 'CLP', label: 'CLP ($ Pesos Chilenos)' },
+              ]}
+              ariaLabel="Moneda del movimiento"
             />
           </div>
           <div className="field">

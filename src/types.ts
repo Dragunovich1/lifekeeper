@@ -123,11 +123,40 @@ export interface FinanceTransaction {
   id: string
   type: TransactionType
   amount: number
+  currency?: string // e.g. 'ARS', 'USD', 'EUR', 'USDT', etc.
   category: string
   date: string
   description?: string
   recurring?: boolean
   recurrence?: 'weekly' | 'monthly' | 'yearly'
+}
+
+export type DebtDebtorType = 'entidad' | 'persona'
+export type DebtDirection = 'por_pagar' | 'por_cobrar' // 'por_pagar' = pasivo (debo), 'por_cobrar' = activo (me deben)
+export type DebtStatus = 'pendiente' | 'parcial' | 'cancelada'
+
+export interface DebtPayment {
+  id: string
+  date: string
+  amount: number
+  notes?: string
+}
+
+export interface DebtEntry {
+  id: string
+  title: string
+  counterparty: string // e.g. "Banco Galicia", "Tarjeta Visa", "Juan Pérez", "Tía Marta"
+  debtorType: DebtDebtorType // 'entidad' | 'persona'
+  direction: DebtDirection // 'por_pagar' | 'por_cobrar'
+  totalAmount: number
+  currency: string // 'ARS', 'USD', 'EUR', etc.
+  installments?: number // cuotas totales si aplica
+  paidInstallments?: number // cuotas pagadas
+  dueDate?: string // YYYY-MM-DD
+  status: DebtStatus
+  payments: DebtPayment[]
+  notes?: string
+  createdAt: string
 }
 
 export interface ProjectTask {
@@ -267,9 +296,11 @@ export type WorkoutType =
   | 'fuerza'
   | 'cardio'
   | 'running'
-  | 'funcional'
+  | 'caminata'
   | 'ciclismo'
   | 'natacion'
+  | 'trekking'
+  | 'funcional'
   | 'flexibilidad'
   | 'otro'
 
@@ -298,7 +329,17 @@ export interface WorkoutSession {
   type: WorkoutType
   durationMinutes?: number
   distanceKm?: number
+  pace?: string // e.g. "5:30 min/km" o "24.5 km/h"
+  elevationGainMeters?: number
   calories?: number
+  exercises: WorkoutExercise[]
+  notes?: string
+}
+
+export interface WorkoutTemplate {
+  id: string
+  name: string
+  type: WorkoutType
   exercises: WorkoutExercise[]
   notes?: string
 }
@@ -345,9 +386,11 @@ export interface NutritionData {
 export interface PersonalData {
   finances: FinanceTransaction[]
   budgets?: Record<string, number>
+  debts?: DebtEntry[]
   projects: Project[]
   vehicles: VehicleService[]
   workouts?: WorkoutSession[]
+  workoutTemplates?: WorkoutTemplate[]
   nutrition?: NutritionData
 }
 
