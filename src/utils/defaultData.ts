@@ -84,6 +84,8 @@ export const createEmptyAppData = (): AppData => ({
       includeCompleted: false,
     },
     backups: {},
+    assistantChats: [],
+    activeAssistantChatId: undefined,
   },
 })
 
@@ -205,6 +207,10 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
         ...defaults.utilities.backups,
         ...(data.utilities?.backups ?? {}),
       },
+      assistantChats: Array.isArray(data.utilities?.assistantChats)
+        ? [...data.utilities.assistantChats]
+        : [],
+      activeAssistantChatId: data.utilities?.activeAssistantChatId ?? undefined,
     },
   }
 }

@@ -49,12 +49,22 @@
 - **Archivos:** `src/sections/diary/MoodTracker.tsx` y `src/utils/insights.ts`.
 - **Umbrales ampliados:** Se eliminó la alerta invasiva en el día 1 de ánimo bajo. El tip preventivo requiere 4 días continuos bajos y la alerta con líneas de ayuda requiere 6 o más días sostenidos.
 
-### 🤖 Asistente Virtual Local
-- **Archivos:** `src/services/assistant/localAssistant.ts` y `src/components/AssistantModal.tsx`.
-- Conexión con Ollama local (`llama3.2:3b`).
-- Acceso a todo el contexto del vault (citas médicas, medicamentos, entrenamientos, finanzas, deudas).
-- Capacidad de ejecutar mutaciones en el vault cuando el usuario lo solicita (ej. registrar agua, gastos o síntomas).
-- Avatar personalizado (`public/brand/assistant.png`) y acceso discreto en la barra superior móvil sin tapar la pantalla.
+### 🤖 Asistente Virtual Local Porteño & Multimodal
+- **Archivos:** `src/services/assistant/localAssistant.ts`, `src/services/assistant/ollamaClient.ts` y `src/components/AssistantModal.tsx`.
+- **Personalidad & Tono:** Español rioplatense porteño / tanguero ("che", "mirá", "una pinturita", "al toque", "de diez", "mangos/lucas", etc.).
+- **Voz Bidireccional (STT & TTS):**
+  - Entrada por voz con dictado nativo en español (`es-AR`) mediante Web Speech API (`SpeechRecognition`) con botón de micrófono animado.
+  - Salida audible con síntesis de voz (`SpeechSynthesis`) en cada respuesta del asistente.
+- **Deudas y Préstamos:**
+  - Carga natural de préstamos a terceros (*"Le presté 20 lucas a Juan"*), deudas propias (*"Le debo $50.000 a Visa"*) y liquidaciones/abonos (*"Juan me devolvió 10 lucas"*).
+  - Consultas inteligentes: *"¿Quién me debe plata?"*, *"¿A quién le debo?"*.
+- **Daily Briefing (Resumen Matutino y Nocturno):**
+  - Vista completa consolidada con clima, tomas de medicación pendientes, rutina recomendada, balances hídrico/calórico y recordatorios.
+- **Entrenador & Nutricionista AI con Guardado en 1 Clic:**
+  - Armado de rutinas de hipertrofia con Action Card interactiva para **guardar como plantilla en Workouts**.
+  - Armado de planes de alimentación con Action Card para **aplicar metas calóricas y macros en Nutrición**.
+- **Action Cards con Deshacer (`Undo2`):** Visualización enriquecida de cada mutación guardada con reversión instantánea.
+- **Historial Persistente Cifrado:** Sesiones de chat guardadas y cifradas Zero-Knowledge en la bóveda, con soporte de múltiples conversaciones y botón **+ Nuevo Chat**.
 
 ---
 

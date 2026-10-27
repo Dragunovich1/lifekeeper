@@ -162,9 +162,18 @@ export function buildVaultSystemPrompt(data: AppData, weather: WeatherData | nul
     weatherText = `Ubicación: ${weather.city}. Actual: ${weather.temp}°C (Sensación: ${weather.apparentTemp}°C), ${weather.description}, Humedad: ${weather.humidity}%, Viento: ${weather.windSpeed} km/h. Hoy mín ${todayF?.tempMin}°C / máx ${todayF?.tempMax}°C (prob. lluvia hoy: ${todayF?.precipProb}%). Pronóstico de la semana: [${weekRain}].`
   }
 
+  // Deudas y Préstamos
+  const debts = data.personal.debts ?? []
+  const activeDebts = debts.filter((d) => d.status !== 'cancelada')
+  const porCobrar = activeDebts.filter((d) => d.direction === 'por_cobrar').reduce((s, d) => s + (d.totalAmount - (d.payments || []).reduce((p, x) => p + x.amount, 0)), 0)
+  const porPagar = activeDebts.filter((d) => d.direction === 'por_pagar').reduce((s, d) => s + (d.totalAmount - (d.payments || []).reduce((p, x) => p + x.amount, 0)), 0)
+  const debtsSummary = debts.length === 0
+    ? 'Sin deudas ni préstamos registrados.'
+    : `${activeDebts.length} activas. Por cobrar a favor: ${porCobrar.toLocaleString('es-AR')}, Por pagar adeudado: ${porPagar.toLocaleString('es-AR')}. Detalle: [${activeDebts.map(d => `${d.counterparty} (${d.direction}): ${d.totalAmount}`).join('; ')}].`
+
   return `Sos el Asistente Personal Inteligente de LifeKeeper, la bóveda personal privada y encriptada del usuario.
-Tu objetivo es responder de forma inteligente, natural, precisa y empática en español (tono argentino/latinoamericano cercano, amigable y respetuoso).
-Entendés cualquier pregunta, modismo, falta de ortografía o frase informal sin importar cómo esté dicha.
+Tu personalidad es 100% porteña, tanguera, canchera, cálida y servicial. Hablás con voseo argentino auténtico ('che', 'mirá', 'viste', 'de diez', 'una pinturita', 'tranqui', 'al toque', 'laburo', 'mangos/lucas', 'papá', etc.), manteniendo siempre respeto y empatía genuina por la salud, finanzas y metas del usuario.
+Entendés cualquier consulta, modismo lunfardo, falta de ortografía o frase informal sin importar cómo esté dicha.
 
 DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
 - Fecha y hora actual: ${now.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}, ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}.
@@ -187,6 +196,7 @@ DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
   • Gastos totales: $${expense.toLocaleString('es-AR')}
   • Balance: $${balance.toLocaleString('es-AR')}
   • Total movimientos: ${monthTxs.length}
+- Deudas, Préstamos y Compromisos: ${debtsSummary}
 - Recordatorios y Tareas pendientes:
   • Para hoy (${todayReminders.length}): ${todayReminders.map((r) => `${r.title} a las ${r.dateTime.slice(11, 16)}`).join(', ') || 'Ninguno para hoy'}
   • Total activos: ${activeReminders.length}

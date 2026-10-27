@@ -394,10 +394,48 @@ export interface PersonalData {
   nutrition?: NutritionData
 }
 
+export interface AssistantMutationCard {
+  category: 'agua' | 'finanzas' | 'deudas' | 'nutricion' | 'biometria' | 'entrenamiento' | 'diario' | 'recordatorio'
+  title: string
+  details: string
+  badge?: string
+  entityId?: string
+}
+
+export interface AssistantProposalCard {
+  type: 'workout_template' | 'nutrition_plan'
+  title: string
+  summary: string
+  payload: any
+}
+
+export interface AssistantChatMessage {
+  id: string
+  sender: 'user' | 'assistant'
+  text: string
+  timestamp: string
+  action?: {
+    label: string
+    hash: string
+  }
+  mutationCard?: AssistantMutationCard
+  proposalCard?: AssistantProposalCard
+}
+
+export interface AssistantChatSession {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  messages: AssistantChatMessage[]
+}
+
 export interface UtilitiesData {
   reminders: Reminder[]
   calendarPreferences: CalendarPreferences
   backups: BackupMeta
+  assistantChats?: AssistantChatSession[]
+  activeAssistantChatId?: string
 }
 
 export interface AppData {
