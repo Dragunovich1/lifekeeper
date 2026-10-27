@@ -177,6 +177,26 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   // Estados de Voz (STT y TTS)
   const [isListening, setIsListening] = useState(false)
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false)
+  const [autoSpeak, setAutoSpeak] = useState(false)
+  const [voiceGender, setVoiceGender] = useState<'female' | 'male' | 'system'>('female')
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('')
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+
+  // Cargar lista de voces del navegador
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+
+    const updateVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (voices && voices.length > 0) {
+        setAvailableVoices(voices)
+      }
+    }
+
+    updateVoices()
+    window.speechSynthesis.onvoiceschanged = updateVoices
+  }, [])
 
   // Acciones y Undo
   const previousVaultSnapshotRef = useRef<AppData | null>(null)
@@ -340,45 +360,88 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     }
   }
 
-  // Configuración de Text to Speech (Texto a Voz / TTS Porteño)
-  const handleToggleSpeak = (msgId: string, textToSpeak: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      alert('Tu navegador no soporta síntesis de voz.')
-      return
+  // Obtener voz y configuración de tono/frecuencia según género o variante elegida
+  const getActiveVoiceConfig = () => {
+    let voice: SpeechSynthesisVoice | null = null
+    let pitch = 1.0
+
+    const currentVoices = availableVoices.length > 0 ? availableVoices : (typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.getVoices() : [])
+    const spanishVoices = currentVoices.filter((v) => v.lang.toLowerCase().startsWith('es'))
+    const pool = spanishVoices.length > 0 ? spanishVoices : currentVoices
+
+    // 1. Si eligió una voz específica instalada
+    if (selectedVoiceURI) {
+      voice = currentVoices.find((v) => v.voiceURI === selectedVoiceURI) || null
     }
 
+    // 2. Si eligió por género (Femenina o Masculina)
+    if (!voice) {
+      const FEMALE_NAMES = ['sabina', 'elena', 'monica', 'laura', 'helena', 'zira', 'francisca', 'victoria', 'paulina', 'rosa', 'female', 'mujer', 'sofia', 'lucia', 'paloma']
+      const MALE_NAMES = ['raul', 'pablo', 'jorge', 'alvaro', 'david', 'diego', 'carlos', 'male', 'hombre', 'miguel', 'juan', 'alberto']
+
+      if (voiceGender === 'female') {
+        voice = pool.find((v) => FEMALE_NAMES.some((n) => v.name.toLowerCase().includes(n))) || null
+        pitch = 1.15
+      } else if (voiceGender === 'male') {
+        voice = pool.find((v) => MALE_NAMES.some((n) => v.name.toLowerCase().includes(n))) || null
+        pitch = 0.88
+      }
+    }
+
+    // 3. Fallback: voz argentina o primer español disponible
+    if (!voice) {
+      voice = pool.find((v) => v.lang.toLowerCase().replace('_', '-') === 'es-ar') || pool[0] || null
+    }
+
+    if (voiceGender === 'female' && pitch === 1.0) pitch = 1.15
+    if (voiceGender === 'male' && pitch === 1.0) pitch = 0.88
+
+    return { voice, pitch }
+  }
+
+  // Reproducir texto en voz alta
+  const speakText = (textToSpeak: string, msgId?: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+
+    window.speechSynthesis.cancel()
+
+    const cleanText = textToSpeak
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/[•\-#_*\`~>]/g, ' ')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    if (!cleanText) return
+
+    const utterance = new SpeechSynthesisUtterance(cleanText)
+    const { voice, pitch } = getActiveVoiceConfig()
+
+    if (voice) {
+      utterance.voice = voice
+      utterance.lang = voice.lang
+    } else {
+      utterance.lang = 'es-AR'
+    }
+
+    utterance.pitch = pitch
+    utterance.rate = 1.05
+
+    if (msgId) setSpeakingMessageId(msgId)
+    utterance.onend = () => setSpeakingMessageId(null)
+    utterance.onerror = () => setSpeakingMessageId(null)
+
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // Alternar reproducción de un mensaje específico
+  const handleToggleSpeak = (msgId: string, textToSpeak: string) => {
     if (speakingMessageId === msgId) {
       window.speechSynthesis.cancel()
       setSpeakingMessageId(null)
       return
     }
-
-    window.speechSynthesis.cancel()
-
-    // Limpiar asteriscos y emojis para una lectura más natural
-    const cleanText = textToSpeak
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/[•\-]/g, '')
-      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-      .trim()
-
-    const utterance = new SpeechSynthesisUtterance(cleanText)
-    const voices = window.speechSynthesis.getVoices()
-
-    // Preferir voz en español de Argentina o cualquier español
-    const arVoice = voices.find((v) => v.lang.toLowerCase().replace('_', '-') === 'es-ar')
-    const esVoice = voices.find((v) => v.lang.toLowerCase().startsWith('es'))
-    if (arVoice) utterance.voice = arVoice
-    else if (esVoice) utterance.voice = esVoice
-
-    utterance.rate = 1.05
-    utterance.pitch = 1.0
-
-    utterance.onend = () => setSpeakingMessageId(null)
-    utterance.onerror = () => setSpeakingMessageId(null)
-
-    setSpeakingMessageId(msgId)
-    window.speechSynthesis.speak(utterance)
+    speakText(textToSpeak, msgId)
   }
 
   const handleSend = async (userText: string) => {
@@ -433,6 +496,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         m.id === assistantMsgId ? mutationResult.message : m,
       )
       persistMessagesToVault(finalMessages)
+      if (autoSpeak && mutationResult.message.text) {
+        speakText(mutationResult.message.text, assistantMsgId)
+      }
       setIsTyping(false)
       return
     }
@@ -461,6 +527,10 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
 
         setMessages((prev) => {
           persistMessagesToVault(prev)
+          const lastMsg = prev.find((m) => m.id === assistantMsgId)
+          if (autoSpeak && lastMsg?.text) {
+            speakText(lastMsg.text, assistantMsgId)
+          }
           return prev
         })
         setIsTyping(false)
@@ -493,6 +563,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         m.id === assistantMsgId ? response : m,
       )
       persistMessagesToVault(finalMessages)
+      if (autoSpeak && response.text) {
+        speakText(response.text, assistantMsgId)
+      }
     } catch {
       setMessages((prev) =>
         prev.map((m) =>
@@ -631,24 +704,71 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       }
       className={`assistant-modal ${isExpanded ? 'is-expanded' : ''}`.trim()}
       headerActions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          {/* Botón Nuevo Chat */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          {/* Botón Nuevo Chat Estilizado como Pill */}
           <button
             type="button"
-            className="pref-modal-action-btn"
             onClick={handleNewChat}
             title="Iniciar nueva conversación"
-            style={{ gap: '0.3rem', display: 'inline-flex', alignItems: 'center' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              height: '32px',
+              padding: '0 0.75rem',
+              borderRadius: '16px',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              background: 'var(--color-surface-hover)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.15s ease',
+            }}
           >
-            <Plus size={15} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>Nuevo</span>
+            <Plus size={14} color="var(--color-accent-cyan)" />
+            <span>Nuevo</span>
+          </button>
+
+          {/* Botón Menú de Ajustes de Voz (Mujer / Hombre / Auto-lectura) */}
+          <button
+            type="button"
+            className={`pref-modal-action-btn ${showVoiceMenu ? 'is-active' : ''}`}
+            onClick={() => {
+              setShowVoiceMenu((prev) => !prev)
+              setShowHistory(false)
+            }}
+            title="Elegir voz (Mujer / Hombre / Variantes) y lectura en voz alta"
+            style={{
+              color: autoSpeak ? 'var(--color-accent-cyan)' : undefined,
+              position: 'relative',
+            }}
+          >
+            <Volume2 size={16} />
+            {autoSpeak && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: 'var(--color-accent-cyan)',
+                }}
+              />
+            )}
           </button>
 
           {/* Botón Historial de Chats */}
           <button
             type="button"
             className={`pref-modal-action-btn ${showHistory ? 'is-active' : ''}`}
-            onClick={() => setShowHistory((prev) => !prev)}
+            onClick={() => {
+              setShowHistory((prev) => !prev)
+              setShowVoiceMenu(false)
+            }}
             title="Ver conversaciones anteriores"
           >
             <History size={16} />
@@ -687,6 +807,140 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           position: 'relative',
         }}
       >
+        {/* Popover de Configuración de Voz */}
+        {showVoiceMenu && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '0.25rem',
+              right: '0.5rem',
+              background: 'var(--color-surface)',
+              zIndex: 45,
+              borderRadius: '14px',
+              padding: '1.1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.85rem',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-lg)',
+              width: '310px',
+              maxWidth: 'calc(100% - 1rem)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
+                <Volume2 size={16} color="var(--color-accent-cyan)" />
+                <span>Configuración de Voz</span>
+              </div>
+              <button
+                type="button"
+                className="pref-modal-action-btn"
+                onClick={() => setShowVoiceMenu(false)}
+                style={{ width: '28px', height: '28px' }}
+                title="Cerrar ajustes"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Selector de Género de Voz */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                Tipo de Voz:
+              </label>
+              <select
+                value={voiceGender}
+                onChange={(e) => setVoiceGender(e.target.value as 'female' | 'male' | 'system')}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  background: 'var(--color-surface-sunken)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-primary)',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                }}
+              >
+                <option value="female">👩 Voz Femenina (Mujer)</option>
+                <option value="male">👨 Voz Masculina (Hombre)</option>
+                <option value="system">🤖 Voz del Sistema / Neutra</option>
+              </select>
+            </div>
+
+            {/* Selector de Voz Específica del Sistema si existen varias en español */}
+            {availableVoices.filter((v) => v.lang.toLowerCase().startsWith('es')).length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                  Variante de voz instalada:
+                </label>
+                <select
+                  value={selectedVoiceURI}
+                  onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '8px',
+                    background: 'var(--color-surface-sunken)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-primary)',
+                    fontSize: '0.78rem',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="">(Automática según género)</option>
+                  {availableVoices
+                    .filter((v) => v.lang.toLowerCase().startsWith('es'))
+                    .map((v) => (
+                      <option key={v.voiceURI} value={v.voiceURI}>
+                        {v.name} ({v.lang})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            {/* Toggle de Auto-lectura */}
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                padding: '0.2rem 0',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={autoSpeak}
+                onChange={(e) => setAutoSpeak(e.target.checked)}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent-cyan)' }}
+              />
+              <span>Leer respuestas en voz alta automáticamente</span>
+            </label>
+
+            {/* Botón de prueba */}
+            <button
+              type="button"
+              onClick={() => speakText('¡Qué hacés, che! Así se escucha mi voz porteña en LifeKeeper.')}
+              className="secondary-button"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.4rem',
+                padding: '0.45rem',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              <Volume2 size={14} />
+              <span>Probar cómo suena esta voz</span>
+            </button>
+          </div>
+        )}
+
         {/* Panel Desplegable de Historial de Chats */}
         {showHistory && (
           <div
@@ -1034,19 +1288,24 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                       <button
                         type="button"
                         onClick={() => handleToggleSpeak(m.id, m.text)}
-                        title={isSpeakingThis ? 'Silenciar voz' : 'Escuchar respuesta con voz porteña'}
+                        className="secondary-button"
+                        title={isSpeakingThis ? 'Silenciar lectura' : 'Escuchar respuesta con la voz seleccionada'}
                         style={{
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: isSpeakingThis ? 'var(--color-accent-cyan)' : 'var(--color-text-muted)',
-                          padding: '0.2rem',
-                          display: 'flex',
+                          fontSize: '0.72rem',
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '14px',
+                          display: 'inline-flex',
                           alignItems: 'center',
-                          borderRadius: '50%',
+                          gap: '0.35rem',
+                          background: isSpeakingThis ? 'rgba(14, 165, 233, 0.25)' : 'var(--color-surface-sunken)',
+                          border: isSpeakingThis ? '1px solid var(--color-accent-cyan)' : '1px solid var(--color-border)',
+                          color: isSpeakingThis ? 'var(--color-accent-cyan)' : 'var(--color-text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
                         }}
                       >
-                        {isSpeakingThis ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                        {isSpeakingThis ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                        <span>{isSpeakingThis ? 'Detener voz' : 'Escuchar'}</span>
                       </button>
                     )}
 
