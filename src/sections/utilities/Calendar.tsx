@@ -11,7 +11,8 @@ import {
   startOfMonth,
   startOfWeek,
 } from 'date-fns'
-import { Plus } from 'lucide-react'
+import { Plus, Download } from 'lucide-react'
+import { exportEventsToICS } from '../../utils/calendarExport'
 import { es } from 'date-fns/locale'
 import { useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -251,6 +252,28 @@ export const CalendarSection = () => {
               onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
             >
               Mes siguiente
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                exportEventsToICS(
+                  allEvents.map((ev) => ({
+                    id: ev.id,
+                    title: ev.title,
+                    description: ev.description,
+                    date: ev.date,
+                    category: ev.category,
+                  })),
+                  'LifeKeeper Calendario',
+                  'lifekeeper_eventos.ics'
+                )
+              }}
+              title="Exportar a Google Calendar, Apple Calendar u Outlook (.ics)"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <Download size={15} />
+              Exportar .ics
             </button>
           </div>
         }

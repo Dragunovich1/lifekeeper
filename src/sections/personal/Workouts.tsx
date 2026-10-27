@@ -1,6 +1,11 @@
 import type { FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
+  Timer,
+  Play,
+  Pause,
+  Zap,
+  Check,
   Dumbbell,
   Plus,
   Trash2,
@@ -33,6 +38,7 @@ import {
   toLocalDateKey,
 } from '../../utils/dates'
 import { exportWorkoutsToPDF } from '../../utils/workoutPdfExport'
+import { playRestTimerSound, triggerHapticFeedback } from '../../utils/audioHaptics'
 
 const WORKOUT_SET_TYPES: Array<{
   value: WorkoutSetType
@@ -183,6 +189,200 @@ export const WorkoutsSection = () => {
   // Formulario de creación
   const [formState, setFormState] = useState<WorkoutFormState>(createInitialFormState)
   const [exerciseDraftName, setExerciseDraftName] = useState('')
+
+  // Modo Planificación vs Modo Gym en Vivo
+  const [creationMode, setCreationMode] = useState<'plan' | 'live'>('plan')
+
+  // Estado Sesión en Vivo
+  const [sessionActive, setSessionActive] = useState(false)
+  const [sessionElapsedSeconds, setSessionElapsedSeconds] = useState(0)
+
+  // Temporizador de descanso (Rest Timer)
+  const [restTimerSeconds, setRestTimerSeconds] = useState(60)
+  const [restRemaining, setRestRemaining] = useState(0)
+  const [restActive, setRestActive] = useState(false)
+  const [finishModalOpen, setFinishModalOpen] = useState(false)
+
+  // Cronómetro de sesión
+  useEffect(() => {
+    let interval: any = null
+    if (sessionActive) {
+      interval = setInterval(() => {
+        setSessionElapsedSeconds((prev) => prev + 1)
+      }, 1000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [sessionActive])
+
+  // Countdown timer de descanso
+  useEffect(() => {
+    let interval: any = null
+    if (restActive && restRemaining > 0) {
+      interval = setInterval(() => {
+        setRestRemaining((prev) => {
+          if (prev <= 1) {
+            playRestTimerSound()
+            triggerHapticFeedback('double')
+            setRestActive(false)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [restActive, restRemaining])
+
+  const startRestTimer = (seconds?: number) => {
+    const s = seconds || restTimerSeconds
+    setRestTimerSeconds(s)
+    setRestRemaining(s)
+    setRestActive(true)
+    triggerHapticFeedback('impact')
+  }
+
+  const stopRestTimer = () => {
+    setRestActive(false)
+    setRestRemaining(0)
+  }
+
+  const formatStopwatch = (totalSec: number) => {
+    const hrs = Math.floor(totalSec / 3600)
+    const mins = Math.floor((totalSec % 3600) / 60)
+    const secs = totalSec % 60
+    if (hrs > 0) {
+      return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    }
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+
+  // Toggle set done en Live Mode
+  const toggleLiveSetDone = (exerciseId: string, setIndex: number) => {
+    setFormState((prev) => {
+      const nextExercises = prev.exercises.map((ex) => {
+        if (ex.id !== exerciseId) return ex
+        const nextSets = ex.sets.map((s, idx) => {
+          if (idx !== setIndex) return s
+          const nextDone = !s.done
+          if (nextDone) {
+            // Disparar timer de descanso al completar serie
+            setTimeout(() => startRestTimer(restTimerSeconds), 50)
+          }
+          return { ...s, done: nextDone }
+        })
+        return { ...ex, sets: nextSets }
+      })
+      return { ...prev, exercises: nextExercises }
+    })
+  }
+
+  const adjustLiveSetReps = (exerciseId: string, setIndex: number, delta: number) => {
+    setFormState((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((ex) => {
+        if (ex.id !== exerciseId) return ex
+        return {
+          ...ex,
+          sets: ex.sets.map((s, idx) =>
+            idx === setIndex ? { ...s, reps: Math.max(1, s.reps + delta) } : s
+          ),
+        }
+      }),
+    }))
+  }
+
+  const adjustLiveSetWeight = (exerciseId: string, setIndex: number, delta: number) => {
+    setFormState((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((ex) => {
+        if (ex.id !== exerciseId) return ex
+        return {
+          ...ex,
+          sets: ex.sets.map((s, idx) =>
+            idx === setIndex
+              ? { ...s, weight: Math.max(0, Number(((s.weight ?? 0) + delta).toFixed(1))) }
+              : s
+          ),
+        }
+      }),
+    }))
+  }
+
+  // Métricas en vivo
+  const liveStats = useMemo(() => {
+    let completedSets = 0
+    let totalSets = 0
+    let totalVolumeKg = 0
+
+    formState.exercises.forEach((ex) => {
+      ex.sets.forEach((s) => {
+        totalSets += 1
+        if (s.done) {
+          completedSets += 1
+        }
+        if (s.reps && s.weight) {
+          totalVolumeKg += s.reps * s.weight
+        }
+      })
+    })
+
+    return {
+      completedSets,
+      totalSets,
+      totalVolumeKg,
+      progressPercent: totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0,
+    }
+  }, [formState.exercises])
+
+  const handleFinishLiveSession = () => {
+    const elapsedMinutes = Math.max(1, Math.round(sessionElapsedSeconds / 60))
+    const normalizedDate = fromLocalDateOrDateTime(formState.date || new Date().toISOString(), true)
+
+    const normalizedExercises = formState.exercises.map((ex) => ({
+      ...ex,
+      sets: ex.sets.map((s) => ({
+        ...s,
+        setType: s.setType || 'normal',
+        weight:
+          typeof s.weight === 'number' && s.weight > 0
+            ? isImperial
+              ? Number((s.weight / 2.20462).toFixed(2))
+              : s.weight
+            : 0,
+      })),
+    }))
+
+    const newSession: WorkoutSession = {
+      id: uuid(),
+      title: formState.title.trim() || 'Entrenamiento en Gym',
+      date: normalizedDate,
+      type: formState.type,
+      durationMinutes: elapsedMinutes,
+      notes: formState.notes.trim() || undefined,
+      exercises: normalizedExercises,
+    }
+
+    updateData((previous) => ({
+      ...previous,
+      personal: {
+        ...previous.personal,
+        workouts: [newSession, ...(previous.personal.workouts ?? [])],
+      },
+    }))
+
+    setSessionActive(false)
+    setSessionElapsedSeconds(0)
+    setRestActive(false)
+    setFinishModalOpen(false)
+    setFormState(createInitialFormState())
+    setCreationMode('plan')
+    setSaveSuccessMsg(`¡Excelente sesión! ${elapsedMinutes} minutos entrenados y ${liveStats.totalVolumeKg.toLocaleString('es-AR')} kg levantados.`)
+    setTimeout(() => setSaveSuccessMsg(null), 5000)
+  }
 
   // Edición
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -797,7 +997,480 @@ export const WorkoutsSection = () => {
               </div>
             ) : null}
 
-            {/* Formulario de Creación de Sesión */}
+            {/* Selector de Modo: Planificación vs Gym en Vivo */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+                marginBottom: '1rem',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--color-border)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className={creationMode === 'plan' ? 'primary-button' : 'secondary-button'}
+                  onClick={() => setCreationMode('plan')}
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  📝 Modo Planificación
+                </button>
+                <button
+                  type="button"
+                  className={creationMode === 'live' ? 'primary-button' : 'secondary-button'}
+                  onClick={() => {
+                    setCreationMode('live')
+                    if (!sessionActive) setSessionActive(true)
+                  }}
+                  style={{ fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Zap size={15} />
+                  🏋️‍♂️ Modo Gym en Vivo
+                  {sessionActive && (
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#22c55e',
+                        display: 'inline-block',
+                      }}
+                    />
+                  )}
+                </button>
+              </div>
+
+              {creationMode === 'live' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '1.15rem', fontWeight: 800 }}>
+                    <Timer size={18} style={{ color: 'var(--color-accent-blue)' }} />
+                    <span style={{ fontFamily: 'monospace' }}>{formatStopwatch(sessionElapsedSeconds)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                    onClick={() => setSessionActive(!sessionActive)}
+                    title={sessionActive ? 'Pausar cronómetro' : 'Reanudar cronómetro'}
+                  >
+                    {sessionActive ? <Pause size={14} /> : <Play size={14} />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ============================================================== */}
+            {/* VISTA A: MODO GYM EN VIVO (CONSOLA INTERACTIVA DE GIMNASIO) */}
+            {/* ============================================================== */}
+            {creationMode === 'live' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                {/* Consola Superior: Rest Timer y Métricas Rápidas */}
+                <div
+                  className="panel"
+                  style={{
+                    background: restActive
+                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.08) 100%)'
+                      : 'linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(16, 185, 129, 0.06) 100%)',
+                    borderColor: restActive ? 'rgba(239, 68, 68, 0.4)' : 'rgba(59, 130, 246, 0.3)',
+                    padding: '1.25rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                    }}
+                  >
+                    <div>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          textTransform: 'uppercase',
+                          fontWeight: 700,
+                          letterSpacing: '0.05em',
+                          color: restActive ? 'var(--color-error)' : 'var(--color-accent-blue)',
+                        }}
+                      >
+                        {restActive ? '⏳ Descanso en curso' : '⏱️ Temporizador de Descanso'}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginTop: '0.2rem' }}>
+                        <span style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'monospace', lineHeight: 1 }}>
+                          {restActive ? `${restRemaining}s` : `${restTimerSeconds}s`}
+                        </span>
+                        {restActive && (
+                          <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                            restantes
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Presets rápidos de descanso */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        {[30, 45, 60, 90, 120, 180].map((sec) => (
+                          <button
+                            key={sec}
+                            type="button"
+                            className={restTimerSeconds === sec ? 'primary-button' : 'secondary-button'}
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                            onClick={() => {
+                              setRestTimerSeconds(sec)
+                              if (restActive) setRestRemaining(sec)
+                            }}
+                          >
+                            {sec}s
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        {restActive ? (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem', color: 'var(--color-error)' }}
+                            onClick={stopRestTimer}
+                          >
+                            Detener descanso
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="primary-button"
+                            style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+                            onClick={() => startRestTimer()}
+                          >
+                            Iniciar descanso ({restTimerSeconds}s)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barra de progreso de descanso */}
+                  {restActive && (
+                    <div
+                      style={{
+                        height: '6px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '999px',
+                        overflow: 'hidden',
+                        marginTop: '0.75rem',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${Math.round((restRemaining / restTimerSeconds) * 100)}%`,
+                          background: restRemaining <= 10 ? 'var(--color-error)' : 'var(--color-warning)',
+                          transition: 'width 1s linear',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Métricas rápidas de la sesión en vivo */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '0.75rem',
+                      marginTop: '1rem',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                      paddingTop: '0.75rem',
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Series hechas</span>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>
+                        {liveStats.completedSets} / {liveStats.totalSets} ({liveStats.progressPercent}%)
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Volumen total</span>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-success)' }}>
+                        {liveStats.totalVolumeKg.toLocaleString('es-AR')} {weightUnit}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Tiempo transcurrido</span>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'monospace' }}>
+                        {formatStopwatch(sessionElapsedSeconds)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Título y Foco del Entrenamiento en Vivo */}
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <input
+                    value={formState.title}
+                    onChange={(e) => setFormState({ ...formState, title: e.target.value })}
+                    placeholder="Nombre del entrenamiento (Ej. Pecho y Bíceps)"
+                    style={{ fontSize: '1.1rem', fontWeight: 700, padding: '0.6rem 0.8rem' }}
+                  />
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => setFinishModalOpen(true)}
+                    style={{ whiteSpace: 'nowrap', backgroundColor: '#10b981', borderColor: '#10b981' }}
+                  >
+                    🏁 Finalizar Sesión
+                  </button>
+                </div>
+
+                {/* Lista de Ejercicios en Vivo con Botones Táctiles Grandes */}
+                {formState.exercises.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+                    <Dumbbell size={40} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
+                    <p style={{ margin: '0 0 1rem 0' }}>Agregá ejercicios para empezar a registrar tus series.</p>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {QUICK_EXERCISES.slice(0, 5).map((quick) => (
+                        <button
+                          key={quick}
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => addExerciseToCreation(quick)}
+                        >
+                          + {quick}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {formState.exercises.map((ex, exIdx) => (
+                      <div
+                        key={ex.id}
+                        className="subpanel"
+                        style={{
+                          backgroundColor: 'var(--color-surface)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '10px',
+                          padding: '1rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                            {exIdx + 1}. {ex.name}
+                          </h4>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                            onClick={() => {
+                              const newSet = { reps: 10, weight: 0, rpe: 8, setType: 'normal' as WorkoutSetType }
+                              setFormState((prev) => ({
+                                ...prev,
+                                exercises: prev.exercises.map((e) =>
+                                  e.id === ex.id ? { ...e, sets: [...e.sets, newSet] } : e
+                                ),
+                              }))
+                            }}
+                          >
+                            + Serie
+                          </button>
+                        </div>
+
+                        {/* Series con botones táctiles grandes */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {ex.sets.map((set, setIdx) => (
+                            <div
+                              key={setIdx}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'auto 1fr 1fr auto',
+                                gap: '0.5rem',
+                                alignItems: 'center',
+                                padding: '0.5rem 0.75rem',
+                                borderRadius: '8px',
+                                backgroundColor: set.done ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                                border: set.done ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--color-border)',
+                              }}
+                            >
+                              {/* Número de serie */}
+                              <span style={{ fontWeight: 700, width: '24px', fontSize: '0.85rem' }}>
+                                #{setIdx + 1}
+                              </span>
+
+                              {/* Repeticiones con botones +/- */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  style={{ padding: '0.3rem 0.6rem', fontSize: '0.9rem', fontWeight: 800 }}
+                                  onClick={() => adjustLiveSetReps(ex.id, setIdx, -1)}
+                                >
+                                  -
+                                </button>
+                                <span style={{ minWidth: '48px', textAlign: 'center', fontWeight: 700 }}>
+                                  {set.reps} reps
+                                </span>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  style={{ padding: '0.3rem 0.6rem', fontSize: '0.9rem', fontWeight: 800 }}
+                                  onClick={() => adjustLiveSetReps(ex.id, setIdx, +1)}
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              {/* Carga con botones +/- */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', fontWeight: 800 }}
+                                  onClick={() => adjustLiveSetWeight(ex.id, setIdx, isImperial ? -5 : -2.5)}
+                                >
+                                  -
+                                </button>
+                                <span style={{ minWidth: '54px', textAlign: 'center', fontWeight: 700 }}>
+                                  {set.weight ?? 0} {weightUnit}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', fontWeight: 800 }}
+                                  onClick={() => adjustLiveSetWeight(ex.id, setIdx, isImperial ? +5 : +2.5)}
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              {/* Botón de serie completada que dispara el timer */}
+                              <button
+                                type="button"
+                                className={set.done ? 'primary-button' : 'secondary-button'}
+                                style={{
+                                  padding: '0.4rem 0.75rem',
+                                  fontSize: '0.85rem',
+                                  backgroundColor: set.done ? '#10b981' : undefined,
+                                  borderColor: set.done ? '#10b981' : undefined,
+                                  color: set.done ? '#ffffff' : undefined,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                }}
+                                onClick={() => toggleLiveSetDone(ex.id, setIdx)}
+                              >
+                                <Check size={16} />
+                                {set.done ? 'Hecha' : 'Completar'}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Agregar más ejercicios en vivo */}
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    value={exerciseDraftName}
+                    onChange={(e) => setExerciseDraftName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addExerciseToCreation(exerciseDraftName)
+                      }
+                    }}
+                    placeholder="Agregar otro ejercicio a la sesión..."
+                  />
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => addExerciseToCreation(exerciseDraftName)}
+                  >
+                    + Agregar
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Modal Confirmar Finalización de Sesión */}
+            <Modal
+              open={finishModalOpen}
+              title="🏁 Finalizar Entrenamiento en Vivo"
+              onClose={() => setFinishModalOpen(false)}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
+                <p style={{ margin: 0, fontSize: '0.95rem' }}>
+                  ¡Gran trabajo en los fierros! Vas a guardar la sesión en tu historial.
+                </p>
+
+                <div
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Tiempo de sesión</span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800 }}>
+                      {Math.max(1, Math.round(sessionElapsedSeconds / 60))} min
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Volumen levantado</span>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-success)' }}>
+                      {liveStats.totalVolumeKg.toLocaleString('es-AR')} {weightUnit}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Series completadas</span>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                      {liveStats.completedSets} de {liveStats.totalSets}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Ejercicios</span>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                      {formState.exercises.length}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-actions" style={{ marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => setFinishModalOpen(false)}
+                  >
+                    Seguir entrenando
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={handleFinishLiveSession}
+                    style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                  >
+                    Confirmar y Guardar Sesión
+                  </button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* ============================================================== */}
+            {/* VISTA B: MODO PLANIFICACIÓN (FORMULARIO CLÁSICO COMPLETO) */}
+            {/* ============================================================== */}
+            {creationMode === 'plan' && (
             <div className="panel">
               <div className="panel-header">
                 <h3 className="panel-title">Registrar nueva sesión de entrenamiento</h3>
@@ -1209,6 +1882,7 @@ export const WorkoutsSection = () => {
                 </div>
               </form>
             </div>
+            )}
           </>
         )}
 

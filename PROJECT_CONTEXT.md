@@ -32,7 +32,52 @@
 - **Multimoneda:** Selector de divisa en movimientos y deudas (`ARS`, `USD`, `EUR`, `USDT`, `BRL`, `CLP`).
 - **Balance del Mes Discreto:** Oculto por defecto (`••••••`) con icono de ojo `Eye`/`EyeOff` y formato limpio sin decimales (`formatCurrencyNoCents`).
 
-### 🏋️‍♂️ Entrenamientos & Fitness Avanzado
+### 🚗 Garaje y Vehículos Integral
+- **Archivo:** `src/sections/personal/Vehicles.tsx`.
+- **Ficha del Vehículo:** Marca, modelo, año, patente, tipo de vehículo y odómetro actual.
+- **Semáforo de Vencimientos Legales:** Alertas dinámicas con código de colores (verde/amarillo/rojo) para Seguro, VTV/RTO y Licencia de conducir según los días restantes.
+- **Tarjeta SOS de Auxilio 24hs:** Botón directo para llamar a la grúa/asistencia del seguro (`tel:...`) con póliza a la vista.
+- **Calculadora de Combustible & Rendimiento:** Registro de cargas, cálculo de Km/L, costo por kilómetro y sincronización opcional con Finanzas (Egresos en Transporte).
+- **Historial de Mantenimiento:** Registro de services, cambio de aceite, distribución, filtros y recordatorio del próximo service por fecha u odómetro.
+
+### 🏋️‍♂️ Entrenamientos: Modo Planificación vs. Modo Gym en Vivo
+- **Archivo:** `src/sections/personal/Workouts.tsx` y `src/utils/audioHaptics.ts`.
+- **Doble Modalidad:**
+  - **Modo Planificación:** Armado tranquilo de rutinas previas sin apuro, configuración de ejercicios y series estimadas.
+  - **Modo Gym en Vivo:** Consola optimizada para cuando estás en el gimnasio con botones táctiles grandes (+/- reps, +/- peso) y cronómetro de sesión activo.
+- **Rest Timer Automático:** Se dispara al marcar una serie hecha (`[✓ Hecha]`) o manualmente con presets de 30s, 45s, 60s, 90s, 120s, 180s.
+- **Feedback Sensorial al Terminar el Descanso:**
+  - Pitido acústico doble sintetizado con **Web Audio API** (100% offline sin archivos de audio externos).
+  - Vibración háptica dual mediante **@capacitor/haptics** y fallback web.
+- **Botón 🏁 Finalizar Sesión:** Modal de resumen con minutos reales entrenados, series completadas y volumen total levantado en kg/lb.
+
+### 📌 Proyectos e Ideas: Vista Dual Kanban / Lista
+- **Archivo:** `src/sections/personal/Projects.tsx`.
+- **Tablero Kanban Interactivo:** 3 columnas (*Por Hacer*, *En Progreso*, *Completadas*) con contadores, tarjetas con prioridad (*Alta*, *Media*, *Baja*) y botones de avance rápido.
+- **Lista Clásica:** Vista tradicional con checkboxes ordenados por completitud y prioridad.
+- **Barra de Progreso y Métricas:** Porcentaje global completado por proyecto en tiempo real.
+
+### 🐷 Finanzas: Metas de Ahorro / "Chanchito Digital"
+- **Archivo:** `src/sections/personal/SavingsSection.tsx` integrado en `Finances.tsx`.
+- **Objetivos de Ahorro:** Creación de metas con monto objetivo, fecha límite estimada, categoría y moneda (ARS, USD, EUR, USDT).
+- **Aportes Progresivos:** Modal para ingresar aportes parciales con fecha y notas.
+- **Sincronización Inteligente de Finanzas:** Opción para registrar el aporte como un egreso real en la categoría *Ahorro e Inversión* para mantener el balance exacto.
+- **Métricas:** Total ahorrado global, total objetivo, barra de progreso con gradiente y alerta de meta cumplida.
+
+### 🪪 Salud: Carnet SOS de Bolsillo y Código QR Médico
+- **Archivo:** `src/sections/health/Emergency.tsx` y librería `qrcode`.
+- **Carnet SOS Imprimible:** Ficha médica en formato de tarjeta de bolsillo con datos vitales (Grupo Sanguíneo, Alergias en rojo, Medicaciones habituales y Contactos de auxilio) lista para imprimir con `window.print()`.
+- **Código QR Médico Offline:** Generación instantánea en pantalla y en el carnet para que cualquier rescatista, médico o persona de auxilio pueda escanearlo con la cámara de su teléfono sin requerir clave maestra.
+
+### 📅 Calendario: Exportación Universal iCalendar (.ics)
+- **Archivo:** `src/sections/utilities/Calendar.tsx` y `src/utils/calendarExport.ts`.
+- **Compatibilidad Universal:** Exportación en formato estándar RFC 5545 compatible con **Google Calendar**, **Apple Calendar** y **Microsoft Outlook**.
+
+### 🔒 Seguridad: Auditoría de Contraseñas Reutilizadas
+- **Archivo:** `src/sections/security/PasswordManager.tsx`.
+- **Detección de Clústeres:** Agrupación automática de credenciales que comparten exactamente la misma contraseña.
+- **Rotación Rápida:** Botón directo para sustituir contraseñas repetidas por claves criptográficas únicas generadas al azar.
+
 - **Archivo:** `src/sections/personal/Workouts.tsx`.
 - **Actividades con Distancia:** Caminata, trekking, running, ciclismo y natación con cálculo automático de ritmo (*pace* en min/km o km/h) y gasto calórico.
 - **Estructura en Solapas:** Pestaña inicial `⚡ Nuevo Entrenamiento` y solapa `📋 Mis Entrenamientos` para consultar el historial con buscador y filtros por período y disciplina.

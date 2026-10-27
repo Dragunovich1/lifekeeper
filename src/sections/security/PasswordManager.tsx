@@ -232,6 +232,24 @@ export const PasswordManagerSection = () => {
     return map
   }, [passwords])
 
+  const reusedPasswordGroups = useMemo(() => {
+    const map = new Map<string, PasswordEntry[]>()
+    passwords.forEach((entry) => {
+      const list = map.get(entry.password) ?? []
+      list.push(entry)
+      map.set(entry.password, list)
+    })
+    return Array.from(map.entries())
+      .filter(([_, entries]) => entries.length > 1)
+      .map(([pwd, entries]) => ({
+        password: pwd,
+        count: entries.length,
+        entries,
+        serviceNames: entries.map((e) => e.service).join(', '),
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [passwords])
+
   const getEntryHealth = (
     entry: PasswordEntry,
   ): { label: 'Fuerte' | 'Repetida' | 'Débil' | 'Antigua'; badgeClass: string } => {
@@ -432,14 +450,115 @@ export const PasswordManagerSection = () => {
           <div
             className="stat-card"
             style={{ cursor: 'pointer' }}
+            onClick={() => setHealthFilter('repeated')}
+            title="Filtrar por claves repetidas"
+          >
+            <span className="stat-title">Reutilizadas</span>
+            <span className="stat-value" style={{ color: auditStats.repeated > 0 ? 'var(--color-error)' : 'inherit' }}>
+              {auditStats.repeated}
+            </span>
+            <span className="panel-subtitle">{reusedPasswordGroups.length} grupos en riesgo</span>
+          </div>
+          <div
+            className="stat-card"
+            style={{ cursor: 'pointer' }}
             onClick={() => setHealthFilter('needsAction')}
             title="Filtrar por claves a revisar (débiles, repetidas o >180 días)"
           >
             <span className="stat-title">Por fortalecer / rotar</span>
             <span className="stat-value">{auditStats.needsAction}</span>
-            <span className="panel-subtitle">Débiles, repetidas o &gt;180 días</span>
+            <span className="panel-subtitle">Débiles o &gt;180 días</span>
           </div>
         </div>
+
+        {/* Panel de Auditoría de Contraseñas Reutilizadas */}
+        {reusedPasswordGroups.length > 0 && (
+          <div
+            className="panel"
+            style={{
+              borderColor: 'rgba(239, 68, 68, 0.4)',
+              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(245, 158, 11, 0.06) 100%)',
+              marginBottom: '1rem',
+            }}
+          >
+            <div className="panel-header" style={{ alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                  <span className="badge badge-error">🚨 Riesgo de Seguridad</span>
+                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                    Auditoría de Contraseñas Reutilizadas ({reusedPasswordGroups.length} grupos detectados)
+                  </h4>
+                </div>
+                <p className="panel-subtitle" style={{ margin: 0 }}>
+                  Usar la misma contraseña en diferentes servicios expone todas tus cuentas si uno de ellos sufre una brecha de datos. Rotá estas credenciales por claves aleatorias únicas.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+              {reusedPasswordGroups.map((group, gIdx) => (
+                <div
+                  key={gIdx}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="badge badge-error" style={{ fontSize: '0.75rem' }}>
+                        Compartida en {group.count} servicios
+                      </span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                        {group.serviceNames}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {group.entries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.35rem 0.65rem',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                          fontSize: '0.8125rem',
+                        }}
+                      >
+                        <strong>{entry.service}</strong>
+                        {entry.username && <span style={{ color: 'var(--color-text-muted)' }}>({entry.username})</span>}
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', marginLeft: '0.25rem' }}
+                          onClick={() => {
+                            startEdit(entry);
+                            setEditFormState((prev) => ({
+                              ...prev,
+                              password: generateSecurePassword(18),
+                            }));
+                          }}
+                          title="Asignar una clave única y segura a este servicio"
+                        >
+                          ⚡ Cambiar por clave única
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="panel">
           <div className="panel-header">

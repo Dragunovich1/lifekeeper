@@ -32,6 +32,7 @@ import {
   toLocalDateKey,
 } from '../../utils/dates'
 import { DebtsSection } from './DebtsSection'
+import { SavingsSection } from './SavingsSection'
 
 const createInitialFormState = (defaultCurrency = 'ARS'): Omit<FinanceTransaction, 'id'> => ({
   type: 'income',
@@ -75,7 +76,7 @@ export const FinancesSection = () => {
   const transactions = data.personal.finances
   const budgets = data.personal.budgets ?? {}
 
-  const [financeTab, setFinanceTab] = useState<'transactions' | 'debts'>('transactions')
+  const [financeTab, setFinanceTab] = useState<'transactions' | 'debts' | 'savings'>('transactions')
   const [showFinancesBalance, setShowFinancesBalance] = useState(false)
 
   const [formState, setFormState] = useState<Omit<FinanceTransaction, 'id'>>(() => createInitialFormState(currency))
@@ -305,9 +306,33 @@ export const FinancesSection = () => {
             </span>
           ) : null}
         </button>
+        <button
+          type="button"
+          className={financeTab === 'savings' ? 'primary-button' : 'secondary-button'}
+          onClick={() => setFinanceTab('savings')}
+        >
+          🐷 Metas de Ahorro
+          {(data.personal.savingsGoals?.length ?? 0) > 0 ? (
+            <span
+              style={{
+                marginLeft: '0.4rem',
+                background: 'var(--color-accent-blue)',
+                color: '#fff',
+                padding: '0.1rem 0.45rem',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}
+            >
+              {data.personal.savingsGoals?.length}
+            </span>
+          ) : null}
+        </button>
       </div>
 
-      {financeTab === 'debts' ? (
+      {financeTab === 'savings' ? (
+        <SavingsSection />
+      ) : financeTab === 'debts' ? (
         <DebtsSection />
       ) : (
         <div className="section-body">

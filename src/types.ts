@@ -159,10 +159,13 @@ export interface DebtEntry {
   createdAt: string
 }
 
+export type ProjectTaskStatus = 'todo' | 'in_progress' | 'done'
+
 export interface ProjectTask {
   id: string
   description: string
   completed: boolean
+  status?: ProjectTaskStatus
   priority?: 'alta' | 'media' | 'baja'
   dueDate?: string
 }
@@ -173,6 +176,57 @@ export interface Project {
   description?: string
   dueDate?: string
   tasks: ProjectTask[]
+  createdAt: string
+}
+
+export interface VehicleFuelLog {
+  id: string
+  date: string
+  mileage: number
+  liters: number
+  cost: number
+  fuelType?: 'nafta' | 'gasoil' | 'gnc' | 'electrico'
+  notes?: string
+}
+
+export interface VehicleProfile {
+  id: string
+  name: string
+  brand: string
+  model: string
+  year?: number
+  licensePlate?: string
+  vehicleType: 'auto' | 'moto' | 'camioneta' | 'otro'
+  currentMileage?: number
+  insuranceCompany?: string
+  insurancePolicyNumber?: string
+  insuranceExpiryDate?: string
+  insurancePhoneEmergency?: string
+  vtvExpiryDate?: string
+  licenseExpiryDate?: string
+  fuelLogs?: VehicleFuelLog[]
+  notes?: string
+}
+
+export interface SavingsContribution {
+  id: string
+  date: string
+  amount: number
+  notes?: string
+}
+
+export interface SavingsGoal {
+  id: string
+  title: string
+  targetAmount: number
+  currentAmount: number
+  currency: string
+  targetDate?: string
+  category?: string
+  icon?: string
+  contributions: SavingsContribution[]
+  completed: boolean
+  notes?: string
   createdAt: string
 }
 
@@ -387,8 +441,10 @@ export interface PersonalData {
   finances: FinanceTransaction[]
   budgets?: Record<string, number>
   debts?: DebtEntry[]
+  savingsGoals?: SavingsGoal[]
   projects: Project[]
   vehicles: VehicleService[]
+  vehicleProfiles?: VehicleProfile[]
   workouts?: WorkoutSession[]
   workoutTemplates?: WorkoutTemplate[]
   nutrition?: NutritionData
