@@ -1,7 +1,12 @@
 import type { AssistantMessage } from '../../services/assistant/localAssistant'
 
 export const INITIAL_WELCOME_TEXT =
-  '¡Qué hacés, che! 👋 Soy tu **Asistente de LifeKeeper**. Tengo tu bóveda bajo la lupa: contame qué necesitás o tocá una de las opciones de abajo.'
+  '¡Qué hacés, che! 👋 Soy tu **Asistente de LifeKeeper**. Contame las cosas como te salgan y yo las dejo guardadas en la sección que corresponda:\n\n' +
+  '• *"tomé 3 vasos de agua"*\n' +
+  '• *"hoy me siento medio bajón"*\n' +
+  '• *"se me vence la VTV el 15 de noviembre"*\n' +
+  '• *"gasté 20 lucas en el súper"*\n\n' +
+  'O tocá una de las opciones de abajo.'
 
 export const CREATE_INITIAL_MESSAGES = (): AssistantMessage[] => [
   {

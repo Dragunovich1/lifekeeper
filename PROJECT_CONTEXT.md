@@ -111,6 +111,13 @@
 - **Action Cards con Deshacer (`Undo2`):** Visualización enriquecida de cada mutación guardada con reversión instantánea.
 - **Historial Persistente Cifrado:** Sesiones de chat guardadas y cifradas Zero-Knowledge en la bóveda, con soporte de múltiples conversaciones y botón **+ Nuevo Chat**.
 
+### 🗣️ Carga por conversación (todo el sistema, solo hablando)
+- **Archivos:** `src/services/assistant/actionExtractor.ts` y `src/services/assistant/actions/` (`wellbeing.ts`, `money.ts`, `health.ts`, `vehicles.ts`, `organizer.ts`, `dateParser.ts`, `index.ts`).
+- **Catálogo de acciones (`ALL_ACTIONS`):** agua, estado de ánimo/diario, comidas, peso, entrenamientos, gastos/ingresos, deudas y pagos, aportes de ahorro, toma/alta de medicación, vacunas, consultas, historial clínico (estudios), ciclo menstrual, vencimientos (VTV/seguro/licencia), combustible, service, recordatorios, tareas de proyectos y notas privadas. Contraseñas y documentos NO se cargan por chat.
+- **Cada acción** define `hints` (cuándo entra al prompt), `schema` + `example` (para el LLM), `build()` (valida, devuelve el cambio real + línea de confirmación + tarjeta con Deshacer, o una pregunta si falta un dato) y opcionalmente `local()` (interpretación determinística sin LLM). Para sumar un área nueva alcanza con agregar una definición.
+- **Orden en `AssistantModal.handleSend`:** (0) mensajes con varias cosas → LLM primero; (1) reglas regex históricas de `localAssistant.ts`; (2) parsers `local()` del catálogo (ánimo, vencimientos, tomas); (3) LLM extractor (JSON, `format: json`, temperatura 0); (4) conversación con el LLM; (5) motor semántico local.
+- **Honestidad:** el LLM nunca guarda ni confirma; solo interpreta. Si afirma haber guardado algo sin que la app lo haya hecho, `guardFalseSaveClaims` agrega un aviso. Si falta un dato (p. ej. la fecha de la VTV) el asistente pregunta en vez de adivinar.
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)

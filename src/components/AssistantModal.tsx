@@ -14,10 +14,11 @@ import {
 } from '../services/assistant/ollamaClient'
 import type { AppData, AssistantChatSession, WorkoutTemplate } from '../types'
 import {
-  buildActionsResult,
-  extractActions,
   guardFalseSaveClaims,
   looksLikeActionRequest,
+  looksMultiIntent,
+  planLlmActions,
+  planLocalActions,
 } from '../services/assistant/actionExtractor'
 import { CREATE_INITIAL_MESSAGES } from './assistant/constants'
 import { useAssistantVoice } from './assistant/useAssistantVoice'
@@ -212,6 +213,26 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       setIsTyping(false)
     }
 
+    const history = messages
+      .filter((m) => m.id !== 'welcome' && m.id !== assistantMsgId)
+      .map((m) => ({ role: m.sender, content: m.text }))
+    const lastAssistantText = [...messages].reverse().find((m) => m.sender === 'assistant')?.text ?? ''
+
+    const llmReady = ollamaStatus.online && Boolean(ollamaStatus.activeModel)
+
+    // Mensajes con varias cosas a la vez: se interpreta primero con el LLM (las reglas rápidas solo captan una)
+    if (llmReady && looksMultiIntent(text, lastAssistantText)) {
+      try {
+        const multi = await planLlmActions(text, history, ollamaStatus.activeModel!, data, lastAssistantText)
+        if (multi) {
+          await applyMutation(multi)
+          return
+        }
+      } catch (err) {
+        console.warn('Interpretación múltiple falló, se sigue con las reglas locales:', err)
+      }
+    }
+
     // Intento 1: Detección y ejecución inmediata de comandos de mutación
     const mutationResult = tryExecuteAssistantMutation(text, data)
     if (mutationResult) {
@@ -219,20 +240,21 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       return
     }
 
-    // Intento 2: Streaming en tiempo real con Ollama Local
-    if (ollamaStatus.online && ollamaStatus.activeModel) {
-      const history = messages
-        .filter((m) => m.id !== 'welcome' && m.id !== assistantMsgId)
-        .map((m) => ({ role: m.sender, content: m.text }))
+    // Intento 2: reglas locales del catálogo (ánimo, vencimientos, tomas de medicación...): instantáneas y sin conexión
+    const localResult = planLocalActions(text, data, lastAssistantText)
+    if (localResult) {
+      await applyMutation(localResult)
+      return
+    }
 
-      // 2a. Pedidos de guardar/agendar/cargar: el LLM los interpreta, la app los ejecuta y confirma
-      const lastAssistantText = [...messages].reverse().find((m) => m.sender === 'assistant')?.text ?? ''
+    // Intento 3: Streaming en tiempo real con Ollama Local
+    if (ollamaStatus.online && ollamaStatus.activeModel) {
+      // 3a. Pedidos de guardar/agendar/cargar: el LLM los interpreta, la app los ejecuta y confirma
       if (looksLikeActionRequest(text, lastAssistantText)) {
         try {
-          const actions = await extractActions(text, history, ollamaStatus.activeModel)
-          const actionResult = buildActionsResult(actions)
-          if (actionResult) {
-            await applyMutation(actionResult)
+          const llmResult = await planLlmActions(text, history, ollamaStatus.activeModel, data, lastAssistantText)
+          if (llmResult) {
+            await applyMutation(llmResult)
             return
           }
         } catch (err) {
@@ -240,7 +262,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         }
       }
 
-      // 2b. Conversación normal. Si el LLM afirma haber guardado algo, se aclara que no fue así
+      // 3b. Conversación normal. Si el LLM afirma haber guardado algo, se aclara que no fue así
       try {
         const rawText = await queryOllamaStream(
           text,
@@ -268,7 +290,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       }
     }
 
-    // Intento 3: Motor semántico local porteño con efecto máquina de escribir
+    // Intento 4: Motor semántico local porteño con efecto máquina de escribir
     try {
       const response = await processAssistantQuery(text, data)
       await streamTextTypewriter(response.text, (currentText) => {
