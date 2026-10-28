@@ -15,6 +15,7 @@ const reminderAt = (dateKey: string, time: string): string => {
 // ---------------------------------------------------------------------------
 export const medicationTakenAction: ActionDef = {
   type: 'medication_taken',
+  about: 'se tomó un medicamento que ya tiene cargado',
   hints: /pastilla|remedio|medic|tome|tomo|comprimido|dosis|antibiotic|ibuprof|paracetam|\bmg\b|tratamiento|pildora/,
   schema: '{"type":"medication_taken","name":"nombre de un medicamento ya cargado","time":"HH:MM o vacío"}',
   example: '"ya me tomé el ibuprofeno" → {"type":"medication_taken","name":"Ibuprofeno"}',
@@ -60,6 +61,7 @@ export const medicationTakenAction: ActionDef = {
 
 export const medicationAddAction: ActionDef = {
   type: 'medication_add',
+  about: 'empieza o le recetaron un medicamento o tratamiento nuevo',
   hints: /empece|empiezo|me recetaron|me indicaron|tengo que tomar|tratamiento|antibiotic|\bmg\b|cada \d+ horas/,
   schema: '{"type":"medication_add","name":"...","dosage":"ej. 500 mg","frequency":"ej. cada 8 horas","times":["08:00","16:00"],"startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD o vacío","instructions":"..."}',
   example: '"me recetaron amoxicilina 500 mg cada 8 horas por 7 días" → {"type":"medication_add","name":"Amoxicilina","dosage":"500 mg","frequency":"Cada 8 horas","times":["08:00","16:00","00:00"],"endDate":"(hoy + 7 días)"}',
@@ -93,6 +95,7 @@ export const medicationAddAction: ActionDef = {
 // ---------------------------------------------------------------------------
 export const vaccineAction: ActionDef = {
   type: 'vaccine',
+  about: 'se aplicó una vacuna',
   hints: /vacun|refuerzo|antigripal|antitetanica|dosis/,
   schema: '{"type":"vaccine","vaccine":"...","dose":"ej. 2da dosis","date":"YYYY-MM-DD","location":"...","nextDoseDate":"YYYY-MM-DD o vacío"}',
   example: '"hoy me puse la antigripal" → {"type":"vaccine","vaccine":"Antigripal","dose":"Dosis única","date":"(hoy)"}',
@@ -128,6 +131,7 @@ export const vaccineAction: ActionDef = {
 
 export const consultationAction: ActionDef = {
   type: 'consultation',
+  about: 'fue a una consulta médica (ya realizada)',
   hints: /consulta|doctor|medic[oa]\b|dra?\b|control|especialista|fui al|cardiolog|dentista|odontolog|pediatra|clinico|dermat|ginecolog/,
   schema: '{"type":"consultation","doctor":"...","reason":"...","date":"YYYY-MM-DD","diagnosis":"...","treatment":"...","nextVisitDate":"YYYY-MM-DD o vacío"}',
   example: '"hoy fui al cardiólogo, me dijo que todo bien, control en 6 meses" → {"type":"consultation","doctor":"Cardiólogo","reason":"Control","date":"(hoy)","diagnosis":"Todo bien","nextVisitDate":"(hoy + 6 meses)"}   (solo consultas ya realizadas; un turno futuro es un recordatorio)',
@@ -163,6 +167,7 @@ export const consultationAction: ActionDef = {
 
 export const clinicalNoteAction: ActionDef = {
   type: 'clinical_note',
+  about: 'quiere guardar un estudio, análisis, diagnóstico o cirugía en su historial clínico',
   hints: /estudio|historial|clinic|laboratorio|diagnostic|analisis|resonancia|ecograf|radiograf|ergometr|electro|tomograf|cirugia|operacion|ficha medica/,
   schema: '{"type":"clinical_note","title":"...","description":"...","date":"YYYY-MM-DD","tags":["Estudio"]}',
   example: '"cargá la ergometría en estudios médicos" → {"type":"clinical_note","title":"Ergometría","description":"Prueba de esfuerzo","date":"(hoy)","tags":["Estudio","Cardiología"]}   (solo si pide cargar un estudio/diagnóstico/cirugía en el historial clínico)',
@@ -191,6 +196,7 @@ export const clinicalNoteAction: ActionDef = {
 // ---------------------------------------------------------------------------
 export const menstrualAction: ActionDef = {
   type: 'menstrual',
+  about: 'empezó o terminó el período menstrual',
   hints: /period|regla|menstru|ciclo|colico|ovula|sangr|me vino|me bajo/,
   schema: '{"type":"menstrual","event":"start|end","date":"YYYY-MM-DD","flow":"ligero|moderado|abundante|manchado","symptoms":["Cólicos"]}',
   example: '"hoy me vino la regla, con cólicos" → {"type":"menstrual","event":"start","date":"(hoy)","flow":"moderado","symptoms":["Cólicos"]}',

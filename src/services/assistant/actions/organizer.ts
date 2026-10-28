@@ -4,6 +4,7 @@ import type { ActionDef } from './types'
 
 export const reminderAction: ActionDef = {
   type: 'reminder',
+  about: 'quiere que se lo recuerden o cuenta un turno/evento futuro con fecha u hora',
   hints: /record|agend|avisa|alarma|olvid|tengo que|tengo (un|una)|turno|cita|manana|hoy a las|a las \d|\d\s?hs/,
   schema: '{"type":"reminder","title":"...","date":"YYYY-MM-DD","time":"HH:MM","category":"salud|personal|general","details":"..."}',
   example: '"hoy a las 15:00 tengo ergometría" → {"type":"reminder","title":"Ergometría","date":"(hoy)","time":"15:00","category":"salud"}   (también turnos y eventos futuros; "recordame…" siempre es un recordatorio)',
@@ -34,6 +35,7 @@ export const reminderAction: ActionDef = {
 
 export const projectTaskAction: ActionDef = {
   type: 'project_task',
+  about: 'quiere sumar una tarea o idea a un proyecto',
   hints: /proyecto|tarea|idea|pendiente|kanban|agrega.*lista|sumale/,
   schema: '{"type":"project_task","project":"nombre del proyecto","description":"la tarea o idea","priority":"alta|media|baja","dueDate":"YYYY-MM-DD o vacío"}',
   example: '"agregá al proyecto Casa la tarea comprar pintura, prioridad alta" → {"type":"project_task","project":"Casa","description":"Comprar pintura","priority":"alta"}',
@@ -74,6 +76,7 @@ export const projectTaskAction: ActionDef = {
 
 export const privateNoteAction: ActionDef = {
   type: 'private_note',
+  about: 'quiere guardar una nota privada o un dato reservado',
   hints: /nota privada|nota segura|notas privadas|nota secreta|guarda.*nota|anota.*nota/,
   schema: '{"type":"private_note","title":"...","content":"..."}',
   example: '"guardá una nota privada: el código del candado es 4821" → {"type":"private_note","title":"Código del candado","content":"El código del candado es 4821"}',

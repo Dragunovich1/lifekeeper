@@ -29,7 +29,9 @@ export type RawAction = Record<string, unknown>
 
 export interface ActionDef {
   type: string
-  /** Se evalúa sobre texto normalizado (sin tildes): decide si la acción entra al prompt del LLM. */
+  /** Descripción corta en lenguaje natural: es lo que ve el LLM para decidir si el mensaje le corresponde. */
+  about: string
+  /** Respaldo cuando el LLM no responde: pistas sobre texto normalizado (sin tildes). */
   hints: RegExp
   /** Descripción del JSON esperado, para el prompt. */
   schema: string

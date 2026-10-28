@@ -7,6 +7,7 @@ const CATEGORIES = ['Alimentación', 'Transporte', 'Servicios', 'Salud', 'Deport
 
 export const transactionAction: ActionDef = {
   type: 'transaction',
+  about: 'gastó, pagó, compró, cobró o ingresó plata',
   hints: /gast|compre|pague|ingres|cobre|sueldo|plata|\$|pesos|lucas|mangos|dolares|usd|luz\b|alquiler|expensas|super\b/,
   schema: '{"type":"transaction","kind":"expense|income","amount":número,"currency":"ARS|USD|EUR|USDT|BRL|CLP","category":"' + CATEGORIES.join('|') + '","description":"..."}',
   example: '"gasté 5 lucas en el súper" → {"type":"transaction","kind":"expense","amount":5000,"currency":"ARS","category":"Alimentación","description":"Súper"}   (una luca = 1000, un palo = 1.000.000; sin moneda es ARS)',
@@ -30,6 +31,7 @@ export const transactionAction: ActionDef = {
 
 export const debtAction: ActionDef = {
   type: 'debt',
+  about: 'prestó plata, le prestaron o debe plata a alguien o a una entidad (deuda nueva)',
   hints: /debo|deuda|preste|prestamo|prestado|me deben|me debe|cuota|tarjeta|financi/,
   schema: '{"type":"debt","direction":"por_pagar|por_cobrar","counterparty":"persona o entidad","personType":"persona|entidad","amount":número,"currency":"ARS|USD|EUR|USDT|BRL|CLP","dueDate":"YYYY-MM-DD o vacío","notes":"..."}',
   example: '"le presté 20 lucas a Juan" → {"type":"debt","direction":"por_cobrar","counterparty":"Juan","personType":"persona","amount":20000,"currency":"ARS"}   ("le debo X a Y" → por_pagar)',
@@ -67,6 +69,7 @@ export const debtAction: ActionDef = {
 
 export const debtPaymentAction: ActionDef = {
   type: 'debt_payment',
+  about: 'pagó o cobró una parte de una deuda o préstamo que ya existe',
   hints: /pague|abone|liquide|devolvio|me pago|cuota|cancele|devolvi/,
   schema: '{"type":"debt_payment","counterparty":"persona o entidad de una deuda existente","amount":número}',
   example: '"Juan me devolvió 10 lucas" → {"type":"debt_payment","counterparty":"Juan","amount":10000}',
@@ -104,6 +107,7 @@ export const debtPaymentAction: ActionDef = {
 
 export const savingsAction: ActionDef = {
   type: 'savings_contribution',
+  about: 'puso plata en una meta de ahorro',
   hints: /ahorr|meta|chanchito|aporte|aporté|apunte|junte|sume a|sumé a/,
   schema: '{"type":"savings_contribution","goal":"nombre de la meta de ahorro","amount":número}',
   example: '"aporté 10 lucas a la meta del viaje" → {"type":"savings_contribution","goal":"viaje","amount":10000}',

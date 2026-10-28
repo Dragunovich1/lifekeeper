@@ -15,8 +15,6 @@ import {
 import type { AppData, AssistantChatSession, WorkoutTemplate } from '../types'
 import {
   guardFalseSaveClaims,
-  looksLikeActionRequest,
-  looksMultiIntent,
   planLlmActions,
   planLocalActions,
 } from '../services/assistant/actionExtractor'
@@ -218,57 +216,48 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       .map((m) => ({ role: m.sender, content: m.text }))
     const lastAssistantText = [...messages].reverse().find((m) => m.sender === 'assistant')?.text ?? ''
 
-    const llmReady = ollamaStatus.online && Boolean(ollamaStatus.activeModel)
+    const llmModel = ollamaStatus.online ? ollamaStatus.activeModel : null
 
-    // Mensajes con varias cosas a la vez: se interpreta primero con el LLM (las reglas rápidas solo captan una)
-    if (llmReady && looksMultiIntent(text, lastAssistantText)) {
+    // Con el LLM disponible, es quien entiende el mensaje con las palabras del usuario.
+    // Si decide que no hay nada para guardar, se pasa directo a la conversación (sin reglas por frase).
+    let llmUnderstood = false
+    if (llmModel) {
       try {
-        const multi = await planLlmActions(text, history, ollamaStatus.activeModel!, data, lastAssistantText)
-        if (multi) {
-          await applyMutation(multi)
+        const llmResult = await planLlmActions(text, history, llmModel, data, lastAssistantText)
+        llmUnderstood = true
+        if (llmResult) {
+          await applyMutation(llmResult)
           return
         }
       } catch (err) {
-        console.warn('Interpretación múltiple falló, se sigue con las reglas locales:', err)
+        console.warn('El LLM no pudo interpretar el mensaje, se usan las reglas locales de respaldo:', err)
       }
     }
 
-    // Intento 1: Detección y ejecución inmediata de comandos de mutación
-    const mutationResult = tryExecuteAssistantMutation(text, data)
-    if (mutationResult) {
-      await applyMutation(mutationResult)
-      return
-    }
-
-    // Intento 2: reglas locales del catálogo (ánimo, vencimientos, tomas de medicación...): instantáneas y sin conexión
-    const localResult = planLocalActions(text, data, lastAssistantText)
-    if (localResult) {
-      await applyMutation(localResult)
-      return
-    }
-
-    // Intento 3: Streaming en tiempo real con Ollama Local
-    if (ollamaStatus.online && ollamaStatus.activeModel) {
-      // 3a. Pedidos de guardar/agendar/cargar: el LLM los interpreta, la app los ejecuta y confirma
-      if (looksLikeActionRequest(text, lastAssistantText)) {
-        try {
-          const llmResult = await planLlmActions(text, history, ollamaStatus.activeModel, data, lastAssistantText)
-          if (llmResult) {
-            await applyMutation(llmResult)
-            return
-          }
-        } catch (err) {
-          console.warn('No se pudo interpretar el pedido como acción, se responde en modo conversación:', err)
-        }
+    // Respaldo sin LLM (o si falló): reglas por patrones y parsers locales del catálogo
+    if (!llmUnderstood) {
+      const mutationResult = tryExecuteAssistantMutation(text, data)
+      if (mutationResult) {
+        await applyMutation(mutationResult)
+        return
       }
 
-      // 3b. Conversación normal. Si el LLM afirma haber guardado algo, se aclara que no fue así
+      const localResult = planLocalActions(text, data, lastAssistantText)
+      if (localResult) {
+        await applyMutation(localResult)
+        return
+      }
+    }
+
+    // Conversación con Ollama Local (streaming)
+    if (llmModel) {
+      // Si el LLM afirma haber guardado algo, se aclara que no fue así
       try {
         const rawText = await queryOllamaStream(
           text,
           history,
           data,
-          ollamaStatus.activeModel,
+          llmModel,
           (_chunk, fullText) => {
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantMsgId ? { ...m, text: fullText } : m)),
@@ -290,7 +279,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
       }
     }
 
-    // Intento 4: Motor semántico local porteño con efecto máquina de escribir
+    // Último recurso: motor semántico local porteño con efecto máquina de escribir
     try {
       const response = await processAssistantQuery(text, data)
       await streamTextTypewriter(response.text, (currentText) => {

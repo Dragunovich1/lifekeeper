@@ -17,6 +17,7 @@ const formatPace = (minutesPerKm: number) => {
 // ---------------------------------------------------------------------------
 export const waterAction: ActionDef = {
   type: 'water',
+  about: 'tomó agua (vasos, botellas, litros, ml)',
   hints: /agua|vaso|botella|litro|\bml\b|hidrat|\bsed\b/,
   schema: '{"type":"water","ml":número}',
   example: '"tomé 3 vasos de agua" → {"type":"water","ml":750}   (un vaso = 250 ml, una botella = 500 ml, un litro = 1000 ml)',
@@ -73,6 +74,7 @@ const CARING_NOTE: Record<string, string> = {
 
 export const diaryAction: ActionDef = {
   type: 'diary',
+  about: 'cuenta cómo se siente emocionalmente o escribe una reflexión del día',
   hints: /siento|sentir|animo|bajon|triste|deprim|ansios|estres|angusti|content|feliz|enojad|cansad|agotad|diario|reflexion|humor|dia (horrible|pesado|dificil|hermoso|lindo)/,
   schema: '{"type":"diary","mood":"Excelente|Bien|Neutral|Regular|Mal","content":"lo que cuenta el usuario, en primera persona"}',
   example: '"hoy me siento medio bajón, mal de ánimo" → {"type":"diary","mood":"Mal","content":"Hoy me siento medio bajón, mal de ánimo."}   (solo emociones o reflexiones; los síntomas físicos NO van acá)',
@@ -112,6 +114,7 @@ const DEFAULT_KCAL: Record<MealType, number> = { desayuno: 300, almuerzo: 600, m
 
 export const mealAction: ActionDef = {
   type: 'meal',
+  about: 'comió o bebió algo (desayuno, almuerzo, merienda, cena, snack)',
   hints: /comi|desayun|almorc|cene|merend|snack|kcal|calori|comida|almuerzo|cena\b|milanesa|ensalada|pizza|asado|fideos|tostada|sandwich|empanada/,
   schema: '{"type":"meal","mealType":"desayuno|almuerzo|merienda|cena|snack|suplemento","name":"qué comió","calories":número estimado,"protein":g,"carbs":g,"fats":g}',
   example: '"almorcé milanesa con puré" → {"type":"meal","mealType":"almuerzo","name":"Milanesa con puré","calories":750,"protein":38,"carbs":70,"fats":32}   (estimá las calorías si no las dice)',
@@ -164,6 +167,7 @@ export const mealAction: ActionDef = {
 // ---------------------------------------------------------------------------
 export const weightAction: ActionDef = {
   type: 'weight',
+  about: 'informa su peso corporal',
   hints: /\bpeso\b|pese|balanza|kilos|\bkg\b/,
   schema: '{"type":"weight","kg":número}',
   example: '"me pesé, 78,4 kilos" → {"type":"weight","kg":78.4}',
@@ -186,6 +190,7 @@ export const weightAction: ActionDef = {
 // ---------------------------------------------------------------------------
 export const workoutAction: ActionDef = {
   type: 'workout',
+  about: 'hizo ejercicio o deporte (gym, correr, caminar, bici, natación, etc.)',
   hints: /entren|gym|gimnasio|corri|camine|nade|pedale|bici|running|trekking|rutina|ejercicio|yoga|pilates|futbol|padel|tenis|natacion|caminata/,
   schema:
     '{"type":"workout","title":"...","workoutType":"fuerza|cardio|running|caminata|ciclismo|natacion|trekking|funcional|flexibilidad|otro","durationMinutes":número,"distanceKm":número,"calories":número,"exercises":[{"name":"...","sets":número,"reps":número,"weight":kg}]}',

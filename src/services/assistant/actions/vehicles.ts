@@ -41,6 +41,7 @@ function detectKind(n: string): keyof typeof KIND | null {
 
 export const vehicleExpiryAction: ActionDef = {
   type: 'vehicle_expiry',
+  about: 'habla del vencimiento de la VTV, el seguro o la licencia/registro de conducir',
   hints: /vtv|rto|seguro|poliza|licencia|registro|vence|vencimiento|venci/,
   schema: '{"type":"vehicle_expiry","kind":"vtv|seguro|licencia","date":"YYYY-MM-DD o vacío si no la dijo","vehicle":"nombre del vehículo o vacío"}',
   example: '"se me vence la VTV el 15 de noviembre" → {"type":"vehicle_expiry","kind":"vtv","date":"2026-11-15"}   (si no dice la fecha dejá "date" vacío)',
@@ -114,6 +115,7 @@ export const vehicleExpiryAction: ActionDef = {
 
 export const vehicleFuelAction: ActionDef = {
   type: 'vehicle_fuel',
+  about: 'cargó combustible',
   hints: /nafta|combustible|cargue|litros|gnc|gasoil|tanque/,
   schema: '{"type":"vehicle_fuel","liters":número,"cost":número,"mileage":km del odómetro o vacío,"fuelType":"nafta|gasoil|gnc|electrico","vehicle":"..."}',
   example: '"cargué 30 litros de nafta, 45 lucas, tengo 82500 km" → {"type":"vehicle_fuel","liters":30,"cost":45000,"mileage":82500,"fuelType":"nafta"}',
@@ -153,6 +155,7 @@ export const vehicleFuelAction: ActionDef = {
 
 export const vehicleServiceAction: ActionDef = {
   type: 'vehicle_service',
+  about: 'hizo un service, arreglo o cambio en el vehículo',
   hints: /service|aceite|cambio de|neumatic|cubiertas|distribucion|frenos|taller|mecanic|bateria|filtro/,
   schema: '{"type":"vehicle_service","serviceType":"...","cost":número,"mileage":km,"nextServiceDate":"YYYY-MM-DD o vacío","nextServiceMileage":km,"vehicle":"..."}',
   example: '"hice el service, cambio de aceite, 80 lucas, 82000 km, el próximo a los 92000" → {"type":"vehicle_service","serviceType":"Cambio de aceite","cost":80000,"mileage":82000,"nextServiceMileage":92000}',
