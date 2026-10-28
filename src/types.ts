@@ -437,6 +437,40 @@ export interface NutritionData {
   }
 }
 
+export interface ShoppingItem {
+  id: string
+  name: string
+  quantity: number
+  unit?: string // 'kg', 'l', 'u', etc.
+  /** Precio unitario estimado o pagado. */
+  price?: number
+  category: string
+  checked: boolean
+  addedAt: string
+  checkedAt?: string
+}
+
+export interface ShoppingList {
+  id: string
+  name: string
+  items: ShoppingItem[]
+  budget?: number
+  currency: string
+  createdAt: string
+}
+
+export interface ShoppingPriceMemory {
+  price: number
+  date: string
+}
+
+export interface ShoppingData {
+  lists: ShoppingList[]
+  activeListId?: string
+  /** Último precio conocido por producto (clave: nombre normalizado). */
+  priceMemory: Record<string, ShoppingPriceMemory>
+}
+
 export interface PersonalData {
   finances: FinanceTransaction[]
   budgets?: Record<string, number>
@@ -448,6 +482,7 @@ export interface PersonalData {
   workouts?: WorkoutSession[]
   workoutTemplates?: WorkoutTemplate[]
   nutrition?: NutritionData
+  shopping?: ShoppingData
 }
 
 export interface AssistantMutationCard {
@@ -486,11 +521,31 @@ export interface AssistantChatSession {
   messages: AssistantChatMessage[]
 }
 
+export type QuickNoteColor = 'amarillo' | 'verde' | 'azul' | 'rosa' | 'violeta' | 'gris'
+
+export interface QuickNote {
+  id: string
+  text: string
+  color: QuickNoteColor
+  pinned: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CalculatorHistoryEntry {
+  id: string
+  expression: string
+  result: string
+  at: string
+}
+
 export interface UtilitiesData {
   reminders: Reminder[]
   calendarPreferences: CalendarPreferences
   backups: BackupMeta
   assistantChats?: AssistantChatSession[]
+  quickNotes?: QuickNote[]
+  calculatorHistory?: CalculatorHistoryEntry[]
   activeAssistantChatId?: string
 }
 

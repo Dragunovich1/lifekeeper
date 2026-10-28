@@ -75,6 +75,9 @@ export const getNavigation = (profile?: UserProfile): NavSection[] => {
       subSections: [
         { key: 'reminders', label: 'Recordatorios' },
         { key: 'calendar', label: 'Calendario' },
+        { key: 'shopping', label: 'Lista de compras' },
+        { key: 'quick-notes', label: 'Notas rápidas' },
+        { key: 'calculator', label: 'Calculadora' },
         { key: 'backups', label: 'Respaldos y exportación' },
       ],
     },

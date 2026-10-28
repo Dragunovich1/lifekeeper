@@ -1,4 +1,5 @@
-import type { PrivateNote, Project, ProjectTask, Reminder } from '../../../types'
+import type { PrivateNote, Project, ProjectTask, QuickNote, Reminder, ShoppingItem, ShoppingList } from '../../../types'
+import { guessCategory, normalizeProductKey } from '../../../utils/shopping'
 import { capitalize, findByName, fmtDate, isoDate, oneOf, optionalIsoDate, str, timeOr, uid } from './helpers'
 import type { ActionDef } from './types'
 
@@ -94,5 +95,78 @@ export const privateNoteAction: ActionDef = {
   },
 }
 
-export const ORGANIZER_ACTIONS = [reminderAction, projectTaskAction, privateNoteAction]
+export const shoppingAddAction: ActionDef = {
+  type: 'shopping_add',
+  about: 'quiere sumar productos a la lista de compras o del súper',
+  hints: /lista de compras|lista del super|comprar|super\b|hay que comprar|falta|se acabo|se termino|sumale a la lista|anota.*(leche|pan)|necesito (comprar|un|una)/,
+  schema: '{"type":"shopping_add","list":"nombre de la lista o vacío","items":[{"name":"...","quantity":número,"unit":"u|kg|g|l|ml|paq","price":precio unitario o vacío}]}',
+  example: '"se acabó la leche y el pan, sumá 2 kilos de tomates a la lista" → {"type":"shopping_add","items":[{"name":"Leche","quantity":1,"unit":"u"},{"name":"Pan","quantity":1,"unit":"u"},{"name":"Tomates","quantity":2,"unit":"kg"}]}',
+  build(raw, { data, now }) {
+    const rawItems = Array.isArray(raw.items) ? (raw.items as Record<string, unknown>[]) : []
+    const memory = data.personal.shopping?.priceMemory ?? {}
+    const items: ShoppingItem[] = rawItems.slice(0, 20).flatMap((r) => {
+      const name = capitalize(str(r.name, 60))
+      if (!name) return []
+      const given = typeof r.price === 'number' ? r.price : parseFloat(String(r.price ?? ''))
+      const unit = oneOf(r.unit, ['kg', 'g', 'l', 'ml', 'paq'] as const)
+      return [{
+        id: uid('shop'),
+        name,
+        quantity: typeof r.quantity === 'number' && r.quantity > 0 ? r.quantity : 1,
+        unit: unit ?? undefined,
+        price: Number.isFinite(given) && given > 0 ? given : memory[normalizeProductKey(name)]?.price,
+        category: guessCategory(name),
+        checked: false,
+        addedAt: now.toISOString(),
+      }]
+    })
+    if (items.length === 0) return null
+
+    const lists = data.personal.shopping?.lists ?? []
+    const wanted = str(raw.list, 60)
+    const existing = (wanted ? findByName(lists, wanted, (l) => l.name) : null) ?? lists.find((l) => l.id === data.personal.shopping?.activeListId) ?? lists[0] ?? null
+    const target: ShoppingList = existing ?? { id: uid('list'), name: capitalize(wanted) || 'Compras', items: [], currency: 'ARS', createdAt: now.toISOString() }
+    const listName = target.name
+
+    return {
+      apply: (prev) => {
+        const shopping = prev.personal.shopping ?? { lists: [], priceMemory: {} }
+        const has = shopping.lists.some((l) => l.id === target.id)
+        const lists = (has ? shopping.lists : [...shopping.lists, { ...target, items: [] }]).map((l) => (l.id === target.id ? { ...l, items: [...items, ...l.items] } : l))
+        return { ...prev, personal: { ...prev.personal, shopping: { ...shopping, lists, activeListId: shopping.activeListId ?? target.id } } }
+      },
+      line: `• 🛒 **${listName}:** ${items.map((i) => `${i.quantity !== 1 || i.unit ? `${i.quantity}${i.unit ? ` ${i.unit}` : ''} ` : ''}${i.name}`).join(', ')}`,
+      card: { category: 'recordatorio', title: `${items.length} ${items.length === 1 ? 'producto' : 'productos'} a la lista`, details: items.map((i) => i.name).join(', ').slice(0, 60), badge: 'Compras', entityId: items[0].id },
+      link: { label: 'Ver Lista de Compras', hash: '#utilities:shopping' },
+    }
+  },
+}
+
+export const quickNoteAction: ActionDef = {
+  type: 'quick_note',
+  about: 'quiere anotar algo rápido (una nota suelta, un apunte, un dato para no olvidarse) que no es un recordatorio con fecha ni un dato reservado',
+  hints: /anotame|apunta|anota (que|esto)|nota rapida|para no olvidar|tene en cuenta|dejame anotado/,
+  schema: '{"type":"quick_note","text":"contenido de la nota","color":"amarillo|verde|azul|rosa|violeta|gris"}',
+  example: '"anotame que el wifi de lo de mamá es casa1234" → {"type":"quick_note","text":"El wifi de lo de mamá es casa1234","color":"amarillo"}   (si tiene fecha u hora, es un recordatorio; si es algo secreto, una nota privada)',
+  build(raw, { now }) {
+    const text = str(raw.text, 1500)
+    if (!text) return null
+    const note: QuickNote = {
+      id: uid('qn'),
+      text: capitalize(text),
+      color: oneOf(raw.color, ['amarillo', 'verde', 'azul', 'rosa', 'violeta', 'gris'] as const) ?? 'amarillo',
+      pinned: false,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    }
+    return {
+      apply: (prev) => ({ ...prev, utilities: { ...prev.utilities, quickNotes: [note, ...(prev.utilities.quickNotes ?? [])] } }),
+      line: `• 📝 **Nota rápida:** ${note.text.length > 90 ? note.text.slice(0, 90) + '…' : note.text}`,
+      card: { category: 'diario', title: 'Nota rápida', details: note.text.slice(0, 60), badge: 'Guardada', entityId: note.id },
+      link: { label: 'Ver Notas Rápidas', hash: '#utilities:quick-notes' },
+    }
+  },
+}
+
+export const ORGANIZER_ACTIONS = [reminderAction, projectTaskAction, privateNoteAction, shoppingAddAction, quickNoteAction]
 

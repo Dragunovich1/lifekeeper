@@ -1,3 +1,6 @@
 export { RemindersSection } from './Reminders'
 export { CalendarSection } from './Calendar'
 export { BackupsSection } from './Backups'
+export { ShoppingListSection } from './ShoppingList'
+export { QuickNotesSection } from './QuickNotes'
+export { CalculatorSection } from './Calculator'

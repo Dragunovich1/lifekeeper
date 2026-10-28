@@ -1,5 +1,6 @@
 import {
   Briefcase,
+  Calculator,
   Calendar,
   CalendarClock,
   CalendarHeart,
@@ -11,6 +12,8 @@ import {
   Palette,
   Settings,
   Share2,
+  ShoppingCart,
+  StickyNote,
   UserRound,
   Utensils,
   X,
@@ -222,6 +225,45 @@ export const MobileMenuSheet = ({
             <div>
               <div className="mobile-sheet-card-label">Calendario</div>
               <div className="mobile-sheet-card-sub">Eventos del mes</div>
+            </div>
+          </button>
+
+          <button
+            className="mobile-sheet-card"
+            onClick={() => handleItemClick(() => onNavigate('utilities', 'shopping'))}
+          >
+            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
+              <ShoppingCart size={20} />
+            </div>
+            <div>
+              <div className="mobile-sheet-card-label">Lista de compras</div>
+              <div className="mobile-sheet-card-sub">Con checks y total</div>
+            </div>
+          </button>
+
+          <button
+            className="mobile-sheet-card"
+            onClick={() => handleItemClick(() => onNavigate('utilities', 'quick-notes'))}
+          >
+            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(250, 204, 21, 0.15)', color: '#facc15' }}>
+              <StickyNote size={20} />
+            </div>
+            <div>
+              <div className="mobile-sheet-card-label">Notas rápidas</div>
+              <div className="mobile-sheet-card-sub">Apuntes al toque</div>
+            </div>
+          </button>
+
+          <button
+            className="mobile-sheet-card"
+            onClick={() => handleItemClick(() => onNavigate('utilities', 'calculator'))}
+          >
+            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
+              <Calculator size={20} />
+            </div>
+            <div>
+              <div className="mobile-sheet-card-label">Calculadora</div>
+              <div className="mobile-sheet-card-sub">Cuentas y propinas</div>
             </div>
           </button>
 

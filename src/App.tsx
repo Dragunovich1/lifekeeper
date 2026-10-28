@@ -55,6 +55,9 @@ const LazyPersonalWorkouts = lazy(() => import('./sections/personal/index').then
 const LazyPersonalNutrition = lazy(() => import('./sections/personal/index').then(m => ({ default: m.NutritionSection })))
 const LazyUtilitiesReminders = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.RemindersSection })))
 const LazyUtilitiesCalendar = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.CalendarSection })))
+const LazyUtilitiesShopping = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.ShoppingListSection })))
+const LazyUtilitiesQuickNotes = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.QuickNotesSection })))
+const LazyUtilitiesCalculator = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.CalculatorSection })))
 const LazyUtilitiesBackups = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.BackupsSection })))
 
 const sectionComponents = {
@@ -79,6 +82,9 @@ const sectionComponents = {
   'personal:nutrition': LazyPersonalNutrition,
   'utilities:reminders': LazyUtilitiesReminders,
   'utilities:calendar': LazyUtilitiesCalendar,
+  'utilities:shopping': LazyUtilitiesShopping,
+  'utilities:quick-notes': LazyUtilitiesQuickNotes,
+  'utilities:calculator': LazyUtilitiesCalculator,
   'utilities:backups': LazyUtilitiesBackups,
 } satisfies Record<string, ComponentType>
 

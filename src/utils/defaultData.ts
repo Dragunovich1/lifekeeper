@@ -78,6 +78,11 @@ export const createEmptyAppData = (): AppData => ({
         fatsGrams: 60,
       },
     },
+    shopping: {
+      lists: [],
+      activeListId: undefined,
+      priceMemory: {},
+    },
   },
   utilities: {
     reminders: [],
@@ -88,6 +93,8 @@ export const createEmptyAppData = (): AppData => ({
     backups: {},
     assistantChats: [],
     activeAssistantChatId: undefined,
+    quickNotes: [],
+    calculatorHistory: [],
   },
 })
 
@@ -200,6 +207,11 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
             dailyGoals: data.personal.nutrition.dailyGoals || defaults.personal.nutrition?.dailyGoals,
           }
         : defaults.personal.nutrition,
+      shopping: {
+        lists: Array.isArray(data.personal?.shopping?.lists) ? [...data.personal.shopping.lists] : [],
+        activeListId: data.personal?.shopping?.activeListId,
+        priceMemory: { ...(data.personal?.shopping?.priceMemory ?? {}) },
+      },
     },
     utilities: {
       reminders: data.utilities?.reminders ? [...data.utilities.reminders] : [],
@@ -215,6 +227,10 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
         ? [...data.utilities.assistantChats]
         : [],
       activeAssistantChatId: data.utilities?.activeAssistantChatId ?? undefined,
+      quickNotes: Array.isArray(data.utilities?.quickNotes) ? [...data.utilities.quickNotes] : [],
+      calculatorHistory: Array.isArray(data.utilities?.calculatorHistory)
+        ? [...data.utilities.calculatorHistory]
+        : [],
     },
   }
 }
