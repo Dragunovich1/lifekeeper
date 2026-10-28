@@ -33,6 +33,9 @@ import {
 } from '../../utils/dates'
 import { DebtsSection } from './DebtsSection'
 import { SavingsSection } from './SavingsSection'
+import { FinanceCalendar } from './finance/FinanceCalendar'
+import { FinanceImport } from './finance/FinanceImport'
+import '../../styles/finance-calendar.css'
 
 const createInitialFormState = (defaultCurrency = 'ARS'): Omit<FinanceTransaction, 'id'> => ({
   type: 'income',
@@ -47,9 +50,10 @@ const createInitialFormState = (defaultCurrency = 'ARS'): Omit<FinanceTransactio
 
 const BASE_CATEGORY_SUGGESTIONS = [
   'Sueldo',
-  'Alquiler',
+  'Hogar',
+  'Comida',
   'Supermercado',
-  'Servicios',
+  'Facturas y servicios',
   'Salud',
   'Transporte',
 ]
@@ -76,7 +80,7 @@ export const FinancesSection = () => {
   const transactions = data.personal.finances
   const budgets = data.personal.budgets ?? {}
 
-  const [financeTab, setFinanceTab] = useState<'transactions' | 'debts' | 'savings'>('transactions')
+  const [financeTab, setFinanceTab] = useState<'calendar' | 'transactions' | 'import' | 'debts' | 'savings'>('calendar')
   const [showFinancesBalance, setShowFinancesBalance] = useState(false)
 
   const [formState, setFormState] = useState<Omit<FinanceTransaction, 'id'>>(() => createInitialFormState(currency))
@@ -276,13 +280,27 @@ export const FinancesSection = () => {
         subtitle="Registrá ingresos y egresos, gestioná deudas y préstamos, controlá presupuestos y divisas"
       />
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem', flexWrap: 'wrap' }}>
+      <div className="fin-section-tabs">
+        <button
+          type="button"
+          className={financeTab === 'calendar' ? 'primary-button' : 'secondary-button'}
+          onClick={() => setFinanceTab('calendar')}
+        >
+          📅 Calendario
+        </button>
         <button
           type="button"
           className={financeTab === 'transactions' ? 'primary-button' : 'secondary-button'}
           onClick={() => setFinanceTab('transactions')}
         >
           💳 Movimientos y Presupuestos
+        </button>
+        <button
+          type="button"
+          className={financeTab === 'import' ? 'primary-button' : 'secondary-button'}
+          onClick={() => setFinanceTab('import')}
+        >
+          📥 Importar
         </button>
         <button
           type="button"
@@ -330,7 +348,11 @@ export const FinancesSection = () => {
         </button>
       </div>
 
-      {financeTab === 'savings' ? (
+      {financeTab === 'calendar' ? (
+        <FinanceCalendar onImport={() => setFinanceTab('import')} />
+      ) : financeTab === 'import' ? (
+        <FinanceImport onDone={() => setFinanceTab('calendar')} />
+      ) : financeTab === 'savings' ? (
         <SavingsSection />
       ) : financeTab === 'debts' ? (
         <DebtsSection />

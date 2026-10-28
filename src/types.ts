@@ -119,6 +119,23 @@ export interface PrivateNote {
 
 export type TransactionType = 'income' | 'expense'
 
+export interface FinanceCategoryDef {
+  id: string
+  name: string
+  kind: TransactionType
+  /** Clave de ícono (ver `financeIcons`). */
+  icon: string
+  /** Color en hex. */
+  color: string
+}
+
+export interface FinanceImportLog {
+  id: string
+  fileName: string
+  at: string
+  count: number
+}
+
 export interface FinanceTransaction {
   id: string
   type: TransactionType
@@ -129,6 +146,8 @@ export interface FinanceTransaction {
   description?: string
   recurring?: boolean
   recurrence?: 'weekly' | 'monthly' | 'yearly'
+  /** Si vino de una importación de archivo, id de esa importación (para poder deshacerla). */
+  importId?: string
 }
 
 export type DebtDebtorType = 'entidad' | 'persona'
@@ -497,6 +516,9 @@ export interface ShoppingData {
 export interface PersonalData {
   finances: FinanceTransaction[]
   budgets?: Record<string, number>
+  /** Categorías propias (las predefinidas viven en el código). */
+  financeCategories?: FinanceCategoryDef[]
+  financeImports?: FinanceImportLog[]
   debts?: DebtEntry[]
   savingsGoals?: SavingsGoal[]
   projects: Project[]

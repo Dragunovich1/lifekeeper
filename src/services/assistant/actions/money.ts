@@ -1,22 +1,24 @@
 import type { DebtEntry, FinanceTransaction } from '../../../types'
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '../../../utils/financeCategories'
 import { capitalize, fmtDate, findByName, isoDate, money, num, oneOf, optionalIsoDate, str, uid } from './helpers'
 import type { ActionDef } from './types'
 
 const CURRENCIES = ['ARS', 'USD', 'EUR', 'USDT', 'BRL', 'CLP'] as const
-const CATEGORIES = ['Alimentación', 'Transporte', 'Servicios', 'Salud', 'Deporte', 'Compras', 'Ocio', 'Hogar', 'Educación', 'Varios', 'Sueldo/Honorarios', 'Ingreso']
+// Mismas categorías que usa la vista de calendario de Finanzas (ícono y color incluidos)
+const CATEGORIES = [...DEFAULT_EXPENSE_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES].map((c) => c.name)
 
 export const transactionAction: ActionDef = {
   type: 'transaction',
   about: 'gastó, pagó, compró, cobró o ingresó plata',
   hints: /gast|compre|pague|ingres|cobre|sueldo|plata|\$|pesos|lucas|mangos|dolares|usd|luz\b|alquiler|expensas|super\b/,
   schema: '{"type":"transaction","kind":"expense|income","amount":número,"currency":"ARS|USD|EUR|USDT|BRL|CLP","category":"' + CATEGORIES.join('|') + '","description":"..."}',
-  example: '"gasté 5 lucas en el súper" → {"type":"transaction","kind":"expense","amount":5000,"currency":"ARS","category":"Alimentación","description":"Súper"}   (una luca = 1000, un palo = 1.000.000; sin moneda es ARS)',
+  example: '"gasté 5 lucas en el súper" → {"type":"transaction","kind":"expense","amount":5000,"currency":"ARS","category":"Supermercado","description":"Súper"}   (una luca = 1000, un palo = 1.000.000; sin moneda es ARS)',
   build(raw, { todayKey }) {
     const amount = num(raw.amount)
     if (!amount || amount <= 0) return null
     const kind = raw.kind === 'income' ? 'income' : 'expense'
     const currency = oneOf(raw.currency, CURRENCIES) ?? 'ARS'
-    const category = CATEGORIES.find((c) => c === raw.category) ?? (kind === 'income' ? 'Ingreso' : 'Varios')
+    const category = CATEGORIES.find((c) => c === raw.category) ?? (kind === 'income' ? 'Otros ingresos' : 'Otros gastos')
     const description = capitalize(str(raw.description, 80)) || (kind === 'income' ? 'Ingreso registrado por asistente' : `Gasto en ${category}`)
     const tx: FinanceTransaction = { id: uid('tx'), type: kind, amount, currency, category, description, date: isoDate(raw.date, todayKey) }
 
