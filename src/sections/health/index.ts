@@ -6,3 +6,4 @@ export { EmergencySection } from './Emergency'
 export { HydrationSection } from './Hydration'
 export { MenstrualCycleSection } from './MenstrualCycleSection'
 
+export { MeasurementsSection } from './Measurements'

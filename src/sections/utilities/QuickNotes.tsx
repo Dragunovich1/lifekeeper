@@ -192,7 +192,7 @@ export const QuickNotesSection = () => {
                   <div className="qn-card-bar">
                     <time dateTime={n.updatedAt}>{timeAgo(n.updatedAt)}</time>
                     <div className="qn-card-actions">
-                      <button type="button" aria-label={n.pinned ? 'Desfijar' : 'Fijar nota'} title={n.pinned ? 'Desfijar' : 'Fijar arriba'} onClick={() => patchNotes((all) => all.map((x) => (x.id === n.id ? { ...x, pinned: !x.pinned } : x)))}>
+                      <button type="button" aria-label={n.pinned ? 'Quitar del Dashboard' : 'Fijar nota en el Dashboard'} title={n.pinned ? 'Quitar del Dashboard' : 'Fijar arriba y en el Dashboard'} onClick={() => patchNotes((all) => all.map((x) => (x.id === n.id ? { ...x, pinned: !x.pinned } : x)))}>
                         {n.pinned ? <PinOff size={15} /> : <Pin size={15} />}
                       </button>
                       <button type="button" aria-label="Copiar nota" title={copiedId === n.id ? 'Copiado' : 'Copiar'} onClick={() => copy(n)}>

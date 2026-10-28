@@ -39,6 +39,7 @@ const LazyHealthVaccines = lazy(() => import('./sections/health/index').then(m =
 const LazyHealthConsultations = lazy(() => import('./sections/health/index').then(m => ({ default: m.ConsultationsSection })))
 const LazyHealthMedications = lazy(() => import('./sections/health/index').then(m => ({ default: m.MedicationsSection })))
 const LazyHealthHydration = lazy(() => import('./sections/health/index').then(m => ({ default: m.HydrationSection })))
+const LazyHealthMeasurements = lazy(() => import('./sections/health/index').then(m => ({ default: m.MeasurementsSection })))
 const LazyHealthHistory = lazy(() => import('./sections/health/index').then(m => ({ default: m.ClinicalHistorySection })))
 const LazyHealthEmergency = lazy(() => import('./sections/health/index').then(m => ({ default: m.EmergencySection })))
 const LazyHealthMenstrual = lazy(() => import('./sections/health/index').then(m => ({ default: m.MenstrualCycleSection })))
@@ -66,6 +67,7 @@ const sectionComponents = {
   'health:consultations': LazyHealthConsultations,
   'health:medications': LazyHealthMedications,
   'health:hydration': LazyHealthHydration,
+  'health:measurements': LazyHealthMeasurements,
   'health:history': LazyHealthHistory,
   'health:emergency': LazyHealthEmergency,
   'health:menstrual': LazyHealthMenstrual,

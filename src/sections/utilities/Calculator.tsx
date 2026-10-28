@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Calculator as CalcIcon, Copy, Delete, History, Percent, Receipt, Tag, Trash2, Users } from 'lucide-react'
+import { Calculator as CalcIcon, ChevronDown, Copy, Delete, History, Percent, Receipt, Tag, Trash2, Users } from 'lucide-react'
 import { SectionHeader } from '../../components/SectionHeader'
 import { useAppData } from '../../hooks/useAppData'
 import { evaluateExpression, formatMoney, formatNumber } from '../../utils/calculator'
@@ -31,6 +31,7 @@ export const CalculatorSection = () => {
   const [expr, setExpr] = useState('')
   const [justEvaluated, setJustEvaluated] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const live = useMemo(() => (expr ? evaluateExpression(expr) : null), [expr])
   const preview = live?.ok && /[+\-−×÷*/^%(]/.test(expr.slice(1)) ? formatNumber(live.value) : ''
@@ -170,9 +171,12 @@ export const CalculatorSection = () => {
             <p className="calc-tip">Podés usar el teclado: números, + − * / , Enter, Borrar y Esc. Ej.: <code>200 + 10%</code> suma el 10% a 200.</p>
           </div>
 
-          <aside className="card calc-history" aria-label="Historial">
+          <aside className={`card calc-history ${historyOpen ? 'is-open' : ''}`} aria-label="Historial">
             <div className="calc-history-head">
-              <h3><History size={16} /> Historial</h3>
+              <button type="button" className="calc-history-toggle" aria-expanded={historyOpen} onClick={() => setHistoryOpen((v) => !v)}>
+                <History size={16} /> Historial {history.length > 0 && <span className="calc-history-count">{history.length}</span>}
+                <ChevronDown size={16} className="calc-history-chevron" aria-hidden="true" />
+              </button>
               {history.length > 0 && (
                 <button type="button" className="secondary-button" onClick={() => updateData((prev) => ({ ...prev, utilities: { ...prev.utilities, calculatorHistory: [] } }))}>
                   <Trash2 size={14} /> Limpiar

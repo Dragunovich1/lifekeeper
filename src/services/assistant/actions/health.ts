@@ -1,4 +1,6 @@
-import type { ClinicalNote, MedicalConsultation, Medication, Reminder, VaccineRecord } from '../../../types'
+import type { ClinicalNote, HealthMeasurement, MedicalConsultation, Medication, Reminder, VaccineRecord } from '../../../types'
+import { FEELINGS, MEASUREMENT_META, MEASUREMENT_TYPES, classifyMeasurement, detectContext, feelingEmoji, formatMeasurement, normalizeContext } from '../../../utils/measurements'
+import { detectMood } from './wellbeing'
 import { capitalize, fmtDate, findByName, isoDate, normalizeText, oneOf, optionalIsoDate, str, timeOr, uid } from './helpers'
 import type { ActionDef } from './types'
 
@@ -235,5 +237,89 @@ export const menstrualAction: ActionDef = {
   },
 }
 
-export const HEALTH_ACTIONS = [medicationTakenAction, medicationAddAction, vaccineAction, consultationAction, clinicalNoteAction, menstrualAction]
+// ---------------------------------------------------------------------------
+// Mediciones (glucosa, presión, pulso, saturación, temperatura, colesterol)
+// ---------------------------------------------------------------------------
+const MEASURE_ICON = { glucosa: '🩸', presion: '❤️', pulso: '💓', saturacion: '🫁', temperatura: '🌡️', colesterol: '🧪' } as const
+const KINDS = MEASUREMENT_TYPES.map((m) => m.type)
+
+/** Cómo se sentía, dicho al pasar junto con la medición ("me siento bien", "estoy medio mal"). */
+function detectFeeling(text: string): HealthMeasurement['feeling'] | undefined {
+  const mood = detectMood(text)
+  if (mood) return mood
+  const n = normalizeText(text)
+  if (/\b(me siento|estoy|ando)\s+(muy |re |super )?(mal|pesimo|horrible)\b/.test(n)) return 'Mal'
+  if (/\b(medio|un poco|algo)\s+(mal|mareado|raro|cansado|decaido)\b|\bregular\b|\basi asi\b/.test(n)) return 'Regular'
+  if (/\b(me siento|estoy|ando)\s+(muy |re |super )?(bien|joya|perfecto|de diez)\b/.test(n)) return 'Bien'
+  if (/\b(tranquilo|tranquila|normal)\b/.test(n)) return 'Neutral'
+  return undefined
+}
+
+export const measurementAction: ActionDef = {
+  type: 'measurement',
+  about: 'se midió glucosa, presión arterial, pulso, saturación de oxígeno, temperatura o colesterol y cuenta el valor (y quizá cómo se sentía)',
+  hints: /glucosa|glucemia|azucar en sangre|presion|tension|pulso|saturacion|oximetro|temperatura|fiebre|colesterol|me medi|medi (la|mi)|tensiometro|glucometro/,
+  schema: '{"type":"measurement","kind":"glucosa|presion|pulso|saturacion|temperatura|colesterol","value":número,"value2":diastólica solo en presión,"pulse":pulso opcional,"context":"momento de la medición: En ayunas|Antes de comer|1 h después de comer|2 h después de comer|Después de hacer ejercicio|Antes de dormir|En reposo|Al despertar|Con síntomas|... o vacío si no lo dijo","feeling":"Excelente|Bien|Neutral|Regular|Mal o vacío","symptoms":["Mareo"],"notes":"..."}',
+  example: '"me medí la presión: 12/8, pulso 70, y estoy medio mareado" → {"type":"measurement","kind":"presion","value":120,"value2":80,"pulse":70,"feeling":"Regular","symptoms":["Mareo"]}   (la presión "12/8" son 120/80; la glucosa en mg/dL; la temperatura en °C). Si dice cuándo se midió (en ayunas, después de comer, después de entrenar, antes de dormir...) completá "context"',
+  local(text) {
+    const n = normalizeText(text)
+    const common = { feeling: detectFeeling(text) }
+    const pres = n.match(/(?:presion|tension)[^\d]{0,20}(\d{1,3})\s*(?:\/|sobre|con|y)\s*(\d{1,3})/)
+    if (pres) return [{ type: 'measurement', kind: 'presion', value: +pres[1], value2: +pres[2], context: detectContext('presion', text), ...common }]
+    const glu = n.match(/(?:glucosa|glucemia|azucar)[^\d]{0,20}(\d{2,3})/)
+    if (glu) return [{ type: 'measurement', kind: 'glucosa', value: +glu[1], context: detectContext('glucosa', text), ...common }]
+    // normalizeText quita la coma decimal: para la temperatura se usa el texto sin tildes pero con puntuación
+    const keepDecimals = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const temp = keepDecimals.match(/(?:temperatura|fiebre)[^\d]{0,15}(\d{2}(?:[.,]\d)?)/) ?? keepDecimals.match(/(\d{2}(?:[.,]\d)?)\s*(?:de\s+)?(?:grados|temperatura|fiebre)/)
+    if (temp) return [{ type: 'measurement', kind: 'temperatura', value: parseFloat(temp[1].replace(',', '.')), context: detectContext('temperatura', text), ...common }]
+    return null
+  },
+  build(raw, { now, todayKey }) {
+    const kind = oneOf(raw.kind, KINDS)
+    if (!kind) return null
+    const meta = MEASUREMENT_META[kind]
+    let value = typeof raw.value === 'number' ? raw.value : parseFloat(String(raw.value ?? ''))
+    let value2 = typeof raw.value2 === 'number' ? raw.value2 : parseFloat(String(raw.value2 ?? ''))
+    if (!Number.isFinite(value)) return null
+    // "12/8" → 120/80
+    if (kind === 'presion' && value < 30) {
+      value *= 10
+      if (Number.isFinite(value2) && value2 < 20) value2 *= 10
+    }
+    if (value < meta.limits.min || value > meta.limits.max) return null
+    if (kind === 'presion' && (!Number.isFinite(value2) || value2 >= value)) {
+      return { clarify: 'Para la presión necesito las dos cifras: la alta y la baja (por ejemplo 120/80). ¿Cuánto te dio?' }
+    }
+
+    const pulse = typeof raw.pulse === 'number' ? raw.pulse : parseFloat(String(raw.pulse ?? ''))
+    const symptoms = (Array.isArray(raw.symptoms) ? raw.symptoms : []).map((x) => str(x, 40)).filter(Boolean).slice(0, 6)
+    const feeling = oneOf(raw.feeling, FEELINGS.map((f) => f.value))
+    const m: HealthMeasurement = {
+      id: uid('meas'),
+      type: kind,
+      date: isoDate(raw.date, todayKey),
+      time: timeOr(raw.time, `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`),
+      value,
+      value2: kind === 'presion' ? value2 : undefined,
+      pulse: kind === 'presion' && Number.isFinite(pulse) && pulse > 20 && pulse < 250 ? pulse : undefined,
+      context: normalizeContext(kind, str(raw.context, 60)),
+      feeling: feeling ?? undefined,
+      symptoms: symptoms.length ? symptoms : undefined,
+      notes: str(raw.notes, 300) || undefined,
+      createdAt: now.toISOString(),
+    }
+    const status = classifyMeasurement(m)
+    const extra = [m.context, m.feeling ? `se sentía ${m.feeling.toLowerCase()} ${feelingEmoji(m.feeling)}` : '', m.symptoms?.join(', ')].filter(Boolean).join(' · ')
+
+    return {
+      apply: (prev) => ({ ...prev, health: { ...prev.health, measurements: [m, ...(prev.health.measurements ?? [])] } }),
+      line: `• ${MEASURE_ICON[kind]} **${meta.short}:** ${formatMeasurement(m)} ${meta.unit} — ${status.label}${extra ? ` (${extra})` : ''}`,
+      card: { category: 'salud', title: `${meta.short}: ${formatMeasurement(m)} ${meta.unit}`, details: status.label, badge: status.label, entityId: m.id },
+      link: { label: 'Ver Mediciones', hash: '#health:measurements' },
+      note: status.hint ? `⚠️ ${status.hint}` : status.level === 'high' ? 'ℹ️ Es un valor alto. Si se repite, conviene consultarlo con tu médico.' : undefined,
+    }
+  },
+}
+
+export const HEALTH_ACTIONS = [measurementAction, medicationTakenAction, medicationAddAction, vaccineAction, consultationAction, clinicalNoteAction, menstrualAction]
 

@@ -325,6 +325,28 @@ export interface MenstrualCycleData {
   entries: MenstrualCycleEntry[]
 }
 
+export type MeasurementType = 'glucosa' | 'presion' | 'pulso' | 'saturacion' | 'temperatura' | 'colesterol'
+
+export interface HealthMeasurement {
+  id: string
+  type: MeasurementType
+  date: string // YYYY-MM-DD
+  time: string // HH:mm
+  /** Valor principal. En presión arterial es la sistólica. */
+  value: number
+  /** Presión arterial: diastólica. */
+  value2?: number
+  /** Presión arterial: pulso medido junto con la presión. */
+  pulse?: number
+  /** Cuándo se midió (en ayunas, 2 h después de comer, en reposo...). */
+  context?: string
+  /** Cómo se sentía la persona al medirse. */
+  feeling?: MoodLevel
+  symptoms?: string[]
+  notes?: string
+  createdAt: string
+}
+
 export interface HealthData {
   vaccines: VaccineRecord[]
   consultations: MedicalConsultation[]
@@ -334,6 +356,7 @@ export interface HealthData {
   hydrationLogs?: HydrationLogEntry[]
   hydrationTargetMl?: number
   menstrualCycle?: MenstrualCycleData
+  measurements?: HealthMeasurement[]
 }
 
 export interface DiaryData {

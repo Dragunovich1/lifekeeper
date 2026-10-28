@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Check, Copy, Minus, Plus, RotateCcw, Share2, ShoppingCart, Trash2, X } from 'lucide-react'
+import { Check, Copy, Minus, Plus, RotateCcw, Share2, ShoppingCart, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { Modal } from '../../components/Modal'
 import { SectionHeader } from '../../components/SectionHeader'
@@ -40,6 +40,8 @@ export const ShoppingListSection = () => {
   const [registerExpense, setRegisterExpense] = useState(true)
   const [deleteListOpen, setDeleteListOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [showDetails, setShowDetails] = useState(false)
+  const [openRowId, setOpenRowId] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
   const patchShopping = (fn: (s: ShoppingData) => ShoppingData) =>
@@ -230,62 +232,67 @@ export const ShoppingListSection = () => {
     }
   }
 
-  const renderRow = (item: ShoppingItem) => (
-    <li key={item.id} className={`shop-row ${item.checked ? 'is-checked' : ''}`}>
-      <button
-        type="button"
-        className="shop-check"
-        role="checkbox"
-        aria-checked={item.checked}
-        aria-label={`${item.checked ? 'Quitar del carrito' : 'Marcar'} ${item.name}`}
-        onClick={() => toggleItem(item)}
-      >
-        {item.checked && <Check size={16} strokeWidth={3} />}
-      </button>
-
-      <div className="shop-row-main">
-        <span className="shop-row-name">{item.name}</span>
-        <span className="shop-row-meta">
-          {item.quantity}
-          {item.unit ? ` ${item.unit}` : ' u'}
-          {item.price ? ` · ${formatMoney(item.price, currency)} c/u` : ''}
-        </span>
-      </div>
-
-      <div className="shop-qty" aria-label={`Cantidad de ${item.name}`}>
-        <button type="button" aria-label="Menos" onClick={() => updateItem(item, { quantity: Math.max(stepFor(item.unit), Math.round((item.quantity - stepFor(item.unit)) * 100) / 100) })}>
-          <Minus size={14} />
+  const renderRow = (item: ShoppingItem) => {
+    const open = openRowId === item.id
+    return (
+      <li key={item.id} className={`shop-row ${item.checked ? 'is-checked' : ''} ${open ? 'is-open' : ''}`}>
+        <button
+          type="button"
+          className="shop-check"
+          role="checkbox"
+          aria-checked={item.checked}
+          aria-label={`${item.checked ? 'Quitar del carrito' : 'Marcar'} ${item.name}`}
+          onClick={() => toggleItem(item)}
+        >
+          {item.checked && <Check size={16} strokeWidth={3} />}
         </button>
-        <span>{item.quantity}</span>
-        <button type="button" aria-label="Más" onClick={() => updateItem(item, { quantity: Math.round((item.quantity + stepFor(item.unit)) * 100) / 100 })}>
-          <Plus size={14} />
+
+        <button type="button" className="shop-row-main" aria-expanded={open} aria-label={`Editar cantidad y precio de ${item.name}`} onClick={() => setOpenRowId(open ? null : item.id)}>
+          <span className="shop-row-name">{item.name}</span>
+          <span className="shop-row-meta">
+            {item.quantity}
+            {item.unit ? ` ${item.unit}` : ' u'}
+            {item.price ? ` · ${formatMoney(item.price, currency)} c/u` : ' · tocá para poner precio'}
+          </span>
         </button>
-      </div>
 
-      <label className="shop-price" aria-label={`Precio unitario de ${item.name}`}>
-        <span>$</span>
-        <input
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="any"
-          placeholder="Precio"
-          defaultValue={item.price ?? ''}
-          key={`${item.id}-${item.price ?? ''}`}
-          onBlur={(e) => {
-            const value = parseFloat(e.target.value)
-            if ((Number.isFinite(value) ? value : undefined) !== item.price) updateItem(item, { price: Number.isFinite(value) && value > 0 ? value : undefined })
-          }}
-        />
-      </label>
+        <div className="shop-row-edit">
+          <div className="shop-qty" aria-label={`Cantidad de ${item.name}`}>
+            <button type="button" aria-label="Menos" onClick={() => updateItem(item, { quantity: Math.max(stepFor(item.unit), Math.round((item.quantity - stepFor(item.unit)) * 100) / 100) })}>
+              <Minus size={14} />
+            </button>
+            <span>{item.quantity}</span>
+            <button type="button" aria-label="Más" onClick={() => updateItem(item, { quantity: Math.round((item.quantity + stepFor(item.unit)) * 100) / 100 })}>
+              <Plus size={14} />
+            </button>
+          </div>
 
-      <span className="shop-line-total">{item.price ? formatMoney(lineTotal(item), currency) : '—'}</span>
+          <label className="shop-price" aria-label={`Precio unitario de ${item.name}`}>
+            <span>$</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              placeholder="Precio"
+              defaultValue={item.price ?? ''}
+              key={`${item.id}-${item.price ?? ''}`}
+              onBlur={(e) => {
+                const value = parseFloat(e.target.value)
+                if ((Number.isFinite(value) ? value : undefined) !== item.price) updateItem(item, { price: Number.isFinite(value) && value > 0 ? value : undefined })
+              }}
+            />
+          </label>
+        </div>
 
-      <button type="button" className="shop-del" aria-label={`Eliminar ${item.name}`} onClick={() => removeItem(item)}>
-        <X size={16} />
-      </button>
-    </li>
-  )
+        <span className="shop-line-total">{item.price ? formatMoney(lineTotal(item), currency) : ''}</span>
+
+        <button type="button" className="shop-del" aria-label={`Eliminar ${item.name}`} onClick={() => removeItem(item)}>
+          <X size={16} />
+        </button>
+      </li>
+    )
+  }
 
   return (
     <div className="tool-page">
@@ -295,11 +302,11 @@ export const ShoppingListSection = () => {
         actions={
           activeList ? (
             <>
-              <button type="button" className="secondary-button" onClick={copyList}>
-                <Copy size={15} /> Copiar
+              <button type="button" className="secondary-button tool-icon-btn" onClick={copyList} aria-label="Copiar lista">
+                <Copy size={15} /> <span>Copiar</span>
               </button>
-              <button type="button" className="primary-button" onClick={shareList}>
-                <Share2 size={15} /> Compartir
+              <button type="button" className="primary-button tool-icon-btn" onClick={shareList} aria-label="Compartir lista">
+                <Share2 size={15} /> <span>Compartir</span>
               </button>
             </>
           ) : undefined
@@ -343,7 +350,7 @@ export const ShoppingListSection = () => {
             list="shop-suggestions"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Agregá un producto… (ej. leche, 2 kg de pan)"
+            placeholder="Agregá un producto… (ej. leche)"
             aria-label="Producto"
             autoComplete="off"
           />
@@ -352,8 +359,14 @@ export const ShoppingListSection = () => {
               <option key={s} value={s} />
             ))}
           </datalist>
+          <button type="button" className={`shop-more ${showDetails ? 'is-active' : ''}`} aria-expanded={showDetails} aria-label="Cantidad, unidad y precio" title="Cantidad, unidad y precio" onClick={() => setShowDetails((v) => !v)}>
+            <SlidersHorizontal size={16} />
+          </button>
+          <button type="submit" className="primary-button shop-add-btn" disabled={!name.trim()} aria-label="Agregar producto">
+            <Plus size={16} /> <span>Agregar</span>
+          </button>
         </div>
-        <div className="shop-add-fields">
+        <div className={`shop-add-fields ${showDetails ? 'is-open' : ''}`}>
           <label>
             <span>Cant.</span>
             <input type="number" inputMode="decimal" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
@@ -370,9 +383,6 @@ export const ShoppingListSection = () => {
             <span>Precio unit. (opcional)</span>
             <input type="number" inputMode="decimal" min="0" step="any" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={rememberedPrice ? String(rememberedPrice.price) : '0'} />
           </label>
-          <button type="submit" className="primary-button" disabled={!name.trim()}>
-            <Plus size={16} /> Agregar
-          </button>
         </div>
         {rememberedPrice && !price && (
           <p className="shop-hint">Último precio que cargaste: <strong>{formatMoney(rememberedPrice.price, currency)}</strong> ({rememberedPrice.date.split('-').reverse().join('/')}). Se usa solo si no ponés otro.</p>
@@ -446,14 +456,14 @@ export const ShoppingListSection = () => {
           )}
 
           <div className="shop-actions">
-            <button type="button" className="secondary-button" onClick={uncheckAll} disabled={inCart.length === 0}>
-              <RotateCcw size={15} /> Destildar todo
+            <button type="button" className="secondary-button tool-icon-btn" onClick={uncheckAll} disabled={inCart.length === 0} aria-label="Destildar todo">
+              <RotateCcw size={15} /> <span>Destildar todo</span>
             </button>
-            <button type="button" className="secondary-button danger" onClick={() => setDeleteListOpen(true)}>
-              <Trash2 size={15} /> Borrar lista
+            <button type="button" className="secondary-button danger tool-icon-btn" onClick={() => setDeleteListOpen(true)} aria-label="Borrar lista">
+              <Trash2 size={15} /> <span>Borrar lista</span>
             </button>
-            <button type="button" className="primary-button" onClick={openFinish} disabled={inCart.length === 0}>
-              <Check size={16} /> Finalizar compra
+            <button type="button" className="primary-button shop-finish" onClick={openFinish} disabled={inCart.length === 0}>
+              <Check size={16} /> Finalizar compra{inCart.length > 0 && cartTotal > 0 ? ` · ${formatMoney(cartTotal, currency)}` : ''}
             </button>
           </div>
         </>

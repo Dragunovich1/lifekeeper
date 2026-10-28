@@ -44,6 +44,7 @@ export const createEmptyAppData = (): AppData => ({
     emergencyProfile: createEmptyEmergencyProfile(),
     hydrationLogs: [],
     hydrationTargetMl: 2500,
+    measurements: [],
     menstrualCycle: {
       enabled: false,
       averageCycleDays: 28,
@@ -165,6 +166,7 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
       clinicalNotes: data.health?.clinicalNotes ? [...data.health.clinicalNotes] : [],
       emergencyProfile: cloneEmergencyProfile(data.health?.emergencyProfile),
       hydrationLogs: data.health?.hydrationLogs ? [...data.health.hydrationLogs] : [],
+      measurements: Array.isArray(data.health?.measurements) ? [...data.health.measurements] : [],
       hydrationTargetMl:
         typeof data.health?.hydrationTargetMl === 'number'
           ? data.health.hydrationTargetMl

@@ -52,7 +52,7 @@ export const waterAction: ActionDef = {
 const MOOD_EMOJI: Record<MoodLevel, string> = { Excelente: '🤩', Bien: '🙂', Neutral: '😐', Regular: '😕', Mal: '😞' }
 const PHYSICAL = /\b(dolor|fiebre|gripe|panza|estomago|cabeza|nausea|vomit|resfri|mareo|garganta|tos|diarrea)\b/
 
-function detectMood(text: string): MoodLevel | null {
+export function detectMood(text: string): MoodLevel | null {
   const n = normalizeText(text)
   const talksAboutSelf = /\b(me siento|me senti|me siento|estoy|ando|hoy|tengo el animo|amanecí|amanecio)\b/.test(n) || /\banimo\b/.test(n)
   if (!talksAboutSelf) return null

@@ -31,6 +31,7 @@ export const getNavigation = (profile?: UserProfile): NavSection[] => {
         { key: 'consultations', label: 'Consultas' },
         { key: 'medications', label: 'Medicación' },
         { key: 'hydration', label: 'Hidratación' },
+        { key: 'measurements', label: 'Mediciones' },
         { key: 'history', label: 'Historial clínico' },
         ...(isFemale ? [{ key: 'menstrual', label: 'Ciclo menstrual' }] : []),
         { key: 'emergency', label: 'Emergencia' },

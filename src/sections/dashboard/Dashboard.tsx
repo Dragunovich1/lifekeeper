@@ -48,6 +48,7 @@ import {
 import { Modal } from '../../components/Modal'
 import { ShareModal } from '../../components/ShareModal'
 import { VaultScoreCard } from '../../components/VaultScoreCard'
+import { PinnedNotesCard } from '../../components/PinnedNotesCard'
 import { fetchAirQuality, type AirQualityData } from '../../services/api'
 import { useAppData } from '../../hooks/useAppData'
 import { useInsights } from '../../hooks/useInsights'
@@ -1681,6 +1682,8 @@ export const DashboardSection = () => {
           </span>
         </a>
       </div>
+
+      <PinnedNotesCard />
 
       <VaultScoreCard />
 

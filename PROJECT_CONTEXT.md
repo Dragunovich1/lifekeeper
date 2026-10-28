@@ -118,9 +118,22 @@
 - **Calculadora:** evaluador seguro sin `eval` (`src/utils/calculator.ts`) con porcentajes estilo calculadora de bolsillo (`200 + 10%` = 220), teclado físico, historial persistente (`utilities.calculatorHistory`) y herramientas: dividir cuenta con propina, descuento, IVA (21/10,5/27) y porcentajes.
 - **Asistente:** acciones `shopping_add` ("se acabó la leche, sumá pan a la lista") y `quick_note` ("anotame que...").
 
+### 🩺 Salud: Mediciones (glucosa, presión, pulso, SpO₂, temperatura, colesterol)
+- **Archivos:** `src/sections/health/Measurements.tsx`, `src/utils/measurements.ts`, `src/styles/measurements.css`. Ruta `#health:measurements`. Datos en `health.measurements`.
+- **Cada medición guarda:** valor (presión: sistólica/diastólica + pulso), fecha y hora, **momento** (en ayunas, antes/1 h/2 h después de comer, después de hacer ejercicio, antes de dormir, en reposo, con síntomas…), **cómo se sentía** (5 niveles), síntomas y notas.
+- **Estado orientativo** por rangos generales para adultos (presión según guía ESC); el momento cambia la clasificación (p. ej. glucosa 2 h después de comer, pulso/presión tras ejercicio). Aviso de atención ante valores peligrosos. No reemplaza criterio médico.
+- **Vistas:** tarjetas resumen por tipo, gráfico de evolución con franja de referencia (7/30/90 d), historial agrupado por día con detalle editable y "Copiar resumen" para el médico.
+- **Asistente:** acción `measurement` ("me medí la presión 12/8, estoy mareado", "glucosa 98 en ayunas"); detecta el momento con `detectContext`.
+
+### 📌 Notas fijadas en el Dashboard
+- `src/components/PinnedNotesCard.tsx`: una sola card con carrusel (flechas y puntos en escritorio, deslizar en móvil) con las notas rápidas fijadas (`pinned`). Se fija desde Utilidades > Notas rápidas.
+
+### 📱 Diseño móvil compacto
+- Todo lo móvil cuelga de `.mobile-app-shell`. `.page-container` ahora tiene margen lateral. Las pantallas nuevas usan encabezado en una línea (subtítulo oculto), formularios con campos secundarios plegables, filas de lista que se expanden al tocar, barra de acciones fija abajo (compras) e historial plegable (calculadora).
+
 ### 🗣️ Carga por conversación (todo el sistema, solo hablando)
 - **Archivos:** `src/services/assistant/actionExtractor.ts` y `src/services/assistant/actions/` (`wellbeing.ts`, `money.ts`, `health.ts`, `vehicles.ts`, `organizer.ts`, `dateParser.ts`, `index.ts`).
-- **Catálogo de acciones (`ALL_ACTIONS`):** agua, estado de ánimo/diario, comidas, peso, entrenamientos, gastos/ingresos, deudas y pagos, aportes de ahorro, toma/alta de medicación, vacunas, consultas, historial clínico (estudios), ciclo menstrual, vencimientos (VTV/seguro/licencia), combustible, service, recordatorios, tareas de proyectos, notas privadas, lista de compras y notas rápidas. Contraseñas y documentos NO se cargan por chat.
+- **Catálogo de acciones (`ALL_ACTIONS`):** agua, estado de ánimo/diario, comidas, peso, entrenamientos, gastos/ingresos, deudas y pagos, aportes de ahorro, toma/alta de medicación, vacunas, consultas, historial clínico (estudios), ciclo menstrual, vencimientos (VTV/seguro/licencia), combustible, service, recordatorios, tareas de proyectos, notas privadas, lista de compras, notas rápidas y mediciones de salud. Contraseñas y documentos NO se cargan por chat.
 - **Cada acción** define `hints` (cuándo entra al prompt), `schema` + `example` (para el LLM), `build()` (valida, devuelve el cambio real + línea de confirmación + tarjeta con Deshacer, o una pregunta si falta un dato) y opcionalmente `local()` (interpretación determinística sin LLM). Para sumar un área nueva alcanza con agregar una definición.
 - **Orden en `AssistantModal.handleSend`:** con el LLM disponible, **el LLM entiende el mensaje con las palabras del usuario, sin frases ni palabras clave**: (1) un clasificador corto (`about` de cada acción) decide qué áreas toca, (2) un extractor completa los datos de esas áreas, con las entidades ya cargadas (vehículos, deudas, metas, proyectos, medicación) como contexto, (3) si no hay nada para guardar, conversa (streaming). Las reglas por patrones (`localAssistant.ts` y `local()` de cada acción) solo se usan como **respaldo** cuando el LLM está caído o falla.
 - **Honestidad:** el LLM nunca guarda ni confirma; solo interpreta. Si afirma haber guardado algo sin que la app lo haya hecho, `guardFalseSaveClaims` agrega un aviso. Si falta un dato (p. ej. la fecha de la VTV) el asistente pregunta en vez de adivinar.
