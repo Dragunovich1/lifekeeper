@@ -8,6 +8,7 @@ services:
     depends_on:
       - api
       - postgres
+      - tts
 
   api:
     build:
@@ -50,6 +51,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  tts:
+    build: ./tts
+    container_name: lifekeeper-tts
+    restart: always
+    # Sin puertos publicados: solo accesible desde nginx dentro de la red de Docker
 
   ollama:
     image: ollama/ollama:latest

@@ -35,6 +35,7 @@ import {
   type OllamaStatus,
 } from '../services/assistant/ollamaClient'
 import type { AppData, AssistantChatSession, WorkoutTemplate } from '../types'
+import { isPiperAvailable, speakWithPiper, stopPiper } from '../services/assistant/piperTts'
 
 interface AssistantModalProps {
   open: boolean
@@ -300,6 +301,7 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   useEffect(() => {
     if (!open && typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
+      stopPiper()
       setSpeakingMessageId(null)
     }
   }, [open])
@@ -400,10 +402,23 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   }
 
   // Reproducir texto en voz alta
-  const speakText = (textToSpeak: string, msgId?: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
+  const speakText = async (textToSpeak: string, msgId?: string) => {
+    if (typeof window === 'undefined') return
 
-    window.speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
+    stopPiper()
+
+    // Voz neural local (Piper) si el usuario no eligió voz del sistema y el servicio responde
+    if (voiceGender !== 'system' && !selectedVoiceURI && (await isPiperAvailable())) {
+      if (msgId) setSpeakingMessageId(msgId)
+      const ok = await speakWithPiper(textToSpeak, voiceGender, {
+        onEnd: () => setSpeakingMessageId(null),
+      })
+      if (ok) return
+      if (msgId) setSpeakingMessageId(null)
+    }
+
+    if (!window.speechSynthesis) return
 
     const cleanText = textToSpeak
       .replace(/\*\*(.*?)\*\*/g, '$1')
@@ -437,7 +452,8 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   // Alternar reproducción de un mensaje específico
   const handleToggleSpeak = (msgId: string, textToSpeak: string) => {
     if (speakingMessageId === msgId) {
-      window.speechSynthesis.cancel()
+      window.speechSynthesis?.cancel()
+      stopPiper()
       setSpeakingMessageId(null)
       return
     }
