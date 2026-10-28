@@ -180,9 +180,27 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [showVoiceMenu, setShowVoiceMenu] = useState(false)
   const [autoSpeak, setAutoSpeak] = useState(false)
-  const [voiceGender, setVoiceGender] = useState<'female' | 'male' | 'system'>('female')
+  type VoiceChoice = 'piper-female' | 'piper-male' | 'female' | 'male' | 'system'
+  const [voiceChoice, setVoiceChoice] = useState<VoiceChoice>('piper-female')
+  const [piperOnline, setPiperOnline] = useState<boolean | null>(null)
+  const usePiper = voiceChoice.startsWith('piper-')
+  // Género para la voz del navegador (también es el respaldo si Piper no responde)
+  const voiceGender: 'female' | 'male' | 'system' = voiceChoice === 'system' ? 'system' : voiceChoice.includes('female') ? 'female' : 'male'
   const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('')
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+
+  // Verificar si el servicio Piper responde al abrir el menú de voz
+  useEffect(() => {
+    if (!showVoiceMenu) return
+    let cancelled = false
+    setPiperOnline(null)
+    isPiperAvailable().then((ok) => {
+      if (!cancelled) setPiperOnline(ok)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [showVoiceMenu, voiceChoice])
 
   // Cargar lista de voces del navegador
   useEffect(() => {
@@ -409,9 +427,9 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     stopPiper()
 
     // Voz neural local (Piper) si el usuario no eligió voz del sistema y el servicio responde
-    if (voiceGender !== 'system' && !selectedVoiceURI && (await isPiperAvailable())) {
+    if (usePiper && (await isPiperAvailable())) {
       if (msgId) setSpeakingMessageId(msgId)
-      const ok = await speakWithPiper(textToSpeak, voiceGender, {
+      const ok = await speakWithPiper(textToSpeak, voiceGender === 'male' ? 'male' : 'female', {
         onEnd: () => setSpeakingMessageId(null),
       })
       if (ok) return
@@ -865,8 +883,11 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                 Tipo de Voz:
               </label>
               <select
-                value={voiceGender}
-                onChange={(e) => setVoiceGender(e.target.value as 'female' | 'male' | 'system')}
+                value={voiceChoice}
+                onChange={(e) => {
+                  setVoiceChoice(e.target.value as VoiceChoice)
+                  if (e.target.value.startsWith('piper-')) setSelectedVoiceURI('')
+                }}
                 style={{
                   padding: '0.5rem 0.75rem',
                   borderRadius: '8px',
@@ -877,14 +898,32 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
                   outline: 'none',
                 }}
               >
-                <option value="female">👩 Voz Femenina (Mujer)</option>
-                <option value="male">👨 Voz Masculina (Hombre)</option>
-                <option value="system">🤖 Voz del Sistema / Neutra</option>
+                <optgroup label="Piper (voz neural local)">
+                  <option value="piper-female">👩 Piper · Mujer (acento argentino)</option>
+                  <option value="piper-male">👨 Piper · Hombre (acento latino, México)</option>
+                </optgroup>
+                <optgroup label="Voces del navegador / sistema">
+                  <option value="female">👩 Voz Femenina (Mujer)</option>
+                  <option value="male">👨 Voz Masculina (Hombre)</option>
+                  <option value="system">🤖 Voz del Sistema / Neutra</option>
+                </optgroup>
               </select>
+              {usePiper && (
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    color: piperOnline === false ? 'var(--color-accent-red, #ef4444)' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  {piperOnline === null && 'Verificando servicio Piper…'}
+                  {piperOnline === true && '● Piper en línea'}
+                  {piperOnline === false && '● Piper no disponible: se usa la voz del navegador'}
+                </span>
+              )}
             </div>
 
             {/* Selector de Voz Específica del Sistema si existen varias en español */}
-            {availableVoices.filter((v) => v.lang.toLowerCase().startsWith('es')).length > 1 && (
+            {!usePiper && availableVoices.filter((v) => v.lang.toLowerCase().startsWith('es')).length > 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
                   Variante de voz instalada:
