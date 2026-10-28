@@ -13,6 +13,12 @@ import {
   type OllamaStatus,
 } from '../services/assistant/ollamaClient'
 import type { AppData, AssistantChatSession, WorkoutTemplate } from '../types'
+import {
+  buildActionsResult,
+  extractActions,
+  guardFalseSaveClaims,
+  looksLikeActionRequest,
+} from '../services/assistant/actionExtractor'
 import { CREATE_INITIAL_MESSAGES } from './assistant/constants'
 import { useAssistantVoice } from './assistant/useAssistantVoice'
 import { HeaderActions } from './assistant/HeaderActions'
@@ -185,47 +191,58 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     setInput('')
     setIsTyping(true)
 
-    // Intento 1: Detección y ejecución inmediata de comandos de mutación
-    const mutationResult = tryExecuteAssistantMutation(text, data)
-    if (mutationResult) {
-      updateData(mutationResult.updater)
-      await streamTextTypewriter(mutationResult.message.text, (currentText) => {
+    // Aplica una mutación real sobre la bóveda y la muestra con efecto de escritura
+    const applyMutation = async (result: NonNullable<ReturnType<typeof tryExecuteAssistantMutation>>) => {
+      updateData(result.updater)
+      await streamTextTypewriter(result.message.text, (currentText) => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsgId
-              ? {
-                  ...m,
-                  text: currentText,
-                  action: mutationResult.message.action,
-                  mutationCard: mutationResult.message.mutationCard,
-                }
+              ? { ...m, text: currentText, action: result.message.action, mutationCard: result.message.mutationCard }
               : m,
           ),
         )
       })
 
-      const finalMessages = currentMessages.map((m) =>
-        m.id === assistantMsgId ? mutationResult.message : m,
-      )
+      const finalMessages = currentMessages.map((m) => (m.id === assistantMsgId ? result.message : m))
       persistMessagesToVault(finalMessages)
-      if (autoSpeak && mutationResult.message.text) {
-        speakText(mutationResult.message.text, assistantMsgId)
+      if (autoSpeak && result.message.text) {
+        speakText(result.message.text, assistantMsgId)
       }
       setIsTyping(false)
+    }
+
+    // Intento 1: Detección y ejecución inmediata de comandos de mutación
+    const mutationResult = tryExecuteAssistantMutation(text, data)
+    if (mutationResult) {
+      await applyMutation(mutationResult)
       return
     }
 
     // Intento 2: Streaming en tiempo real con Ollama Local
     if (ollamaStatus.online && ollamaStatus.activeModel) {
-      try {
-        const history = messages
-          .filter((m) => m.id !== 'welcome' && m.id !== assistantMsgId)
-          .map((m) => ({
-            role: m.sender,
-            content: m.text,
-          }))
+      const history = messages
+        .filter((m) => m.id !== 'welcome' && m.id !== assistantMsgId)
+        .map((m) => ({ role: m.sender, content: m.text }))
 
-        await queryOllamaStream(
+      // 2a. Pedidos de guardar/agendar/cargar: el LLM los interpreta, la app los ejecuta y confirma
+      const lastAssistantText = [...messages].reverse().find((m) => m.sender === 'assistant')?.text ?? ''
+      if (looksLikeActionRequest(text, lastAssistantText)) {
+        try {
+          const actions = await extractActions(text, history, ollamaStatus.activeModel)
+          const actionResult = buildActionsResult(actions)
+          if (actionResult) {
+            await applyMutation(actionResult)
+            return
+          }
+        } catch (err) {
+          console.warn('No se pudo interpretar el pedido como acción, se responde en modo conversación:', err)
+        }
+      }
+
+      // 2b. Conversación normal. Si el LLM afirma haber guardado algo, se aclara que no fue así
+      try {
+        const rawText = await queryOllamaStream(
           text,
           history,
           data,
@@ -237,14 +254,13 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           },
         )
 
-        setMessages((prev) => {
-          persistMessagesToVault(prev)
-          const lastMsg = prev.find((m) => m.id === assistantMsgId)
-          if (autoSpeak && lastMsg?.text) {
-            speakText(lastMsg.text, assistantMsgId)
-          }
-          return prev
-        })
+        const finalText = guardFalseSaveClaims(rawText)
+        const finalMessages = currentMessages.map((m) => (m.id === assistantMsgId ? { ...m, text: finalText } : m))
+        setMessages(finalMessages)
+        persistMessagesToVault(finalMessages)
+        if (autoSpeak && finalText) {
+          speakText(finalText, assistantMsgId)
+        }
         setIsTyping(false)
         return
       } catch (err) {

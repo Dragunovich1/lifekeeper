@@ -451,7 +451,7 @@ export interface PersonalData {
 }
 
 export interface AssistantMutationCard {
-  category: 'agua' | 'finanzas' | 'deudas' | 'nutricion' | 'biometria' | 'entrenamiento' | 'diario' | 'recordatorio'
+  category: 'agua' | 'finanzas' | 'deudas' | 'nutricion' | 'biometria' | 'entrenamiento' | 'diario' | 'recordatorio' | 'salud'
   title: string
   details: string
   badge?: string

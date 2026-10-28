@@ -6,7 +6,7 @@
  */
 
 import type { AppData } from '../../types'
-import { toLocalDateKey, formatDate } from '../../utils/dates'
+import { toLocalDateKey, toLocalTimeKey, formatDate } from '../../utils/dates'
 import { fetchWeatherData, describeWeatherCode, type WeatherData } from '../api/weather'
 
 export interface OllamaStatus {
@@ -198,7 +198,7 @@ DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
   • Total movimientos: ${monthTxs.length}
 - Deudas, Préstamos y Compromisos: ${debtsSummary}
 - Recordatorios y Tareas pendientes:
-  • Para hoy (${todayReminders.length}): ${todayReminders.map((r) => `${r.title} a las ${r.dateTime.slice(11, 16)}`).join(', ') || 'Ninguno para hoy'}
+  • Para hoy (${todayReminders.length}): ${todayReminders.map((r) => `${r.title} a las ${toLocalTimeKey(r.dateTime)}`).join(', ') || 'Ninguno para hoy'}
   • Total activos: ${activeReminders.length}
 - Seguridad: ${data.security.passwordEntries.length} contraseñas resguardadas (cifrado local Zero-Knowledge).
 - Vehículos: ${data.personal.vehicles.map((v) => `${v.vehicleName} (${v.serviceType}, km: ${v.mileage || 'N/A'})`).join('; ') || 'Ninguno'}
@@ -211,6 +211,15 @@ MAPA DE OPCIONES DE LA APLICACIÓN LIFEKEEPER:
 • Diario: Bitácora de reflexiones y estados de ánimo con cifrado.
 • Seguridad: Gestor de contraseñas, Notas seguras, Copias de respaldo cifradas.
 • Utilidades: Recordatorios, Calendario integrado (muestra entrenamientos, eventos y ciclos menstruales), Herramientas biométricas.
+
+GLOSARIO (no confundir):
+• Ergometría / prueba de esfuerzo, electrocardiograma, ecocardiograma, ecografía, resonancia, tomografía, radiografía, análisis de sangre o laboratorio, espirometría, holter, densitometría = ESTUDIOS MÉDICOS (van en Salud > Historial clínico). NUNCA son entrenamientos ni rutinas de gimnasio.
+• Entrenamientos = gimnasio, running, ciclismo, natación, caminata, etc. (van en Personal > Entrenamientos).
+
+REGLA DE HONESTIDAD (la más importante):
+• Vos NO podés guardar, cargar, agendar ni modificar nada en la bóveda desde esta conversación. Eso lo hace la app por su cuenta cuando detecta un pedido claro, y te lo confirma con una tarjeta.
+• JAMÁS digas "ya guardé", "te lo cargué", "lo agendé", "lo anoté" ni nada parecido. Si el usuario te pide guardar algo y no ves la confirmación de la app, decile que todavía NO quedó guardado y pedile que lo diga de forma directa, por ejemplo: "agendá ergometría hoy a las 15:00" o "cargá la ergometría en estudios médicos".
+• No inventes datos que no estén en la bóveda.
 
 REGLAS DE RESPUESTA:
 1. Sé conciso, directo y útil. No escribas introducciones vacías como "Claro, con gusto te ayudo".

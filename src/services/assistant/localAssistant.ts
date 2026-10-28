@@ -802,7 +802,8 @@ export function tryExecuteAssistantMutation(query: string, data: AppData): Assis
       d.setHours(10, 0, 0, 0)
     }
 
-    const dateTimeStr = d.toISOString().slice(0, 16)
+    // La app guarda los recordatorios como ISO completo (UTC); recortarlo corría la hora 3 h
+    const dateTimeStr = d.toISOString()
     const remId = `rem-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 
     const updater = (prev: AppData): AppData => ({
