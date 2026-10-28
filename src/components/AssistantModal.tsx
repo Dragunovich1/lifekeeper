@@ -1,26 +1,4 @@
-import { useState, useRef, useEffect, useMemo, type FormEvent } from 'react'
-import {
-  Send,
-  ArrowUpRight,
-  User,
-  Trash2,
-  Maximize2,
-  Minimize2,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  Plus,
-  History,
-  Undo2,
-  Dumbbell,
-  Check,
-  Sparkles,
-  X,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Modal } from './Modal'
 import { useAppData } from '../hooks/useAppData'
 import {
@@ -35,124 +13,20 @@ import {
   type OllamaStatus,
 } from '../services/assistant/ollamaClient'
 import type { AppData, AssistantChatSession, WorkoutTemplate } from '../types'
-import { isPiperAvailable, speakWithPiper, stopPiper } from '../services/assistant/piperTts'
+import { CREATE_INITIAL_MESSAGES } from './assistant/constants'
+import { useAssistantVoice } from './assistant/useAssistantVoice'
+import { HeaderActions } from './assistant/HeaderActions'
+import { VoiceMenu } from './assistant/VoiceMenu'
+import { ChatHistoryPanel } from './assistant/ChatHistoryPanel'
+import { MessageBubble } from './assistant/MessageBubble'
+import { WelcomeCards } from './assistant/WelcomeCards'
+import { QuickPrompts } from './assistant/QuickPrompts'
+import { ChatInput } from './assistant/ChatInput'
+import './assistant/assistant.css'
 
 interface AssistantModalProps {
   open: boolean
   onClose: () => void
-}
-
-const INITIAL_WELCOME_TEXT =
-  '¡Qué hacés, che! 👋 Soy tu **Asistente Inteligente de LifeKeeper** con acento bien porteño y la mejor onda.\n\n' +
-  'Tengo toda tu bóveda bajo la lupa:\n' +
-  '• 🩺 **Salud e Historia Clínica:** pastillas, consultas, vacunas y ficha médica.\n' +
-  '• 🤝 **Deudas y Préstamos:** anotá plata prestada, compromisos o pagos.\n' +
-  '• 🏋️ **Gym & Nutrición:** puedo armarte rutinas de entrenamiento o dietas y dejártelas guardadas en 1 clic.\n' +
-  '• ☀️ **Daily Briefing:** preguntame *"¿Cómo viene mi día?"* para un panorama completo con clima, remedios y tareas.\n' +
-  '• 🎙️ **Micrófono y Voz:** podés hablarme con el botón del mic o escucharme con el parlante.\n\n' +
-  '¿En qué te doy una mano hoy, papá?'
-
-const CREATE_INITIAL_MESSAGES = (): AssistantMessage[] => [
-  {
-    id: 'welcome',
-    sender: 'assistant',
-    text: INITIAL_WELCOME_TEXT,
-    timestamp: 'Ahora',
-  },
-]
-
-const QUICK_PROMPTS = [
-  { label: '☀️ ¿Cómo viene mi día?', query: '¿Cómo viene mi día?' },
-  { label: '🤝 ¿Quién me debe plata?', query: '¿Quién me debe plata?' },
-  { label: '🏋️ Armame rutina hipertrofia', query: 'Armame una rutina de 4 días hipertrofia' },
-  { label: '🥗 Armame una dieta 2200 kcal', query: 'Armame una dieta de 2200 calorias' },
-  { label: '💧 Anotá 500ml de agua', query: 'Anotá que tomé 500ml de agua' },
-  { label: '💳 Gasté $5000 en comida', query: 'Gasté $5000 en comida' },
-  { label: '🌦️ ¿Va a llover hoy?', query: '¿Va a llover hoy?' },
-  { label: '💊 Medicación de hoy', query: '¿Qué pastillas tomo hoy?' },
-  { label: '⚖️ Anotá mi peso 75 kg', query: 'Anotá mi peso 75 kg' },
-  { label: '📋 Resumen de mi bóveda', query: 'Haceme un resumen general de mi bóveda' },
-]
-
-/**
- * Renderiza texto enriquecido con soporte de viñetas, negritas y saltos de línea con contención visual estricta.
- */
-function renderFormattedMessage(content: string) {
-  const lines = content.split('\n')
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', width: '100%', minWidth: 0 }}>
-      {lines.map((line, lineIdx) => {
-        const trimmed = line.trim()
-        if (!trimmed) {
-          return <div key={lineIdx} style={{ height: '0.4rem' }} />
-        }
-
-        const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || /^\d+\.\s/.test(trimmed)
-        const cleanLine = isBullet ? trimmed.replace(/^[•\-]\s*|^\d+\.\s*/, '') : line
-
-        const parts = cleanLine.split(/(\*\*.*?\*\*)/g)
-        const renderedText = parts.map((part, partIdx) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return (
-              <strong key={partIdx} style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-                {part.slice(2, -2)}
-              </strong>
-            )
-          }
-          return part
-        })
-
-        if (isBullet) {
-          return (
-            <div
-              key={lineIdx}
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.5rem',
-                paddingLeft: trimmed.startsWith('  ') ? '1.25rem' : '0.25rem',
-                lineHeight: '1.55',
-                minWidth: 0,
-                width: '100%',
-              }}
-            >
-              <span style={{ color: 'var(--color-accent-cyan)', fontSize: '0.85rem', flexShrink: 0, marginTop: '0.1rem' }}>
-                •
-              </span>
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  overflowWrap: 'anywhere',
-                  wordBreak: 'break-word',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {renderedText}
-              </div>
-            </div>
-          )
-        }
-
-        return (
-          <div
-            key={lineIdx}
-            style={{
-              lineHeight: '1.55',
-              overflowWrap: 'anywhere',
-              wordBreak: 'break-word',
-              whiteSpace: 'pre-wrap',
-              width: '100%',
-              minWidth: 0,
-            }}
-          >
-            {renderedText}
-          </div>
-        )
-      })}
-    </div>
-  )
 }
 
 export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
@@ -174,48 +48,10 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const [isTyping, setIsTyping] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-
-  // Estados de Voz (STT y TTS)
-  const [isListening, setIsListening] = useState(false)
-  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [showVoiceMenu, setShowVoiceMenu] = useState(false)
-  const [autoSpeak, setAutoSpeak] = useState(false)
-  type VoiceChoice = 'piper-female' | 'piper-male' | 'female' | 'male' | 'system'
-  const [voiceChoice, setVoiceChoice] = useState<VoiceChoice>('piper-female')
-  const [piperOnline, setPiperOnline] = useState<boolean | null>(null)
-  const usePiper = voiceChoice.startsWith('piper-')
-  // Género para la voz del navegador (también es el respaldo si Piper no responde)
-  const voiceGender: 'female' | 'male' | 'system' = voiceChoice === 'system' ? 'system' : voiceChoice.includes('female') ? 'female' : 'male'
-  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>('')
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
 
-  // Verificar si el servicio Piper responde al abrir el menú de voz
-  useEffect(() => {
-    if (!showVoiceMenu) return
-    let cancelled = false
-    setPiperOnline(null)
-    isPiperAvailable().then((ok) => {
-      if (!cancelled) setPiperOnline(ok)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [showVoiceMenu, voiceChoice])
-
-  // Cargar lista de voces del navegador
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-
-    const updateVoices = () => {
-      const voices = window.speechSynthesis.getVoices()
-      if (voices && voices.length > 0) {
-        setAvailableVoices(voices)
-      }
-    }
-
-    updateVoices()
-    window.speechSynthesis.onvoiceschanged = updateVoices
-  }, [])
+  const voice = useAssistantVoice({ open, showVoiceMenu, onTranscript: setInput })
+  const { speakText, autoSpeak } = voice
 
   // Acciones y Undo
   const previousVaultSnapshotRef = useRef<AppData | null>(null)
@@ -229,19 +65,19 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const recognitionRef = useRef<any>(null)
-  const quickPromptsRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const stickToBottomRef = useRef(true)
 
-  const scrollQuickPrompts = (direction: 'left' | 'right') => {
-    if (quickPromptsRef.current) {
-      const scrollAmount = direction === 'left' ? -220 : 220
-      quickPromptsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' })
-    }
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
   }
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // Solo se baja automáticamente si el usuario ya estaba al final del chat
+  const handleLogScroll = () => {
+    const el = logRef.current
+    if (!el) return
+    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
   }
 
   // Sincronizar mensajes cuando cambia la sesión activa
@@ -304,179 +140,21 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
         .then((status) => setOllamaStatus(status))
         .catch(() => setOllamaStatus({ online: false, models: [], activeModel: null }))
 
+      stickToBottomRef.current = true
       setTimeout(() => {
-        scrollToBottom()
+        scrollToBottom('auto')
         inputRef.current?.focus()
       }, 150)
     }
   }, [open])
 
   useEffect(() => {
-    scrollToBottom()
+    const last = messages[messages.length - 1]
+    if (stickToBottomRef.current || last?.sender === 'user') {
+      stickToBottomRef.current = true
+      scrollToBottom(isTyping ? 'auto' : 'smooth')
+    }
   }, [messages, isTyping])
-
-  // Detener TTS si se cierra el modal
-  useEffect(() => {
-    if (!open && typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
-      stopPiper()
-      setSpeakingMessageId(null)
-    }
-  }, [open])
-
-  // Configuración de Speech Recognition (Voz a Texto / STT)
-  const toggleSpeechRecognition = () => {
-    if (typeof window === 'undefined') return
-
-    const SpeechRec =
-      (window as unknown as { webkitSpeechRecognition?: any; SpeechRecognition?: any }).SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition?: any; SpeechRecognition?: any }).webkitSpeechRecognition
-
-    if (!SpeechRec) {
-      alert('Tu navegador o dispositivo no soporta reconocimiento de voz nativo.')
-      return
-    }
-
-    if (isListening) {
-      recognitionRef.current?.stop()
-      setIsListening(false)
-      return
-    }
-
-    try {
-      const recognition = new SpeechRec()
-      recognition.lang = 'es-AR'
-      recognition.continuous = false
-      recognition.interimResults = true
-
-      recognition.onstart = () => {
-        setIsListening(true)
-      }
-
-      recognition.onresult = (event: any) => {
-        let transcript = ''
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript
-        }
-        if (transcript) {
-          setInput(transcript)
-        }
-      }
-
-      recognition.onerror = (e: any) => {
-        console.warn('Error en SpeechRecognition:', e)
-        setIsListening(false)
-      }
-
-      recognition.onend = () => {
-        setIsListening(false)
-      }
-
-      recognitionRef.current = recognition
-      recognition.start()
-    } catch (err) {
-      console.error('No se pudo iniciar el reconocimiento de voz:', err)
-      setIsListening(false)
-    }
-  }
-
-  // Obtener voz y configuración de tono/frecuencia según género o variante elegida
-  const getActiveVoiceConfig = () => {
-    let voice: SpeechSynthesisVoice | null = null
-    let pitch = 1.0
-
-    const currentVoices = availableVoices.length > 0 ? availableVoices : (typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.getVoices() : [])
-    const spanishVoices = currentVoices.filter((v) => v.lang.toLowerCase().startsWith('es'))
-    const pool = spanishVoices.length > 0 ? spanishVoices : currentVoices
-
-    // 1. Si eligió una voz específica instalada
-    if (selectedVoiceURI) {
-      voice = currentVoices.find((v) => v.voiceURI === selectedVoiceURI) || null
-    }
-
-    // 2. Si eligió por género (Femenina o Masculina)
-    if (!voice) {
-      const FEMALE_NAMES = ['sabina', 'elena', 'monica', 'laura', 'helena', 'zira', 'francisca', 'victoria', 'paulina', 'rosa', 'female', 'mujer', 'sofia', 'lucia', 'paloma']
-      const MALE_NAMES = ['raul', 'pablo', 'jorge', 'alvaro', 'david', 'diego', 'carlos', 'male', 'hombre', 'miguel', 'juan', 'alberto']
-
-      if (voiceGender === 'female') {
-        voice = pool.find((v) => FEMALE_NAMES.some((n) => v.name.toLowerCase().includes(n))) || null
-        pitch = 1.15
-      } else if (voiceGender === 'male') {
-        voice = pool.find((v) => MALE_NAMES.some((n) => v.name.toLowerCase().includes(n))) || null
-        pitch = 0.88
-      }
-    }
-
-    // 3. Fallback: voz argentina o primer español disponible
-    if (!voice) {
-      voice = pool.find((v) => v.lang.toLowerCase().replace('_', '-') === 'es-ar') || pool[0] || null
-    }
-
-    if (voiceGender === 'female' && pitch === 1.0) pitch = 1.15
-    if (voiceGender === 'male' && pitch === 1.0) pitch = 0.88
-
-    return { voice, pitch }
-  }
-
-  // Reproducir texto en voz alta
-  const speakText = async (textToSpeak: string, msgId?: string) => {
-    if (typeof window === 'undefined') return
-
-    window.speechSynthesis?.cancel()
-    stopPiper()
-
-    // Voz neural local (Piper) si el usuario no eligió voz del sistema y el servicio responde
-    if (usePiper && (await isPiperAvailable())) {
-      if (msgId) setSpeakingMessageId(msgId)
-      const ok = await speakWithPiper(textToSpeak, voiceGender === 'male' ? 'male' : 'female', {
-        onEnd: () => setSpeakingMessageId(null),
-      })
-      if (ok) return
-      if (msgId) setSpeakingMessageId(null)
-    }
-
-    if (!window.speechSynthesis) return
-
-    const cleanText = textToSpeak
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/[•\-#_*\`~>]/g, ' ')
-      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    if (!cleanText) return
-
-    const utterance = new SpeechSynthesisUtterance(cleanText)
-    const { voice, pitch } = getActiveVoiceConfig()
-
-    if (voice) {
-      utterance.voice = voice
-      utterance.lang = voice.lang
-    } else {
-      utterance.lang = 'es-AR'
-    }
-
-    utterance.pitch = pitch
-    utterance.rate = 1.05
-
-    if (msgId) setSpeakingMessageId(msgId)
-    utterance.onend = () => setSpeakingMessageId(null)
-    utterance.onerror = () => setSpeakingMessageId(null)
-
-    window.speechSynthesis.speak(utterance)
-  }
-
-  // Alternar reproducción de un mensaje específico
-  const handleToggleSpeak = (msgId: string, textToSpeak: string) => {
-    if (speakingMessageId === msgId) {
-      window.speechSynthesis?.cancel()
-      stopPiper()
-      setSpeakingMessageId(null)
-      return
-    }
-    speakText(textToSpeak, msgId)
-  }
 
   const handleSend = async (userText: string) => {
     const text = userText.trim()
@@ -712,11 +390,6 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
     setShowHistory(false)
   }
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    handleSend(input)
-  }
-
   const handleActionClick = (hash: string) => {
     window.location.hash = hash
     onClose()
@@ -725,692 +398,92 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
   const isLlmActive = ollamaStatus.online && Boolean(ollamaStatus.activeModel)
   const userAvatar = data.profile.avatar
   const userName = data.profile.nickName || data.profile.fullName || 'Usuario'
+  const showWelcomeCards = messages.length === 1 && messages[0].id === 'welcome' && !isTyping
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Asistente LifeKeeper"
-      subtitle={
-        isLlmActive
-          ? `Motor LLM Local (${ollamaStatus.activeModel}) · Acento Porteño · Cifrado E2EE`
-          : 'Inteligencia Porteña Local · Cifrado Zero-Knowledge · Meteorología en vivo'
-      }
+      subtitle={isLlmActive ? `LLM local en línea · ${ollamaStatus.activeModel}` : 'Asistente local · Cifrado Zero-Knowledge'}
       className={`assistant-modal ${isExpanded ? 'is-expanded' : ''}`.trim()}
       headerActions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-          {/* Botón Nuevo Chat Estilizado como Pill */}
-          <button
-            type="button"
-            onClick={handleNewChat}
-            title="Iniciar nueva conversación"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              height: '32px',
-              padding: '0 0.75rem',
-              borderRadius: '16px',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              background: 'var(--color-surface-hover)',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text-primary)',
-              cursor: 'pointer',
-              flexShrink: 0,
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Plus size={14} color="var(--color-accent-cyan)" />
-            <span>Nuevo</span>
-          </button>
-
-          {/* Botón Menú de Ajustes de Voz (Mujer / Hombre / Auto-lectura) */}
-          <button
-            type="button"
-            className={`pref-modal-action-btn ${showVoiceMenu ? 'is-active' : ''}`}
-            onClick={() => {
-              setShowVoiceMenu((prev) => !prev)
-              setShowHistory(false)
-            }}
-            title="Elegir voz (Mujer / Hombre / Variantes) y lectura en voz alta"
-            style={{
-              color: autoSpeak ? 'var(--color-accent-cyan)' : undefined,
-              position: 'relative',
-            }}
-          >
-            <Volume2 size={16} />
-            {autoSpeak && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '5px',
-                  right: '5px',
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: 'var(--color-accent-cyan)',
-                }}
-              />
-            )}
-          </button>
-
-          {/* Botón Historial de Chats */}
-          <button
-            type="button"
-            className={`pref-modal-action-btn ${showHistory ? 'is-active' : ''}`}
-            onClick={() => {
-              setShowHistory((prev) => !prev)
-              setShowVoiceMenu(false)
-            }}
-            title="Ver conversaciones anteriores"
-          >
-            <History size={16} />
-          </button>
-
-          {messages.length > 1 && (
-            <button
-              type="button"
-              className="pref-modal-action-btn"
-              onClick={handleDeleteCurrentChat}
-              title="Eliminar esta conversación"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="pref-modal-action-btn"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            title={isExpanded ? 'Contraer ventana' : 'Expandir ventana'}
-          >
-            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        </div>
+        <HeaderActions
+          onNewChat={handleNewChat}
+          onOpenVoice={() => {
+            setShowVoiceMenu(true)
+            setShowHistory(false)
+          }}
+          onOpenHistory={() => {
+            setShowHistory(true)
+            setShowVoiceMenu(false)
+          }}
+          onDeleteChat={handleDeleteCurrentChat}
+          canDelete={messages.length > 1}
+          autoSpeak={autoSpeak}
+          isExpanded={isExpanded}
+          onToggleExpand={() => setIsExpanded((prev) => !prev)}
+        />
       }
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          flex: 1,
-          minHeight: 0,
-          gap: '0.75rem',
-          position: 'relative',
-        }}
-      >
-        {/* Popover de Configuración de Voz */}
-        {showVoiceMenu && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '0.25rem',
-              right: '0.5rem',
-              background: 'var(--color-surface)',
-              zIndex: 45,
-              borderRadius: '14px',
-              padding: '1.1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.85rem',
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-lg)',
-              width: '310px',
-              maxWidth: 'calc(100% - 1rem)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 600, fontSize: '0.88rem' }}>
-                <Volume2 size={16} color="var(--color-accent-cyan)" />
-                <span>Configuración de Voz</span>
-              </div>
-              <button
-                type="button"
-                className="pref-modal-action-btn"
-                onClick={() => setShowVoiceMenu(false)}
-                style={{ width: '28px', height: '28px' }}
-                title="Cerrar ajustes"
-              >
-                <X size={15} />
-              </button>
-            </div>
+      <div className="asst-root">
+        {showVoiceMenu && <VoiceMenu voice={voice} onClose={() => setShowVoiceMenu(false)} />}
 
-            {/* Selector de Género de Voz */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
-                Tipo de Voz:
-              </label>
-              <select
-                value={voiceChoice}
-                onChange={(e) => {
-                  setVoiceChoice(e.target.value as VoiceChoice)
-                  if (e.target.value.startsWith('piper-')) setSelectedVoiceURI('')
-                }}
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '8px',
-                  background: 'var(--color-surface-sunken)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.82rem',
-                  outline: 'none',
-                }}
-              >
-                <optgroup label="Piper (voz neural local)">
-                  <option value="piper-female">👩 Piper · Mujer (acento argentino)</option>
-                  <option value="piper-male">👨 Piper · Hombre (acento latino, México)</option>
-                </optgroup>
-                <optgroup label="Voces del navegador / sistema">
-                  <option value="female">👩 Voz Femenina (Mujer)</option>
-                  <option value="male">👨 Voz Masculina (Hombre)</option>
-                  <option value="system">🤖 Voz del Sistema / Neutra</option>
-                </optgroup>
-              </select>
-              {usePiper && (
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    color: piperOnline === false ? 'var(--color-accent-red, #ef4444)' : 'var(--color-text-secondary)',
-                  }}
-                >
-                  {piperOnline === null && 'Verificando servicio Piper…'}
-                  {piperOnline === true && '● Piper en línea'}
-                  {piperOnline === false && '● Piper no disponible: se usa la voz del navegador'}
-                </span>
-              )}
-            </div>
-
-            {/* Selector de Voz Específica del Sistema si existen varias en español */}
-            {!usePiper && availableVoices.filter((v) => v.lang.toLowerCase().startsWith('es')).length > 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
-                  Variante de voz instalada:
-                </label>
-                <select
-                  value={selectedVoiceURI}
-                  onChange={(e) => setSelectedVoiceURI(e.target.value)}
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '8px',
-                    background: 'var(--color-surface-sunken)',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-text-primary)',
-                    fontSize: '0.78rem',
-                    outline: 'none',
-                  }}
-                >
-                  <option value="">(Automática según género)</option>
-                  {availableVoices
-                    .filter((v) => v.lang.toLowerCase().startsWith('es'))
-                    .map((v) => (
-                      <option key={v.voiceURI} value={v.voiceURI}>
-                        {v.name} ({v.lang})
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
-
-            {/* Toggle de Auto-lectura */}
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                padding: '0.2rem 0',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={autoSpeak}
-                onChange={(e) => setAutoSpeak(e.target.checked)}
-                style={{ width: '16px', height: '16px', accentColor: 'var(--color-accent-cyan)' }}
-              />
-              <span>Leer respuestas en voz alta automáticamente</span>
-            </label>
-
-            {/* Botón de prueba */}
-            <button
-              type="button"
-              onClick={() => speakText('¡Qué hacés, che! Así se escucha mi voz porteña en LifeKeeper.')}
-              className="secondary-button"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                padding: '0.45rem',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              <Volume2 size={14} />
-              <span>Probar cómo suena esta voz</span>
-            </button>
-          </div>
-        )}
-
-        {/* Panel Desplegable de Historial de Chats */}
         {showHistory && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'var(--color-surface)',
-              zIndex: 30,
-              borderRadius: '12px',
-              padding: '1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-              border: '1px solid var(--color-border)',
-              boxShadow: 'var(--shadow-lg)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
-                <Clock size={16} color="var(--color-accent-cyan)" />
-                <span>Conversaciones Guardadas ({sessions.length})</span>
-              </div>
-              <button
-                type="button"
-                className="pref-modal-action-btn"
-                onClick={() => setShowHistory(false)}
-                title="Cerrar historial"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {sessions.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem 1rem', fontSize: '0.85rem' }}>
-                  No hay conversaciones anteriores guardadas en tu bóveda.
-                </div>
-              ) : (
-                sessions.map((s) => {
-                  const isCur = s.id === activeSessionId
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => handleSelectSession(s.id)}
-                      style={{
-                        padding: '0.75rem 1rem',
-                        borderRadius: '8px',
-                        background: isCur ? 'var(--color-surface-hover)' : 'var(--color-surface-sunken)',
-                        border: isCur ? '1.5px solid var(--color-accent-blue)' : '1px solid var(--color-border)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.25rem',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem', color: isCur ? 'var(--color-accent-cyan)' : 'var(--color-text-primary)' }}>
-                        {s.title || 'Conversación'}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                        {new Date(s.updatedAt).toLocaleDateString('es-AR')} · {s.messages?.length || 0} mensajes
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
+          <ChatHistoryPanel
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelect={handleSelectSession}
+            onClose={() => setShowHistory(false)}
+          />
         )}
 
-        {/* Historial de Mensajes */}
         <div
-          className="app-chat-scroll"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1.1rem',
-            padding: '0.5rem 0.5rem 0.5rem 0.25rem',
-            scrollbarWidth: 'none',
-          }}
+          ref={logRef}
+          className="asst-log app-chat-scroll"
+          role="log"
+          aria-live="polite"
+          aria-label="Conversación con el asistente"
+          onScroll={handleLogScroll}
         >
-          {messages.map((m) => {
-            const isUser = m.sender === 'user'
-            if (!isUser && !m.text && isTyping) return null
+          {messages.map((m, idx) => {
+            if (m.sender !== 'user' && !m.text && isTyping) return null
 
-            const isSpeakingThis = speakingMessageId === m.id
-            const isUndone = m.mutationCard?.entityId && undoneEntityIds.has(m.mutationCard.entityId)
-            const isProposalSaved = m.proposalCard && (
-              (m.proposalCard.type === 'workout_template' && savedProposalIds.has(m.proposalCard.payload?.id)) ||
-              (m.proposalCard.type === 'nutrition_plan' && savedProposalIds.has(m.id))
+            const isProposalSaved = Boolean(
+              m.proposalCard &&
+                ((m.proposalCard.type === 'workout_template' && savedProposalIds.has(m.proposalCard.payload?.id)) ||
+                  (m.proposalCard.type === 'nutrition_plan' && savedProposalIds.has(m.id))),
             )
 
             return (
-              <div
+              <MessageBubble
                 key={m.id}
-                style={{
-                  display: 'flex',
-                  gap: '0.75rem',
-                  alignSelf: isUser ? 'flex-end' : 'flex-start',
-                  maxWidth: isUser ? '85%' : '100%',
-                  width: '100%',
-                  flexDirection: isUser ? 'row-reverse' : 'row',
-                }}
-              >
-                {/* Avatar */}
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    boxShadow: isUser ? '0 2px 8px rgba(0, 0, 0, 0.25)' : '0 2px 10px rgba(0, 200, 255, 0.25)',
-                    border: isUser ? '1.5px solid rgba(255, 255, 255, 0.15)' : '1.5px solid rgba(14, 165, 233, 0.4)',
-                    background: isUser ? 'var(--color-accent-blue)' : '#07111f',
-                    marginTop: '2px',
-                  }}
-                >
-                  {isUser ? (
-                    userAvatar ? (
-                      <img
-                        src={userAvatar}
-                        alt={userName}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                      />
-                    ) : (
-                      <User size={18} color="#ffffff" />
-                    )
-                  ) : (
-                    <img
-                      src="/brand/assistant.png?v=2"
-                      alt="Asistente LifeKeeper"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                    />
-                  )}
-                </div>
-
-                {/* Burbuja de contenido */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: isUser ? 'flex-end' : 'flex-start',
-                    minWidth: 0,
-                    flex: 1,
-                    maxWidth: isUser ? '100%' : 'calc(100% - 48px)',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.95rem 1.25rem',
-                      borderRadius: isUser ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
-                      background: isUser
-                        ? 'linear-gradient(135deg, var(--color-accent-blue), #2563eb)'
-                        : 'var(--color-surface-hover)',
-                      border: isUser ? 'none' : '1px solid var(--color-border)',
-                      color: isUser ? '#ffffff' : 'var(--color-text-primary)',
-                      fontSize: '0.875rem',
-                      lineHeight: '1.6',
-                      overflowWrap: 'anywhere',
-                      wordBreak: 'break-word',
-                      whiteSpace: 'pre-wrap',
-                      boxShadow: 'var(--shadow-sm)',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    {renderFormattedMessage(m.text)}
-
-                    {/* MUTATION ACTION CARD (con botón Deshacer) */}
-                    {m.mutationCard && (
-                      <div
-                        style={{
-                          marginTop: '0.85rem',
-                          padding: '0.75rem 0.95rem',
-                          borderRadius: '10px',
-                          background: 'rgba(14, 165, 233, 0.08)',
-                          border: '1px solid rgba(14, 165, 233, 0.3)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                        }}
-                      >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.mutationCard.title}</span>
-                            {m.mutationCard.badge && (
-                              <span
-                                style={{
-                                  fontSize: '0.65rem',
-                                  padding: '0.1rem 0.45rem',
-                                  borderRadius: '10px',
-                                  background: 'var(--color-accent-blue)',
-                                  color: '#fff',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {m.mutationCard.badge}
-                              </span>
-                            )}
-                          </div>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                            {m.mutationCard.details}
-                          </span>
-                        </div>
-
-                        {/* Botón Deshacer */}
-                        {isUndone ? (
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                            Deshecho
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleUndoMutation(m.mutationCard?.entityId)}
-                            className="secondary-button"
-                            style={{
-                              fontSize: '0.72rem',
-                              padding: '0.35rem 0.65rem',
-                              borderRadius: '14px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                              flexShrink: 0,
-                            }}
-                            title="Deshacer este registro en tu bóveda"
-                          >
-                            <Undo2 size={13} />
-                            <span>Deshacer</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* PROPOSAL ACTION CARD (Guardar Rutina o Metas Nutricionales en 1 Clic) */}
-                    {m.proposalCard && (
-                      <div
-                        style={{
-                          marginTop: '0.85rem',
-                          padding: '0.85rem 1rem',
-                          borderRadius: '12px',
-                          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(14, 165, 233, 0.1))',
-                          border: '1.5px solid rgba(34, 197, 94, 0.4)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.6rem',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <Sparkles size={16} color="var(--color-accent-green)" />
-                          <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.proposalCard.title}</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                          {m.proposalCard.summary}
-                        </p>
-
-                        {m.proposalCard.type === 'workout_template' && (
-                          <button
-                            type="button"
-                            disabled={isProposalSaved}
-                            onClick={() => handleSaveWorkoutTemplate(m.proposalCard!.payload)}
-                            className="primary-button"
-                            style={{
-                              fontSize: '0.75rem',
-                              padding: '0.45rem 0.85rem',
-                              borderRadius: '16px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              alignSelf: 'flex-start',
-                              background: isProposalSaved ? 'var(--color-surface-hover)' : undefined,
-                            }}
-                          >
-                            {isProposalSaved ? <Check size={14} /> : <Dumbbell size={14} />}
-                            <span>{isProposalSaved ? '¡Guardada en Workouts!' : '💾 Guardar como Plantilla'}</span>
-                          </button>
-                        )}
-
-                        {m.proposalCard.type === 'nutrition_plan' && (
-                          <button
-                            type="button"
-                            disabled={isProposalSaved}
-                            onClick={() => handleApplyNutritionGoals(m.proposalCard!.payload, m.id)}
-                            className="primary-button"
-                            style={{
-                              fontSize: '0.75rem',
-                              padding: '0.45rem 0.85rem',
-                              borderRadius: '16px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              alignSelf: 'flex-start',
-                              background: isProposalSaved ? 'var(--color-surface-hover)' : undefined,
-                            }}
-                          >
-                            {isProposalSaved ? <Check size={14} /> : <Check size={14} />}
-                            <span>{isProposalSaved ? '¡Metas aplicadas en Nutrición!' : '🥗 Aplicar Metas en Nutrición'}</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Acciones del mensaje (Link contextual y Botón Voz TTS) */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      marginTop: '0.35rem',
-                      padding: '0 0.25rem',
-                      width: '100%',
-                    }}
-                  >
-                    {m.action && (
-                      <button
-                        type="button"
-                        className="primary-button"
-                        style={{
-                          fontSize: '0.72rem',
-                          padding: '0.3rem 0.75rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          borderRadius: '18px',
-                        }}
-                        onClick={() => handleActionClick(m.action!.hash)}
-                      >
-                        <span>{m.action.label}</span>
-                        <ArrowUpRight size={12} />
-                      </button>
-                    )}
-
-                    {!isUser && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSpeak(m.id, m.text)}
-                        className="secondary-button"
-                        title={isSpeakingThis ? 'Silenciar lectura' : 'Escuchar respuesta con la voz seleccionada'}
-                        style={{
-                          fontSize: '0.72rem',
-                          padding: '0.25rem 0.65rem',
-                          borderRadius: '14px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          background: isSpeakingThis ? 'rgba(14, 165, 233, 0.25)' : 'var(--color-surface-sunken)',
-                          border: isSpeakingThis ? '1px solid var(--color-accent-cyan)' : '1px solid var(--color-border)',
-                          color: isSpeakingThis ? 'var(--color-accent-cyan)' : 'var(--color-text-secondary)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        {isSpeakingThis ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                        <span>{isSpeakingThis ? 'Detener voz' : 'Escuchar'}</span>
-                      </button>
-                    )}
-
-                    <span
-                      style={{
-                        fontSize: '0.6875rem',
-                        color: 'var(--color-text-muted)',
-                        marginLeft: 'auto',
-                      }}
-                    >
-                      {m.timestamp}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                message={m}
+                showAvatar={idx === 0 || messages[idx - 1].sender !== m.sender}
+                userAvatar={userAvatar}
+                userName={userName}
+                isSpeaking={voice.speakingMessageId === m.id}
+                isUndone={Boolean(m.mutationCard?.entityId && undoneEntityIds.has(m.mutationCard.entityId))}
+                isProposalSaved={isProposalSaved}
+                onToggleSpeak={() => voice.handleToggleSpeak(m.id, m.text)}
+                onAction={handleActionClick}
+                onUndo={handleUndoMutation}
+                onSaveWorkout={handleSaveWorkoutTemplate}
+                onApplyNutrition={handleApplyNutritionGoals}
+              />
             )
           })}
 
-          {/* Indicador de escritura */}
+          {showWelcomeCards && <WelcomeCards onSelect={handleSend} />}
+
           {isTyping && messages[messages.length - 1]?.text === '' && (
-            <div style={{ display: 'flex', gap: '0.75rem', alignSelf: 'flex-start' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 10px rgba(0, 200, 255, 0.25)',
-                  border: '1.5px solid rgba(14, 165, 233, 0.4)',
-                  background: '#07111f',
-                }}
-              >
-                <img
-                  src="/brand/assistant.png?v=2"
-                  alt="Asistente LifeKeeper"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                />
+            <div className="asst-typing">
+              <div className="asst-avatar-slot">
+                <div className="asst-avatar">
+                  <img src="/brand/assistant.png?v=2" alt="Asistente LifeKeeper" />
+                </div>
               </div>
-              <div
-                style={{
-                  padding: '0.75rem 1.1rem',
-                  borderRadius: '4px 18px 18px 18px',
-                  background: 'var(--color-surface-hover)',
-                  border: '1px solid var(--color-border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}
-              >
+              <div className="asst-typing-bubble" aria-label="El asistente está escribiendo">
                 <span className="typing-dot" />
                 <span className="typing-dot" />
                 <span className="typing-dot" />
@@ -1420,175 +493,18 @@ export const AssistantModal = ({ open, onClose }: AssistantModalProps) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Carrusel de Sugerencias Rápidas con Botones Deslizables < y > */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            width: '100%',
-            position: 'relative',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => scrollQuickPrompts('left')}
-            className="pref-modal-action-btn"
-            title="Deslizar sugerencias a la izquierda"
-            aria-label="Deslizar sugerencias a la izquierda"
-            style={{
-              width: '28px',
-              height: '28px',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              flexShrink: 0,
-              background: 'var(--color-surface-sunken)',
-              border: '1px solid var(--color-border)',
-              cursor: 'pointer',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            <ChevronLeft size={16} />
-          </button>
+        <QuickPrompts onSelect={handleSend} disabled={isTyping} />
 
-          <div
-            ref={quickPromptsRef}
-            className="app-chat-scroll"
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              overflowX: 'auto',
-              padding: '0.35rem 0.2rem',
-              scrollbarWidth: 'none',
-              flex: 1,
-              minWidth: 0,
-              scrollBehavior: 'smooth',
-            }}
-          >
-            {QUICK_PROMPTS.map((p) => (
-              <button
-                key={p.query}
-                type="button"
-                className="secondary-button"
-                style={{
-                  fontSize: '0.75rem',
-                  whiteSpace: 'nowrap',
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: '18px',
-                  cursor: 'pointer',
-                  background: 'var(--color-surface-sunken)',
-                  border: '1px solid var(--color-border)',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                onClick={() => handleSend(p.query)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => scrollQuickPrompts('right')}
-            className="pref-modal-action-btn"
-            title="Deslizar sugerencias a la derecha"
-            aria-label="Deslizar sugerencias a la derecha"
-            style={{
-              width: '28px',
-              height: '28px',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '50%',
-              flexShrink: 0,
-              background: 'var(--color-surface-sunken)',
-              border: '1px solid var(--color-border)',
-              cursor: 'pointer',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-
-        {/* Input Bar con Micrófono STT */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          {/* Botón de Dictado por Voz (Mic) */}
-          <button
-            type="button"
-            onClick={toggleSpeechRecognition}
-            title={isListening ? 'Escuchando... hacé clic para detener' : 'Hablarle al asistente (voz)'}
-            style={{
-              borderRadius: '50%',
-              width: '44px',
-              height: '44px',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              cursor: 'pointer',
-              border: isListening ? '2px solid #ef4444' : '1px solid var(--color-border-strong)',
-              background: isListening ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-surface-sunken)',
-              color: isListening ? '#ef4444' : 'var(--color-text-secondary)',
-              transition: 'all 0.2s ease',
-              animation: isListening ? 'pulse 1.2s infinite' : 'none',
-            }}
-          >
-            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-          </button>
-
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              isListening
-                ? '🎙️ Escuchando tu voz...'
-                : isLlmActive
-                ? 'Escribile o hablále a tu LLM local...'
-                : 'Pedime algo (ej: ¿cómo viene mi día?, le presté 20 lucas a Juan, rutina 4 días)...'
-            }
-            style={{
-              flex: 1,
-              borderRadius: '24px',
-              padding: '0.85rem 1.35rem',
-              background: 'var(--color-surface-sunken)',
-              border: isListening
-                ? '1.5px solid #ef4444'
-                : isLlmActive
-                ? '1px solid rgba(16, 185, 129, 0.35)'
-                : '1px solid var(--color-border-strong)',
-              color: 'var(--color-text-primary)',
-              fontSize: '0.875rem',
-            }}
-          />
-
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={!input.trim() || isTyping}
-            style={{
-              borderRadius: '50%',
-              width: '44px',
-              height: '44px',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-            title="Enviar mensaje"
-          >
-            <Send size={17} />
-          </button>
-        </form>
+        <ChatInput
+          value={input}
+          onChange={setInput}
+          onSubmit={() => handleSend(input)}
+          isListening={voice.isListening}
+          onToggleMic={voice.toggleSpeechRecognition}
+          isTyping={isTyping}
+          isLlmActive={isLlmActive}
+          textareaRef={inputRef}
+        />
       </div>
     </Modal>
   )

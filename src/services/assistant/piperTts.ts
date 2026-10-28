@@ -18,7 +18,9 @@ export async function isPiperAvailable(): Promise<boolean> {
   if (availability && now - availability.checkedAt < AVAILABILITY_TTL_MS) return availability.value
   try {
     const res = await fetch('/api/tts/health', { signal: AbortSignal.timeout(3000) })
-    availability = { value: res.ok, checkedAt: now }
+    // Se valida el JSON: un servidor de desarrollo puede responder 200 con el index.html
+    const body = res.ok ? await res.json() : null
+    availability = { value: body?.ok === true, checkedAt: now }
   } catch {
     availability = { value: false, checkedAt: now }
   }
