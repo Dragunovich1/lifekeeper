@@ -8,6 +8,7 @@
 import type { AppData } from '../../types'
 import { toLocalDateKey, formatDate } from '../../utils/dates'
 import { fetchWeatherData, describeWeatherCode, type WeatherData } from '../api/weather'
+import { apiFetch } from '../api/apiConfig'
 
 export interface OllamaStatus {
   online: boolean
@@ -32,7 +33,7 @@ const PREFERRED_MODELS = [
  */
 export async function checkOllamaStatus(): Promise<OllamaStatus> {
   try {
-    const res = await fetch('/api/ai/tags', {
+    const res = await apiFetch('/api/ai/tags', {
       method: 'GET',
       headers: { Accept: 'application/json' },
     })
@@ -256,7 +257,7 @@ export async function queryOllamaStream(
     { role: 'user', content: userQuery },
   ]
 
-  const response = await fetch('/api/ai/chat', {
+  const response = await apiFetch('/api/ai/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

@@ -1,13 +1,15 @@
 import { saveAs } from 'file-saver'
 import { jsPDF } from 'jspdf'
 import * as ExcelJS from 'exceljs'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Cloud, RefreshCw, Smartphone } from 'lucide-react'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { SectionHeader } from '../../components/SectionHeader'
 import { useAppData } from '../../hooks/useAppData'
 import { encryptObject, decryptObject } from '../../utils/encryption'
 import { formatDate, formatDateTime, toLocalDateKey } from '../../utils/dates'
 import { downloadEmergencyKitPdf } from '../../services/crypto/emergencyKit'
+import { syncService, type SyncState } from '../../services/sync/syncService'
 import type { AppData } from '../../types'
 
 const timestamp = () => new Date().toISOString().replace(/[:T]/g, '-').split('.')[0]
@@ -34,14 +36,45 @@ const isValidAppData = (candidate: unknown): candidate is AppData => {
 }
 
 export const BackupsSection = () => {
-  const { data, masterPassword, updateData, replaceData } = useAppData()
+  const { data, masterPassword, updateData, replaceData, syncNow } = useAppData()
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false)
+  const [syncState, setSyncState] = useState<SyncState>(() => syncService.getState())
+  const [cloudSession, setCloudSession] = useState(() => syncService.getSession())
   const [pendingRestore, setPendingRestore] = useState<AppData | null>(null)
+
+  useEffect(() => {
+    const unsub = syncService.subscribe((next) => {
+      setSyncState(next)
+      setCloudSession(syncService.getSession())
+    })
+    return unsub
+  }, [])
 
   const lastAuto = data.utilities.backups.lastAutomaticBackup
   const lastManual = data.utilities.backups.lastManualBackup
+
+  const handleCloudSyncNow = async () => {
+    if (!syncNow) return
+    setIsSyncingCloud(true)
+    setStatusMessage(null)
+    setErrorMessage(null)
+    try {
+      const res = await syncNow()
+      setCloudSession(syncService.getSession())
+      if (res.success) {
+        setStatusMessage(res.message)
+      } else {
+        setErrorMessage(res.message)
+      }
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Error al sincronizar con el servidor')
+    } finally {
+      setIsSyncingCloud(false)
+    }
+  }
 
   const stampManualBackup = () => {
     updateData((previous) => ({
@@ -489,17 +522,69 @@ export const BackupsSection = () => {
     setErrorMessage(null)
   }
 
+  const linkedIdentifier =
+    cloudSession?.username ||
+    cloudSession?.email ||
+    data.profile.auth.username ||
+    data.profile.auth.email ||
+    'Sin definir en Perfil'
+
   return (
     <div>
       <SectionHeader
         title="Respaldos y exportación"
-        subtitle="Generá respaldos cifrados, exportá a Excel/CSV y restaurá información"
+        subtitle="Sincronizá entre Desktop y Smartphone, generá respaldos cifrados y exportá tus datos"
       />
 
       <div className="section-body">
         <div className="panel">
+          <div className="panel-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <h3 className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Smartphone size={18} />
+              <span>Sincronización Multi-Dispositivo (Desktop ↔ Smartphone)</span>
+            </h3>
+            <span
+              className={`badge ${
+                syncState === 'synced' && cloudSession
+                  ? 'badge-success'
+                  : syncState === 'syncing'
+                    ? 'badge-warning'
+                    : 'badge-error'
+              }`}
+            >
+              {syncState === 'syncing'
+                ? 'Sincronizando...'
+                : cloudSession
+                  ? `Sincronizado (v${cloudSession.vaultVersion || 1})`
+                  : 'Pendiente de vincular'}
+            </span>
+          </div>
+          <p className="panel-subtitle">
+            Tu bóveda se sincroniza de extremo a extremo (Zero-Knowledge AES-256-GCM) con PostgreSQL para que puedas abrirla desde tu Smartphone (navegador o APK) ingresando tu usuario o email y tu contraseña maestra.
+          </p>
+          <p className="panel-subtitle">
+            <strong>Usuario / Email de acceso:</strong> {linkedIdentifier}
+            {cloudSession?.lastSync ? `  •  Último sync cloud: ${formatDateTime(cloudSession.lastSync)}` : ''}
+          </p>
+          <div className="section-actions">
+            <button
+              className="primary-button"
+              type="button"
+              onClick={handleCloudSyncNow}
+              disabled={isSyncingCloud}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              {isSyncingCloud ? <RefreshCw size={16} /> : <Cloud size={16} />}
+              <span>{isSyncingCloud ? 'Sincronizando con el servidor...' : 'Sincronizar ahora (Subir / Descargar)'}</span>
+            </button>
+          </div>
+          {statusMessage ? <p className="panel-subtitle" style={{ marginTop: '0.75rem', color: 'var(--color-success)' }}>{statusMessage}</p> : null}
+          {errorMessage ? <p className="auth-error" style={{ marginTop: '0.75rem' }}>{errorMessage}</p> : null}
+        </div>
+
+        <div className="panel">
           <div className="panel-header">
-            <h3 className="panel-title">Estado de respaldos</h3>
+            <h3 className="panel-title">Estado de respaldos locales</h3>
           </div>
           <p className="panel-subtitle">
             Último backup automático: {lastAuto ? formatDateTime(lastAuto) : 'Aún no se generó'}
@@ -507,8 +592,6 @@ export const BackupsSection = () => {
           <p className="panel-subtitle">
             Último backup manual: {lastManual ? formatDateTime(lastManual) : 'Aún no se generó'}
           </p>
-          {statusMessage ? <p className="panel-subtitle">{statusMessage}</p> : null}
-          {errorMessage ? <p className="auth-error">{errorMessage}</p> : null}
         </div>
 
         <div className="panel">
