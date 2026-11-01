@@ -127,8 +127,15 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
       row.amount += t.amount
       map.set(v.name, row)
     }
-    return [...map.values()].sort((a, b) => b.amount - a.amount).map((r) => ({ ...r, pct: total > 0 ? (r.amount / total) * 100 : 0 }))
-  }, [monthTx, tab, totals, customCats])
+    const budgets = data.personal.budgets ?? {}
+    const limitOf = (name: string) => {
+      const key = Object.keys(budgets).find((k) => k.toLowerCase() === name.toLowerCase())
+      return key && budgets[key] > 0 ? budgets[key] : undefined
+    }
+    return [...map.values()]
+      .sort((a, b) => b.amount - a.amount)
+      .map((r) => ({ ...r, pct: total > 0 ? (r.amount / total) * 100 : 0, limit: kind === 'expense' ? limitOf(r.name) : undefined }))
+  }, [monthTx, tab, totals, customCats, data.personal.budgets])
 
   const grid = useMemo(() => buildGrid(cursor.year, cursor.month), [cursor])
   const money = (n: number) => (reveal ? formatCurrencyNoCents(n, currency) : '••••')
@@ -369,6 +376,11 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
                         </div>
                         <small>{money(r.amount)}</small>
                       </div>
+                      {r.limit ? (
+                        <small className="fin-bar-limit" style={{ color: r.amount > r.limit ? 'var(--color-danger, #ef4444)' : undefined }}>
+                          Tope {money(r.limit)} · {Math.round((r.amount / r.limit) * 100)}%{r.amount > r.limit ? ' (superado)' : ''}
+                        </small>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

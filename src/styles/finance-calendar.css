@@ -394,3 +394,4 @@
 .mobile-app-shell .fin-infl { padding: 0.7rem 0.8rem; }
 .mobile-app-shell .fin-infl-main { grid-template-columns: auto auto minmax(60px, 1fr); gap: 0.9rem; }
 .mobile-app-shell .fin-infl-main strong { font-size: 1.25rem; }
+.fin-bar-limit{display:block;margin-top:2px;font-size:.7rem;opacity:.85}

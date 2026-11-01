@@ -1,6 +1,7 @@
 import { differenceInCalendarDays, isSameMonth, subMonths } from 'date-fns'
 import { navigation } from '../navigation'
 import type { AppData, MoodLevel } from '../types'
+import { MEASUREMENT_META, classifyMeasurement, formatMeasurement, measurementTimestamp } from './measurements'
 import {
   formatCurrency,
   formatDate,
@@ -514,6 +515,79 @@ export const computeSmartSummary = (data: AppData, now = new Date()): DashboardS
   const activeProjectsCount = projects.filter(
     (proj) => proj.tasks.length === 0 || proj.tasks.some((t) => !t.completed),
   ).length
+
+  // 10. Mediciones de salud fuera de rango (últimos 3 días, la más reciente de cada tipo)
+  const recentMeasurements = (data.health.measurements ?? []).filter(
+    (m) => measurementTimestamp(m) >= now.getTime() - 3 * 86_400_000,
+  )
+  const latestByType = new Map<string, (typeof recentMeasurements)[number]>()
+  recentMeasurements.forEach((m) => {
+    const prev = latestByType.get(m.type)
+    if (!prev || measurementTimestamp(m) > measurementTimestamp(prev)) latestByType.set(m.type, m)
+  })
+  latestByType.forEach((m) => {
+    const status = classifyMeasurement(m)
+    if (status.level === 'ok' || status.level === 'low' || status.level === 'elevated') return
+    const meta = MEASUREMENT_META[m.type]
+    insights.push({
+      id: `measurement-${m.type}`,
+      title: `${meta.label} ${status.label.toLowerCase()}: ${formatMeasurement(m)} ${meta.unit}`,
+      description:
+        status.hint ??
+        'Es un valor orientativo, no un diagnóstico. Si se repite o te sentís mal, consultá con tu médico.',
+      severity: status.level === 'danger' ? 'critical' : 'warning',
+      category: 'salud',
+      actionLabel: 'Ver mediciones',
+      targetHash: '#health:measurements',
+      meta: 'Mediciones',
+    })
+  })
+
+  // 11. Topes de gasto del mes (cerca o por encima del límite)
+  const budgets = data.personal.budgets ?? {}
+  Object.entries(budgets).forEach(([category, limit]) => {
+    if (!(limit > 0)) return
+    const spent = data.personal.finances
+      .filter(
+        (t) =>
+          t.type === 'expense' &&
+          t.category.toLowerCase() === category.toLowerCase() &&
+          isSameMonth(safeParseDate(t.date) ?? new Date(0), now),
+      )
+      .reduce((sum, t) => sum + t.amount, 0)
+    const ratio = spent / limit
+    if (ratio < 0.8) return
+    insights.push({
+      id: `budget-${category.toLowerCase()}`,
+      title:
+        ratio >= 1
+          ? `Superaste el tope de ${category} este mes`
+          : `Vas ${Math.round(ratio * 100)}% del tope de ${category}`,
+      description: `Gastaste ${formatCurrency(spent)} de ${formatCurrency(limit)} en ${category}.`,
+      severity: ratio >= 1 ? 'warning' : 'info',
+      category: 'personal',
+      actionLabel: 'Ver finanzas',
+      targetHash: '#personal:finances',
+      meta: 'Presupuesto',
+    })
+  })
+
+  // 12. Lista de compras activa por encima de su presupuesto
+  ;(data.personal.shopping?.lists ?? []).forEach((list) => {
+    if (!list.budget || list.budget <= 0) return
+    const total = list.items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0)
+    if (total <= list.budget) return
+    insights.push({
+      id: `shopping-over-${list.id}`,
+      title: `La lista "${list.name}" supera su presupuesto`,
+      description: `Estimado ${formatCurrency(total)} sobre ${formatCurrency(list.budget)}.`,
+      severity: 'info',
+      category: 'utilidades',
+      actionLabel: 'Ver lista',
+      targetHash: '#utilities:shopping',
+      meta: 'Compras',
+    })
+  })
 
   // Ordenar insights por severidad: critical -> warning -> info -> success
   const severityOrder: Record<InsightSeverity, number> = {

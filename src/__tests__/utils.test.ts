@@ -87,3 +87,29 @@ describe('exportes', () => {
     expect((await buildMeasurementsPdf({ measurements: [], now })).getNumberOfPages()).toBe(1)
   })
 })
+
+describe('alertas (insights)', () => {
+  it('avisa mediciones altas recientes, topes superados y compras sobre presupuesto', async () => {
+    const { computeSmartSummary } = await import('../utils/insights')
+    const { ensureAppDataShape } = await import('../utils/defaultData')
+    const now = new Date('2026-11-10T12:00:00')
+    const data = ensureAppDataShape({}) as AppData
+    data.health.measurements = [
+      { id: 'a', type: 'presion', date: '2026-11-09', time: '08:00', value: 150, value2: 95 },
+      { id: 'b', type: 'glucosa', date: '2026-10-01', time: '08:00', value: 300 },
+    ] as never
+    data.personal.budgets = { Comida: 1000, Ocio: 1000 }
+    data.personal.finances = [
+      { id: '1', type: 'expense', amount: 1200, category: 'Comida', date: '2026-11-03' },
+      { id: '2', type: 'expense', amount: 100, category: 'Ocio', date: '2026-11-03' },
+      { id: '3', type: 'expense', amount: 5000, category: 'Ocio', date: '2026-10-03' },
+    ] as never
+    data.personal.shopping = { lists: [{ id: 'l', name: 'Super', currency: 'ARS', budget: 100, createdAt: '', items: [{ id: 'i', name: 'x', quantity: 2, price: 100, category: 'Otros', checked: false, addedAt: '' }] }], priceMemory: {} } as never
+    const ids = computeSmartSummary(data, now).insights.map((i) => i.id)
+    expect(ids).toContain('measurement-presion')
+    expect(ids).not.toContain('measurement-glucosa') // vieja: fuera de los 3 días
+    expect(ids).toContain('budget-comida')
+    expect(ids).not.toContain('budget-ocio') // el gasto de octubre no cuenta
+    expect(ids).toContain('shopping-over-l')
+  })
+})
