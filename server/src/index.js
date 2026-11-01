@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import { pool, query } from './db.js'
 import { signToken, requireAuth } from './auth.js'
 import { sendEmail } from './mailer.js'
+import { createPublicDataRouter } from './publicData.js'
 
 dotenv.config()
 
@@ -13,6 +14,9 @@ const PORT = process.env.PORT || 4000
 // Configuración de middlewares
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
+
+// Datos públicos de solo lectura (feriados, inflación, ejercicios, MedlinePlus) con caché
+app.use('/api/public', createPublicDataRouter())
 
 // Asegurar soporte de columna username para login tanto por usuario como por email
 query(`

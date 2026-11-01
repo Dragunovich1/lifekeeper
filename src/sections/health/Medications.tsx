@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { HealthInfoModal } from '../../components/HealthInfoModal'
 import { DatePicker } from '../../components/DatePicker'
 import { Modal } from '../../components/Modal'
 import { SectionHeader } from '../../components/SectionHeader'
@@ -41,6 +42,7 @@ export const MedicationsSection = () => {
     note: '',
   })
   const [pendingDelete, setPendingDelete] = useState<Medication | null>(null)
+  const [infoFor, setInfoFor] = useState<string | null>(null)
   const [dueMedications, setDueMedications] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [medSuggestions, setMedSuggestions] = useState<MedicationSuggestion[]>([])
@@ -646,6 +648,14 @@ export const MedicationsSection = () => {
                           <button
                             className="secondary-button"
                             type="button"
+                            onClick={() => setInfoFor(med.name)}
+                            title="Información del medicamento (MedlinePlus)"
+                          >
+                            Info
+                          </button>
+                          <button
+                            className="secondary-button"
+                            type="button"
                             onClick={() => startEdit(med)}
                           >
                             Editar
@@ -674,6 +684,8 @@ export const MedicationsSection = () => {
           )}
         </div>
       </div>
+
+      <HealthInfoModal open={infoFor !== null} onClose={() => setInfoFor(null)} mode="drug" initialQuery={infoFor ?? ''} />
 
       <Modal
         open={Boolean(editingId)}

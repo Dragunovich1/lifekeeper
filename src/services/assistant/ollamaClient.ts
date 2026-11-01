@@ -9,6 +9,7 @@ import type { AppData } from '../../types'
 import { toLocalDateKey, toLocalTimeKey, formatDate } from '../../utils/dates'
 import { fetchWeatherData, describeWeatherCode, type WeatherData } from '../api/weather'
 import { apiFetch } from '../api/apiConfig'
+import { getHolidays, getInflation, peekHolidays, peekInflation } from '../api/publicData'
 
 export interface OllamaStatus {
   online: boolean
@@ -163,6 +164,16 @@ export function buildVaultSystemPrompt(data: AppData, weather: WeatherData | nul
     weatherText = `Ubicación: ${weather.city}. Actual: ${weather.temp}°C (Sensación: ${weather.apparentTemp}°C), ${weather.description}, Humedad: ${weather.humidity}%, Viento: ${weather.windSpeed} km/h. Hoy mín ${todayF?.tempMin}°C / máx ${todayF?.tempMax}°C (prob. lluvia hoy: ${todayF?.precipProb}%). Pronóstico de la semana: [${weekRain}].`
   }
 
+  // Feriados e inflación (copias guardadas en el dispositivo)
+  const upcomingHolidays = [...peekHolidays(now.getFullYear()), ...peekHolidays(now.getFullYear() + 1)].filter((h) => h.date >= todayKey).slice(0, 3)
+  const upcomingHolidaysText = upcomingHolidays.length
+    ? upcomingHolidays.map((h) => `${formatDate(h.date)} ${h.name}`).join('; ')
+    : 'Sin datos disponibles'
+  const inflationLatest = peekInflation()?.latest
+  const inflationText = inflationLatest
+    ? `${inflationLatest.month}: ${inflationLatest.monthly ?? 's/d'}% mensual, ${inflationLatest.yoy ?? 's/d'}% interanual`
+    : 'Sin datos disponibles'
+
   // Deudas y Préstamos
   const debts = data.personal.debts ?? []
   const activeDebts = debts.filter((d) => d.status !== 'cancelada')
@@ -204,6 +215,8 @@ DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
 - Seguridad: ${data.security.passwordEntries.length} contraseñas resguardadas (cifrado local Zero-Knowledge).
 - Vehículos: ${data.personal.vehicles.map((v) => `${v.vehicleName} (${v.serviceType}, km: ${v.mileage || 'N/A'})`).join('; ') || 'Ninguno'}
 - Clima y Meteorología en Tiempo Real: ${weatherText}
+- Próximos feriados nacionales: ${upcomingHolidaysText}
+- Inflación (INDEC): ${inflationText}
 
 MAPA DE OPCIONES DE LA APLICACIÓN LIFEKEEPER:
 • Dashboard: Resumen biométrico, clima en vivo, puntaje de bóveda y accesos.
@@ -251,6 +264,12 @@ export async function queryOllamaStream(
   } catch {
     // ignore
   }
+
+  // Feriados e inflación: se actualiza la copia local sin demorar la respuesta más de un instante
+  await Promise.race([
+    Promise.allSettled([getHolidays(new Date().getFullYear()), getInflation()]),
+    new Promise((resolve) => setTimeout(resolve, 1200)),
+  ])
 
   const systemPrompt = buildVaultSystemPrompt(data, weather)
 

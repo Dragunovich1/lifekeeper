@@ -1,0 +1,11 @@
+.ex-adder { position: relative; width: 100%; }
+.ex-adder-row { display: flex; gap: 0.5rem; align-items: center; }
+.ex-adder-row input { flex: 1; min-width: 0; }
+.ex-suggest { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; list-style: none; margin: 0; padding: 0.25rem; max-height: 300px; overflow-y: auto; border-radius: 12px; background: var(--color-surface); border: 1px solid var(--color-border-strong); box-shadow: var(--shadow-lg); }
+.ex-suggest li { margin: 0; }
+.ex-suggest button { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; width: 100%; padding: 0.5rem 0.65rem; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-primary); font: inherit; text-align: left; cursor: pointer; }
+.ex-suggest button:hover, .ex-suggest button.is-active { background: var(--color-surface-hover); }
+.ex-suggest strong { font-size: 0.88rem; font-weight: 600; }
+.ex-suggest small { font-size: 0.72rem; color: var(--color-text-muted); }
+.ex-suggest-foot { padding: 0.3rem 0.65rem 0.2rem; font-size: 0.66rem; color: var(--color-text-muted); text-align: right; }
+.ex-meta { display: block; margin-top: 0.1rem; font-size: 0.72rem; font-weight: 400; color: var(--color-text-muted); }

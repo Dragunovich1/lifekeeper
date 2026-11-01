@@ -416,6 +416,9 @@ export interface WorkoutExercise {
   name: string
   sets: WorkoutExerciseSet[]
   notes?: string
+  /** Músculos y equipo (del catálogo de ejercicios), solo informativo. */
+  muscles?: string[]
+  equipment?: string[]
 }
 
 export interface WorkoutSession {

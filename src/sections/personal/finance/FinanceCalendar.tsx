@@ -10,6 +10,8 @@ import { usePreferences } from '../../../preferences/context'
 import type { FinanceCategoryDef, FinanceTransaction, TransactionType } from '../../../types'
 import { formatCurrencyNoCents, toLocalDateKey } from '../../../utils/dates'
 import { resolveCategory } from '../../../utils/financeCategories'
+import { useHolidays } from '../../../hooks/usePublicData'
+import { InflationCard } from './InflationCard'
 import { TransactionModal, type TransactionDraft } from './TransactionModal'
 import '../../../styles/finance-calendar.css'
 
@@ -72,6 +74,7 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
   const [txOpen, setTxOpen] = useState(false)
   const [deleting, setDeleting] = useState<FinanceTransaction | null>(null)
   const [notice, setNotice] = useState('')
+  const { byDate: holidays } = useHolidays([cursor.year])
 
   const flash = (t: string) => {
     setNotice(t)
@@ -197,6 +200,7 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
     <div className="fin-day">
       <header className="fin-day-head">
         <h3>{dayTitle(selected)}</h3>
+        {holidays.get(selected) && <span className="fin-holiday-chip">Feriado: {holidays.get(selected)!.name}</span>}
         {dayAgg && (
           <span className="fin-day-totals">
             {dayAgg.income > 0 && <b className="inc">+{money(dayAgg.income)}</b>}
@@ -287,6 +291,7 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
                 const agg = c.inMonth ? byDay.get(c.key) : undefined
                 const isToday = c.key === todayKey
                 const isSel = c.key === selected && c.inMonth
+                const holiday = c.inMonth ? holidays.get(c.key) : undefined
                 return (
                   <button
                     key={c.key}
@@ -294,8 +299,9 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
                     role="gridcell"
                     disabled={!c.inMonth}
                     aria-selected={isSel}
-                    aria-label={`${c.day} de ${MONTHS[cursor.month]}${agg ? `: ${agg.income ? 'ingresos' : ''}${agg.income && agg.expense ? ' y ' : ''}${agg.expense ? 'gastos' : ''}` : ''}`}
-                    className={`fin-day-cell ${c.inMonth ? '' : 'is-out'} ${isToday ? 'is-today' : ''} ${isSel ? 'is-selected' : ''}`}
+                    title={holiday ? `Feriado: ${holiday.name}` : undefined}
+                    aria-label={`${c.day} de ${MONTHS[cursor.month]}${holiday ? `, feriado: ${holiday.name}` : ''}${agg ? `: ${agg.income ? 'ingresos' : ''}${agg.income && agg.expense ? ' y ' : ''}${agg.expense ? 'gastos' : ''}` : ''}`}
+                    className={`fin-day-cell ${c.inMonth ? '' : 'is-out'} ${isToday ? 'is-today' : ''} ${isSel ? 'is-selected' : ''} ${holiday ? 'is-holiday' : ''}`}
                     onClick={() => {
                       setSelected(c.key)
                       if (isMobile) setDayModal(true)
@@ -322,9 +328,12 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
               <span><i className="exp" /> Día con gastos</span>
               <span><i className="inc" /> Día con ingresos</span>
               <span><i className="today" /> Hoy</span>
+              <span><i className="holiday" /> Feriado</span>
               <button type="button" className="fin-today-btn" onClick={goToday}>Ir a hoy</button>
             </footer>
           </section>
+
+          <InflationCard transactions={transactions} currency={currency} defaultCurrency={defaultCurrency} cursor={cursor} />
         </div>
 
         <div className="fin-right">

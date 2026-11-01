@@ -22,6 +22,7 @@ import { SectionHeader } from '../../components/SectionHeader'
 import { Select } from '../../components/Select'
 import { TimePicker } from '../../components/TimePicker'
 import { useAppData } from '../../hooks/useAppData'
+import { useHolidays } from '../../hooks/usePublicData'
 import { usePreferences } from '../../preferences/context'
 import type { AppData, DiaryEntry, Reminder, WorkoutSession } from '../../types'
 import {
@@ -50,6 +51,7 @@ const categoriesPalette: Record<string, string> = {
   seguridad: 'var(--color-warning)',
   personal: 'var(--color-accent-blue)',
   general: 'var(--color-success)',
+  feriado: '#f43f5e',
 }
 
 const categoryFilterOptions = [
@@ -59,6 +61,7 @@ const categoryFilterOptions = [
   { value: 'seguridad', label: 'Seguridad' },
   { value: 'diario', label: 'Diario' },
   { value: 'general', label: 'General' },
+  { value: 'feriado', label: 'Feriados' },
 ]
 
 const weekDays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -80,10 +83,22 @@ export const CalendarSection = () => {
   const [quickMode, setQuickMode] = useState<'reminder' | 'both'>('reminder')
   const [quickDetails, setQuickDetails] = useState('')
 
-  const allEvents = useMemo(
-    () => buildEvents(data, preferences.includeCompleted, appPreferences.currency),
-    [data, preferences.includeCompleted, appPreferences.currency],
-  )
+  // Feriados nacionales: del año visible (y el siguiente, para el tramo de diciembre y los "próximos eventos")
+  const holidayYears = [cursor.getFullYear() - 1, cursor.getFullYear(), cursor.getFullYear() + 1, new Date().getFullYear()]
+  const { list: holidays, approximate: holidaysApproximate } = useHolidays(holidayYears)
+
+  const allEvents = useMemo(() => {
+    const base = buildEvents(data, preferences.includeCompleted, appPreferences.currency)
+    const holidayEvents: CalendarEvent[] = holidays.map((h) => ({
+      id: `holiday-${h.date}`,
+      date: h.date,
+      title: h.name,
+      description: 'Feriado nacional',
+      category: 'feriado',
+      targetHash: '#utilities:calendar',
+    }))
+    return [...base, ...holidayEvents]
+  }, [data, preferences.includeCompleted, appPreferences.currency, holidays])
 
   const events = useMemo(() => {
     if (selectedCategory === 'all') return allEvents
@@ -324,6 +339,12 @@ export const CalendarSection = () => {
             })}
           </div>
 
+          {holidaysApproximate && (
+            <p className="panel-subtitle" role="status" style={{ margin: '0 0 0.5rem' }}>
+              Sin conexión con el servidor: se muestran solo los feriados de fecha fija. Los trasladables y los puentes aparecen cuando se pueda actualizar.
+            </p>
+          )}
+
           <div className="calendar-grid">
             {weekDays.map((day) => (
               <div key={day} className="calendar-header-cell">
@@ -365,7 +386,13 @@ export const CalendarSection = () => {
                     isSameMonth(day, currentMonth) ? '' : 'calendar-cell-out'
                   }`}
                 >
-                  <span className="calendar-day">{day.getDate()}</span>
+                  <span
+                    className="calendar-day"
+                    style={dayEvents.some((e) => e.category === 'feriado') ? { color: '#f43f5e', fontWeight: 700 } : undefined}
+                    title={dayEvents.find((e) => e.category === 'feriado')?.title}
+                  >
+                    {day.getDate()}
+                  </span>
                   <div className="calendar-events">
                     {dayEvents.map((event) => (
                       <div

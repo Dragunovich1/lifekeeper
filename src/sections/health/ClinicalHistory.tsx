@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { HealthInfoModal } from '../../components/HealthInfoModal'
 import { DatePicker } from '../../components/DatePicker'
 import { Modal } from '../../components/Modal'
 import { SectionHeader } from '../../components/SectionHeader'
@@ -46,6 +47,7 @@ export const ClinicalHistorySection = () => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<ClinicalNoteForm>(createInitialFormState)
   const [pendingDelete, setPendingDelete] = useState<ClinicalNote | null>(null)
+  const [infoFor, setInfoFor] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
   const [includeAllHealthEvents, setIncludeAllHealthEvents] = useState(true)
@@ -304,6 +306,14 @@ export const ClinicalHistorySection = () => {
                       <button
                         className="secondary-button"
                         type="button"
+                        onClick={() => setInfoFor(note.title)}
+                        title="Información de salud sobre este tema (MedlinePlus)"
+                      >
+                        Más info
+                      </button>
+                      <button
+                        className="secondary-button"
+                        type="button"
                         onClick={() => startEdit(note)}
                       >
                         Editar
@@ -402,6 +412,8 @@ export const ClinicalHistorySection = () => {
           </div>
         </form>
       </Modal>
+
+      <HealthInfoModal open={infoFor !== null} onClose={() => setInfoFor(null)} mode="topic" initialQuery={infoFor ?? ''} />
 
       <ConfirmModal
         open={Boolean(pendingDelete)}

@@ -7,7 +7,6 @@ import {
   Zap,
   Check,
   Dumbbell,
-  Plus,
   Trash2,
   Trophy,
   Copy,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { ExerciseAdder, type ExerciseMeta } from '../../components/ExerciseAdder'
 import { DatePicker } from '../../components/DatePicker'
 import { Modal } from '../../components/Modal'
 import { SectionHeader } from '../../components/SectionHeader'
@@ -188,7 +188,6 @@ export const WorkoutsSection = () => {
 
   // Formulario de creación
   const [formState, setFormState] = useState<WorkoutFormState>(createInitialFormState)
-  const [exerciseDraftName, setExerciseDraftName] = useState('')
 
   // Modo Planificación vs Modo Gym en Vivo
   const [creationMode, setCreationMode] = useState<'plan' | 'live'>('plan')
@@ -387,7 +386,6 @@ export const WorkoutsSection = () => {
   // Edición
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<WorkoutFormState>(createInitialFormState)
-  const [editExerciseDraftName, setEditExerciseDraftName] = useState('')
 
   // Eliminación
   const [deletingSession, setDeletingSession] = useState<WorkoutSession | null>(null)
@@ -465,12 +463,14 @@ export const WorkoutsSection = () => {
   }
 
   // Atajos para agregar ejercicios
-  const addExerciseToCreation = (nameToAdd: string) => {
+  const addExerciseToCreation = (nameToAdd: string, meta?: ExerciseMeta) => {
     const clean = nameToAdd.trim()
     if (!clean) return
     const newEx: WorkoutExercise = {
       id: uuid(),
       name: clean,
+      muscles: meta?.muscles?.length ? meta.muscles : undefined,
+      equipment: meta?.equipment?.length ? meta.equipment : undefined,
       sets: [
         { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
         { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
@@ -481,15 +481,16 @@ export const WorkoutsSection = () => {
       ...prev,
       exercises: [...prev.exercises, newEx],
     }))
-    setExerciseDraftName('')
   }
 
-  const addExerciseToEdit = (nameToAdd: string) => {
+  const addExerciseToEdit = (nameToAdd: string, meta?: ExerciseMeta) => {
     const clean = nameToAdd.trim()
     if (!clean) return
     const newEx: WorkoutExercise = {
       id: uuid(),
       name: clean,
+      muscles: meta?.muscles?.length ? meta.muscles : undefined,
+      equipment: meta?.equipment?.length ? meta.equipment : undefined,
       sets: [
         { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
         { reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' },
@@ -500,7 +501,6 @@ export const WorkoutsSection = () => {
       ...prev,
       exercises: [...prev.exercises, newEx],
     }))
-    setEditExerciseDraftName('')
   }
 
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
@@ -1377,26 +1377,7 @@ export const WorkoutsSection = () => {
                 )}
 
                 {/* Agregar más ejercicios en vivo */}
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <input
-                    value={exerciseDraftName}
-                    onChange={(e) => setExerciseDraftName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        addExerciseToCreation(exerciseDraftName)
-                      }
-                    }}
-                    placeholder="Agregar otro ejercicio a la sesión..."
-                  />
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => addExerciseToCreation(exerciseDraftName)}
-                  >
-                    + Agregar
-                  </button>
-                </div>
+                <ExerciseAdder onAdd={addExerciseToCreation} placeholder="Agregar otro ejercicio a la sesión..." maxWidth="100%" />
               </div>
             ) : null}
 
@@ -1634,27 +1615,9 @@ export const WorkoutsSection = () => {
                     ))}
                   </div>
 
-                  {/* Input manual para otro ejercicio */}
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <input
-                      value={exerciseDraftName}
-                      onChange={(e) => setExerciseDraftName(e.target.value)}
-                      placeholder="Nombre de otro ejercicio..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          addExerciseToCreation(exerciseDraftName)
-                        }
-                      }}
-                      style={{ maxWidth: '360px' }}
-                    />
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => addExerciseToCreation(exerciseDraftName)}
-                    >
-                      <Plus size={16} style={{ marginRight: '0.25rem' }} /> Agregar
-                    </button>
+                  {/* Buscador de ejercicios (catálogo base + wger) */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <ExerciseAdder onAdd={addExerciseToCreation} placeholder="Buscá un ejercicio: press, sentadilla, dominadas..." maxWidth={460} />
                   </div>
 
                   {/* Listado de ejercicios agregados a la sesión */}
@@ -1676,7 +1639,12 @@ export const WorkoutsSection = () => {
                             marginBottom: '0.5rem',
                           }}
                         >
-                          <strong style={{ fontSize: '0.95rem' }}>{exercise.name}</strong>
+                          <div>
+                            <strong style={{ fontSize: '0.95rem' }}>{exercise.name}</strong>
+                            {exercise.muscles?.length || exercise.equipment?.length ? (
+                              <small className="ex-meta">{[...(exercise.muscles ?? []), ...(exercise.equipment ?? [])].join(' · ')}</small>
+                            ) : null}
+                          </div>
                           <button
                             type="button"
                             className="secondary-button"
@@ -2280,20 +2248,8 @@ export const WorkoutsSection = () => {
               Ejercicios y Series
             </label>
 
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.875rem' }}>
-              <input
-                value={editExerciseDraftName}
-                onChange={(e) => setEditExerciseDraftName(e.target.value)}
-                placeholder="Nombre de otro ejercicio..."
-                style={{ maxWidth: '300px' }}
-              />
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => addExerciseToEdit(editExerciseDraftName)}
-              >
-                + Agregar
-              </button>
+            <div style={{ marginBottom: '0.875rem' }}>
+              <ExerciseAdder onAdd={addExerciseToEdit} placeholder="Buscá un ejercicio para agregar..." maxWidth={420} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -2311,7 +2267,12 @@ export const WorkoutsSection = () => {
                       marginBottom: '0.4rem',
                     }}
                   >
-                    <strong>{exercise.name}</strong>
+                    <div>
+                      <strong>{exercise.name}</strong>
+                      {exercise.muscles?.length || exercise.equipment?.length ? (
+                        <small className="ex-meta">{[...(exercise.muscles ?? []), ...(exercise.equipment ?? [])].join(' · ')}</small>
+                      ) : null}
+                    </div>
                     <button
                       type="button"
                       className="secondary-button"
