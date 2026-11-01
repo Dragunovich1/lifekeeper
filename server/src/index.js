@@ -14,6 +14,12 @@ const PORT = process.env.PORT || 4000
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
+// Asegurar soporte de columna username para login tanto por usuario como por email
+query(`
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(255);
+  CREATE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username));
+`).catch((err) => console.warn('[DB MIGRATION WARN]:', err.message))
+
 // Ruta de Salud
 app.get('/api/health', async (_req, res) => {
   try {
@@ -36,18 +42,26 @@ app.get('/api/health', async (_req, res) => {
 })
 
 // -----------------------------------------------------------------------------
-// 1. OBTENER SALT DE USUARIO (Zero-Knowledge Pre-Login)
+// 1. OBTENER SALT DE USUARIO (Zero-Knowledge Pre-Login por Email o Username)
 // -----------------------------------------------------------------------------
 app.get('/api/auth/salt', async (req, res) => {
-  const email = (req.query.email || '').toString().trim().toLowerCase()
-  if (!email) {
-    return res.status(400).json({ error: 'Parámetro email es requerido' })
+  const identifier = (req.query.email || req.query.identifier || '').toString().trim().toLowerCase()
+  if (!identifier) {
+    return res.status(400).json({ error: 'Parámetro email o usuario es requerido' })
   }
 
   try {
-    const result = await query('SELECT salt FROM users WHERE email = $1', [email])
+    const result = await query(
+      'SELECT email, username, salt FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1',
+      [identifier],
+    )
     if (result.rows.length > 0) {
-      return res.json({ exists: true, salt: result.rows[0].salt })
+      return res.json({
+        exists: true,
+        salt: result.rows[0].salt,
+        email: result.rows[0].email,
+        username: result.rows[0].username,
+      })
     }
 
     // Si el usuario no existe, devolvemos exists: false
@@ -64,6 +78,7 @@ app.get('/api/auth/salt', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   const {
     email,
+    username,
     auth_hash,
     salt,
     encrypted_data,
@@ -80,24 +95,53 @@ app.post('/api/auth/register', async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase()
+  const normalizedUsername = username ? username.trim() : null
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    // Verificar si el usuario ya existe
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [normalizedEmail])
+    // Verificar si el usuario ya existe por email o username
+    const existing = await client.query(
+      'SELECT id, email, username, auth_hash, salt, current_vault_version FROM users WHERE LOWER(email) = $1 OR ($2::text IS NOT NULL AND LOWER(username) = LOWER($2)) LIMIT 1',
+      [normalizedEmail, normalizedUsername],
+    )
     if (existing.rows.length > 0) {
+      const existingUser = existing.rows[0]
+      if (existingUser.auth_hash === auth_hash) {
+        // Si coincide el hash (mismo dueño vinculando dispositivo), actualizamos username si faltaba y devolvemos sesión
+        if (normalizedUsername && !existingUser.username) {
+          await client.query('UPDATE users SET username = $1, updated_at = NOW() WHERE id = $2', [
+            normalizedUsername,
+            existingUser.id,
+          ])
+        }
+        await client.query('COMMIT')
+        const token = signToken({ userId: existingUser.id, email: existingUser.email })
+        return res.status(200).json({
+          success: true,
+          token,
+          user: { id: existingUser.id, email: existingUser.email, username: normalizedUsername || existingUser.username },
+          salt: existingUser.salt,
+          vault: {
+            version: existingUser.current_vault_version || 1,
+            encrypted_data,
+            iv,
+            auth_tag,
+            checksum,
+          },
+        })
+      }
       await client.query('ROLLBACK')
-      return res.status(409).json({ error: 'Ya existe una cuenta con este correo electrónico' })
+      return res.status(409).json({ error: 'Ya existe una cuenta con este correo o usuario' })
     }
 
     // Insertar usuario
     const userRes = await client.query(
-      `INSERT INTO users (email, auth_hash, salt, current_vault_version)
-       VALUES ($1, $2, $3, 1)
-       RETURNING id, email, created_at`,
-      [normalizedEmail, auth_hash, salt],
+      `INSERT INTO users (email, username, auth_hash, salt, current_vault_version)
+       VALUES ($1, $2, $3, $4, 1)
+       RETURNING id, email, username, created_at`,
+      [normalizedEmail, normalizedUsername, auth_hash, salt],
     )
     const user = userRes.rows[0]
 
@@ -147,7 +191,7 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(201).json({
       success: true,
       token,
-      user: { id: user.id, email: user.email },
+      user: { id: user.id, email: user.email, username: user.username },
       vault: {
         version: 1,
         encrypted_data,
@@ -166,24 +210,25 @@ app.post('/api/auth/register', async (req, res) => {
 })
 
 // -----------------------------------------------------------------------------
-// 3. INICIO DE SESIÓN (Zero-Knowledge Login)
+// 3. INICIO DE SESIÓN (Zero-Knowledge Login por Email o Username)
 // -----------------------------------------------------------------------------
 app.post('/api/auth/login', async (req, res) => {
-  const { email, auth_hash, device_id = 'web-client' } = req.body
+  const { email, username, auth_hash, device_id = 'web-client' } = req.body
+  const identifier = (email || username || '').toString().trim().toLowerCase()
 
-  if (!email || !auth_hash) {
-    return res.status(400).json({ error: 'Email y auth_hash son requeridos' })
+  if (!identifier || !auth_hash) {
+    return res.status(400).json({ error: 'Usuario/Email y auth_hash son requeridos' })
   }
 
-  const normalizedEmail = email.trim().toLowerCase()
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress
   const userAgent = req.headers['user-agent'] || 'unknown'
   const cleanIp = ip ? ip.split(',')[0].trim() : null
 
   try {
-    const userRes = await query('SELECT id, email, auth_hash, salt, current_vault_version FROM users WHERE email = $1', [
-      normalizedEmail,
-    ])
+    const userRes = await query(
+      'SELECT id, email, username, auth_hash, salt, current_vault_version FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1',
+      [identifier],
+    )
 
     if (userRes.rows.length === 0) {
       return res.status(401).json({ error: 'Credenciales inválidas' })
@@ -199,6 +244,14 @@ app.post('/api/auth/login', async (req, res) => {
         [user.id, cleanIp, userAgent],
       )
       return res.status(401).json({ error: 'Credenciales inválidas' })
+    }
+
+    if (username && !user.username) {
+      await query('UPDATE users SET username = $1, updated_at = NOW() WHERE id = $2', [
+        username.trim(),
+        user.id,
+      ]).catch(() => undefined)
+      user.username = username.trim()
     }
 
     // Obtener el snapshot más reciente de la bóveda
@@ -223,7 +276,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.json({
       success: true,
       token,
-      user: { id: user.id, email: user.email },
+      user: { id: user.id, email: user.email, username: user.username },
       vault,
     })
   } catch (err) {
@@ -265,7 +318,7 @@ app.get('/api/vault/sync', requireAuth, async (req, res) => {
 // -----------------------------------------------------------------------------
 app.post('/api/vault/sync', requireAuth, async (req, res) => {
   const userId = req.user.userId
-  const { version, encrypted_data, iv, auth_tag, checksum, device_id = 'web-client' } = req.body
+  const { version, encrypted_data, iv, auth_tag, checksum, username, device_id = 'web-client' } = req.body
 
   if (!encrypted_data || !iv || !auth_tag) {
     return res.status(400).json({ error: 'Campos requeridos incompletos (encrypted_data, iv, auth_tag)' })
@@ -298,11 +351,18 @@ app.post('/api/vault/sync', requireAuth, async (req, res) => {
       [userId, version || 1, encrypted_data, iv, checksum || '', device_id],
     )
 
-    // Actualizar versión en users
-    await client.query(`UPDATE users SET current_vault_version = $1, updated_at = NOW() WHERE id = $2`, [
-      version || 1,
-      userId,
-    ])
+    // Actualizar versión y username opcional en users
+    if (username) {
+      await client.query(
+        `UPDATE users SET current_vault_version = $1, username = COALESCE(NULLIF($3, ''), username), updated_at = NOW() WHERE id = $2`,
+        [version || 1, userId, username.trim()],
+      )
+    } else {
+      await client.query(`UPDATE users SET current_vault_version = $1, updated_at = NOW() WHERE id = $2`, [
+        version || 1,
+        userId,
+      ])
+    }
 
     await client.query('COMMIT')
 

@@ -1,6 +1,6 @@
 import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Fingerprint, HeartPulse, LockKeyhole, ShieldCheck } from 'lucide-react'
+import { CloudDownload, Fingerprint, HeartPulse, LockKeyhole, Server, ShieldCheck } from 'lucide-react'
 import { useAppDataUnsafe } from '../hooks/useAppData'
 import { loadProfileMeta, storeProfileMeta, type StoredProfileMeta } from '../utils/storage'
 import { Footer } from './Footer'
@@ -13,6 +13,7 @@ import {
 } from '../services/crypto/webAuthn'
 import { downloadEmergencyKitPdf } from '../services/crypto/emergencyKit'
 import { notifyWelcome, notifyNewLoginAlert, notifyBruteForceAlert } from '../services/mail/mailService'
+import { getCustomServerUrl, setCustomServerUrl } from '../services/api/apiConfig'
 
 type AuthMode = 'unlock' | 'create' | 'restore'
 
@@ -32,13 +33,17 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
   const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png?v=2' : '/brand/logo-login.png?v=2'
   const markSrc = isLightMode ? '/brand/isotipo-light.png?v=2' : '/brand/isotipo.png?v=2'
   const wordmarkSrc = isLightMode ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'
-  const [mode, setMode] = useState<AuthMode>(hasVault ? 'unlock' : 'create')
+  // Iniciamos siempre en 'unlock' para que desde el Smartphone o APK pueda entrar directo con su usuario/email
+  const [mode, setMode] = useState<AuthMode>('unlock')
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [signup, setSignup] = useState(initialSignup)
   const [storedMeta, setStoredMeta] = useState<StoredProfileMeta | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showServerConfig, setShowServerConfig] = useState(false)
+  const [serverUrlInput, setServerUrlInput] = useState<string>(() => getCustomServerUrl() || '')
+  const [serverSavedMsg, setServerSavedMsg] = useState<string | null>(null)
   const [failedAttempts, setFailedAttempts] = useState<number>(() => {
     try {
       return parseInt(localStorage.getItem('lifekeeper_failed_attempts') || '0', 10) || 0
@@ -64,11 +69,9 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     setStoredMeta(meta)
     if (meta?.username) {
       setLoginUsername(meta.username)
+    } else if (meta?.email) {
+      setLoginUsername(meta.email)
     }
-  }, [])
-
-  useEffect(() => {
-    setMode(hasVault ? 'unlock' : 'create')
   }, [hasVault])
 
   const resetMessages = () => {
@@ -122,11 +125,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
 
     if (mode === 'restore') {
       if (!loginUsername.trim()) {
-        setLocalError('Ingresa tu correo electrónico registrado')
+        setLocalError('Ingresá tu usuario o correo electrónico registrado')
         return
       }
       if (!loginPassword.trim()) {
-        setLocalError('Ingresa tu contraseña maestra')
+        setLocalError('Ingresá tu contraseña maestra')
         return
       }
 
@@ -146,24 +149,38 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
 
     if (mode === 'unlock') {
       if (!loginUsername.trim()) {
-        setLocalError('Ingresa tu usuario para continuar')
+        setLocalError('Ingresá tu usuario o email para continuar')
         return
       }
       if (!loginPassword.trim()) {
-        setLocalError('Ingresa tu contraseña maestra')
+        setLocalError('Ingresá tu contraseña maestra')
         return
       }
-      if (
-        storedMeta?.username &&
-        storedMeta.username.trim().toLowerCase() !== loginUsername.trim().toLowerCase()
-      ) {
-        setLocalError('El usuario ingresado no coincide con el registrado en esta bóveda')
-        return
+
+      const inputId = loginUsername.trim().toLowerCase()
+      const matchesStoredUser =
+        !storedMeta?.username || storedMeta.username.trim().toLowerCase() === inputId
+      const matchesStoredEmail =
+        Boolean(storedMeta?.email) && storedMeta!.email!.trim().toLowerCase() === inputId
+
+      if (hasVault && storedMeta?.username && !matchesStoredUser && !matchesStoredEmail) {
+        // Si ingresa otro usuario/email distinto al local, intentamos restaurar esa cuenta desde la nube
+        if (restoreFromCloud) {
+          try {
+            setIsLoading(true)
+            await restoreFromCloud(loginUsername.trim(), loginPassword)
+            return
+          } catch {
+            setLocalError('El usuario ingresado no coincide con la bóveda local ni se pudo autenticar en la nube')
+            setIsLoading(false)
+            return
+          }
+        }
       }
 
       try {
         setIsLoading(true)
-        await unlock(loginPassword)
+        await unlock(loginPassword, loginUsername.trim())
         setFailedAttempts(0)
         localStorage.removeItem('lifekeeper_failed_attempts')
 
@@ -313,11 +330,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
             <ul className="auth-brand-points">
               <li>
                 <ShieldCheck size={16} aria-hidden />
-                <span>Cifrado local AES con contraseña maestra</span>
+                <span>Cifrado Zero-Knowledge AES-256 con contraseña maestra</span>
               </li>
               <li>
                 <LockKeyhole size={16} aria-hidden />
-                <span>Tus datos nunca salen de este dispositivo</span>
+                <span>Sincronización cifrada entre Desktop y Smartphone</span>
               </li>
               <li>
                 <HeartPulse size={16} aria-hidden />
@@ -332,7 +349,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                 {mode === 'unlock'
                   ? 'Iniciar sesión'
                   : mode === 'restore'
-                    ? 'Restaurar desde la nube'
+                    ? 'Sincronizar desde la nube'
                     : 'Crear tu bóveda'}
               </h1>
               {mode === 'create' ? (
@@ -341,7 +358,11 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                 </p>
               ) : mode === 'restore' ? (
                 <p className="auth-subtitle">
-                  Ingresá tu correo y contraseña maestra para sincronizar tu bóveda desde PostgreSQL.
+                  Ingresá el usuario o correo de tu bóveda de Desktop y tu contraseña maestra.
+                </p>
+              ) : !hasVault ? (
+                <p className="auth-subtitle">
+                  Ingresá con tu usuario o email para abrir tu bóveda sincronizada en este dispositivo.
                 </p>
               ) : null}
             </header>
@@ -355,17 +376,17 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                 <>
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="restore-email">
-                      Correo electrónico registrado
+                      Usuario o correo electrónico
                     </label>
                     <input
                       id="restore-email"
                       className="auth-input"
-                      type="email"
-                      autoComplete="email"
+                      type="text"
+                      autoComplete="username"
                       spellCheck={false}
                       value={loginUsername}
                       onChange={(event) => setLoginUsername(event.target.value)}
-                      placeholder="correo@dominio.com"
+                      placeholder="Tu usuario o correo@dominio.com"
                     />
                   </div>
                   <div className="auth-field">
@@ -379,7 +400,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                       autoComplete="current-password"
                       value={loginPassword}
                       onChange={(event) => setLoginPassword(event.target.value)}
-                      placeholder="Contraseña maestra de tu cuenta"
+                      placeholder="Contraseña maestra de tu bóveda"
                     />
                   </div>
                 </>
@@ -387,7 +408,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                 <>
                   <div className="auth-field">
                     <label className="auth-label" htmlFor="login-username">
-                      Usuario
+                      Usuario o Email
                     </label>
                     <input
                       id="login-username"
@@ -396,7 +417,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                       spellCheck={false}
                       value={loginUsername}
                       onChange={(event) => setLoginUsername(event.target.value)}
-                      placeholder="Usuario registrado"
+                      placeholder="Usuario o correo registrado"
                     />
                   </div>
                   <div className="auth-field">
@@ -509,7 +530,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
 
               <button className="auth-submit" type="submit" disabled={isLoading}>
                 {isLoading
-                  ? 'Procesando...'
+                  ? 'Sincronizando bóveda...'
                   : mode === 'unlock'
                     ? 'Iniciar sesión'
                     : mode === 'restore'
@@ -529,7 +550,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                       if (success) {
                         const cachedPwd = sessionStorage.getItem('lifekeeper_bio_pwd')
                         if (cachedPwd) {
-                          await unlock(cachedPwd)
+                          await unlock(cachedPwd, loginUsername.trim())
                         } else {
                           setLocalError(
                             'Identidad biométrica confirmada. Ingresá tu contraseña maestra para reactivar la sesión completa.',
@@ -576,9 +597,107 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                   className="auth-switch"
                   type="button"
                   onClick={() => switchMode('restore')}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  Restaurar desde la nube
+                  <CloudDownload size={14} />
+                  <span>Restaurar / vincular bóveda desde la nube</span>
                 </button>
+              )}
+
+              <button
+                type="button"
+                className="auth-switch"
+                onClick={() => setShowServerConfig((prev) => !prev)}
+                style={{ fontSize: '0.75rem', opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginTop: '0.2rem' }}
+              >
+                <Server size={12} />
+                <span>{showServerConfig ? 'Ocultar servidor' : 'Configurar servidor (APK / Red local)'}</span>
+              </button>
+
+              {showServerConfig && (
+                <div
+                  style={{
+                    width: '100%',
+                    marginTop: '0.35rem',
+                    padding: '0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(15, 23, 42, 0.55)',
+                    border: '1px solid var(--color-border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <label style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                    URL del Servidor LifeKeeper (vacío = automático):
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <input
+                      type="url"
+                      className="auth-input"
+                      style={{ flex: 1, minWidth: '170px', fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+                      placeholder="https://app.lifekeeper.lat o http://192.168.0.52"
+                      value={serverUrlInput}
+                      onChange={(e) => setServerUrlInput(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                      onClick={() => {
+                        setCustomServerUrl(serverUrlInput)
+                        setServerSavedMsg('Servidor guardado')
+                        setTimeout(() => setServerSavedMsg(null), 2500)
+                      }}
+                    >
+                      Guardar
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+                      onClick={() => {
+                        setServerUrlInput('http://192.168.0.52')
+                        setCustomServerUrl('http://192.168.0.52')
+                        setServerSavedMsg('Usando LAN 192.168.0.52')
+                        setTimeout(() => setServerSavedMsg(null), 2500)
+                      }}
+                    >
+                      LAN (192.168.0.52)
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+                      onClick={() => {
+                        setServerUrlInput('https://app.lifekeeper.lat')
+                        setCustomServerUrl('https://app.lifekeeper.lat')
+                        setServerSavedMsg('Usando app.lifekeeper.lat')
+                        setTimeout(() => setServerSavedMsg(null), 2500)
+                      }}
+                    >
+                      Dominio (app.lifekeeper.lat)
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+                      onClick={() => {
+                        setServerUrlInput('')
+                        setCustomServerUrl(null)
+                        setServerSavedMsg('Modo automático activo')
+                        setTimeout(() => setServerSavedMsg(null), 2500)
+                      }}
+                    >
+                      Automático
+                    </button>
+                  </div>
+                  {serverSavedMsg && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-success)' }}>{serverSavedMsg}</span>
+                  )}
+                </div>
               )}
             </div>
           </div>

@@ -6,6 +6,7 @@ import {
   getBackupSuccessEmail,
   getHealthReminderEmail,
 } from './templates'
+import { apiFetch } from '../api/apiConfig'
 
 /**
  * Despacha un correo electrónico seguro a través del backend LifeKeeper (/api/mail/send).
@@ -13,7 +14,7 @@ import {
  */
 export async function dispatchEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch('/api/mail/send', {
+    const res = await apiFetch('/api/mail/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
