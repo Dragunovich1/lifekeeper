@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Activity, ChevronDown, Copy, Droplet, FlaskConical, HeartPulse, Pencil, Plus, Thermometer, Trash2, Wind } from 'lucide-react'
+import { Activity, ChevronDown, Copy, Droplet, FileDown, FlaskConical, HeartPulse, Pencil, Plus, Thermometer, Trash2, Wind } from 'lucide-react'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { Modal } from '../../components/Modal'
 import { SectionHeader } from '../../components/SectionHeader'
@@ -21,6 +21,7 @@ import {
   measurementTimestamp,
   statsFor,
 } from '../../utils/measurements'
+import { downloadMeasurementsPdf } from '../../utils/measurementsPdf'
 import '../../styles/measurements.css'
 
 const ICONS: Record<MeasurementType, typeof Droplet> = {
@@ -282,6 +283,14 @@ export const MeasurementsSection = () => {
     }
   }
 
+  const downloadPdf = () => {
+    downloadMeasurementsPdf(
+      { measurements, userName: data.profile.fullName || data.profile.nickName, days: 30 },
+      `mediciones-${new Date().toISOString().slice(0, 10)}.pdf`,
+    )
+    flash('PDF generado: llevalo a tu consulta')
+  }
+
   const selectedStats = filter === 'all' ? null : perType.find((p) => p.meta.type === filter)?.stats30
 
   return (
@@ -294,6 +303,11 @@ export const MeasurementsSection = () => {
             {measurements.length > 0 && (
               <button type="button" className="secondary-button meas-icon-btn" onClick={copySummary} aria-label="Copiar resumen para el médico" title="Copiar resumen para el médico">
                 <Copy size={15} /> <span>Resumen</span>
+              </button>
+            )}
+            {measurements.length > 0 && (
+              <button type="button" className="secondary-button meas-icon-btn" onClick={downloadPdf} aria-label="Descargar PDF para el médico" title="Descargar PDF para el médico">
+                <FileDown size={15} /> <span>PDF</span>
               </button>
             )}
             <button type="button" className="primary-button" onClick={() => openNew()}>

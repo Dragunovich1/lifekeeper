@@ -11,6 +11,8 @@ import { formatDate, formatDateTime, toLocalDateKey } from '../../utils/dates'
 import { downloadEmergencyKitPdf } from '../../services/crypto/emergencyKit'
 import { syncService, type SyncState } from '../../services/sync/syncService'
 import type { AppData } from '../../types'
+import { mapFinanceCategories, mapMeasurements, mapQuickNotes, mapShopping } from '../../utils/exportRows'
+import { downloadMeasurementsPdf } from '../../utils/measurementsPdf'
 
 const timestamp = () => new Date().toISOString().replace(/[:T]/g, '-').split('.')[0]
 
@@ -148,6 +150,10 @@ export const BackupsSection = () => {
     createSheet('Finanzas', mapFinances(data))
     createSheet('Vehículos', mapVehicles(data))
     createSheet('Recordatorios', mapReminders(data))
+    createSheet('Mediciones', mapMeasurements(data))
+    createSheet('Compras', mapShopping(data))
+    createSheet('Notas rápidas', mapQuickNotes(data))
+    createSheet('Categorías', mapFinanceCategories(data))
 
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], {
@@ -167,6 +173,9 @@ export const BackupsSection = () => {
       ...mapConsultations(data).map((row) => ({ seccion: 'Consultas', ...row })),
       ...mapFinances(data).map((row) => ({ seccion: 'Finanzas', ...row })),
       ...mapReminders(data).map((row) => ({ seccion: 'Recordatorios', ...row })),
+      ...mapMeasurements(data).map((row) => ({ seccion: 'Mediciones', ...row })),
+      ...mapShopping(data).map((row) => ({ seccion: 'Compras', ...row })),
+      ...mapQuickNotes(data).map((row) => ({ seccion: 'Notas rápidas', ...row })),
     ]
 
     if (rows.length > 0) {
@@ -183,6 +192,19 @@ export const BackupsSection = () => {
     const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8' })
     saveAs(blob, `lifekeeper-${timestamp()}.csv`)
     setStatusMessage('Archivo CSV combinado generado.')
+    setErrorMessage(null)
+  }
+
+  const handleMeasurementsPdf = () => {
+    if (!(data.health.measurements ?? []).length) {
+      setErrorMessage('Todavía no cargaste mediciones de salud.')
+      return
+    }
+    downloadMeasurementsPdf(
+      { measurements: data.health.measurements ?? [], userName: data.profile.fullName || data.profile.nickName, days: 90 },
+      `lifekeeper-mediciones-${timestamp()}.pdf`,
+    )
+    setStatusMessage('Informe de mediciones (últimos 90 días) generado.')
     setErrorMessage(null)
   }
 
@@ -640,6 +662,9 @@ export const BackupsSection = () => {
             </button>
             <button className="secondary-button" type="button" onClick={handleEmergencyPdf}>
               Exportar tarjeta SOS (PDF)
+            </button>
+            <button className="secondary-button" type="button" onClick={handleMeasurementsPdf}>
+              Mediciones para el médico (PDF)
             </button>
             <button className="primary-button" type="button" onClick={handleHealthAndFitnessPdf}>
               Reporte Salud &amp; Fitness (PDF)
