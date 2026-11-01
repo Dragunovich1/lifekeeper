@@ -104,6 +104,10 @@ export interface Preferences {
   currency: CurrencyCode
   unitSystem: UnitSystem
   privacyCurtain: boolean
+  /** Avisos de recordatorios y medicación (con la app cerrada en la APK). */
+  notifications: boolean
+  /** true: la notificación muestra el nombre del medicamento o del recordatorio; false: texto genérico. */
+  notificationDetails: boolean
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -119,6 +123,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   currency: 'ARS',
   unitSystem: 'metric',
   privacyCurtain: false,
+  notifications: false,
+  notificationDetails: false,
 }
 
 export const AUTO_LOCK_OPTIONS = [

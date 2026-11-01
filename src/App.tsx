@@ -29,6 +29,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { AppearanceModal } from './components/AppearanceModal'
 import { AlertsPopover } from './components/AlertsPopover'
 import { useInsights } from './hooks/useInsights'
+import { useNotificationSync } from './hooks/useNotificationSync'
 
 type MainSectionKey = (typeof navigation)[number]['key']
 type SubSectionKey = (typeof navigation)[number]['subSections'][number]['key']
@@ -101,6 +102,7 @@ const VaultApp = () => {
   const { preferences } = usePreferences()
   const { isMobile } = useMobileLayout()
   const { insights, criticalCount, warningCount, infoCount } = useInsights()
+  useNotificationSync()
 
   const navSections = useMemo(() => getNavigation(data?.profile), [data?.profile])
 

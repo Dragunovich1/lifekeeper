@@ -62,6 +62,8 @@ const loadPreferences = (): Preferences => {
       currency: isCurrencyCode(parsed.currency) ? parsed.currency : DEFAULT_PREFERENCES.currency,
       unitSystem: isUnitSystem(parsed.unitSystem) ? parsed.unitSystem : DEFAULT_PREFERENCES.unitSystem,
       privacyCurtain: typeof parsed.privacyCurtain === 'boolean' ? parsed.privacyCurtain : DEFAULT_PREFERENCES.privacyCurtain,
+      notifications: parsed.notifications === true,
+      notificationDetails: parsed.notificationDetails === true,
     }
   } catch {
     return DEFAULT_PREFERENCES

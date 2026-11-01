@@ -5,6 +5,7 @@ import { AUTO_LOCK_OPTIONS, CURRENCY_OPTIONS, UNIT_SYSTEM_OPTIONS, type Currency
 import { usePreferences } from '../preferences/context'
 import { ScrollbarOverlay } from '../scrollbar/ScrollbarOverlay'
 import { Select } from './Select'
+import { NotificationSettings } from './NotificationSettings'
 import { sendTestTemplate } from '../services/mail/mailService'
 
 interface SettingsModalProps {
@@ -134,6 +135,8 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                   Difumina la pantalla al cambiar de pestaña para proteger tus datos de miradas indiscretas.
                 </p>
               </div>
+
+              <NotificationSettings />
 
               <div className="pref-field">
                 <label htmlFor="settings-start">Sección inicial</label>

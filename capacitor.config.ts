@@ -8,6 +8,12 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     cleartext: true,
   },
+  plugins: {
+    LocalNotifications: {
+      smallIcon: 'ic_stat_lifekeeper',
+      iconColor: '#1d63dc',
+    },
+  },
   android: {
     backgroundColor: '#0a0a0c',
     allowMixedContent: true,

@@ -157,6 +157,10 @@
 - **Orden en `AssistantModal.handleSend`:** con el LLM disponible, **el LLM entiende el mensaje con las palabras del usuario, sin frases ni palabras clave**: (1) un clasificador corto (`about` de cada acción) decide qué áreas toca, (2) un extractor completa los datos de esas áreas, con las entidades ya cargadas (vehículos, deudas, metas, proyectos, medicación) como contexto, (3) si no hay nada para guardar, conversa (streaming). Las reglas por patrones (`localAssistant.ts` y `local()` de cada acción) solo se usan como **respaldo** cuando el LLM está caído o falla.
 - **Honestidad:** el LLM nunca guarda ni confirma; solo interpreta. Si afirma haber guardado algo sin que la app lo haya hecho, `guardFalseSaveClaims` agrega un aviso. Si falta un dato (p. ej. la fecha de la VTV) el asistente pregunta en vez de adivinar.
 
+### Avisos de recordatorios y medicación (notificaciones)
+- `src/services/notifications/plan.ts` calcula qué avisar (recordatorios con fecha, dosis de medicación del día/siguientes, respetando dosis tomadas, fechas de fin y posposición; tope 60; ids estables). `index.ts` los entrega: en el APK con `@capacitor/local-notifications` (se programan con la app cerrada), en el navegador con la API `Notification` (solo mientras la app está abierta).
+- `useNotificationSync` (montado en `App.tsx`) reprograma al cambiar los datos. Ajuste en Configuración (`NotificationSettings.tsx`): activar/desactivar, mostrar o no el detalle en el aviso (texto genérico si está apagado) y aviso de prueba. Requiere rebuild del APK (plugin nuevo + permisos en `AndroidManifest.xml`).
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)
