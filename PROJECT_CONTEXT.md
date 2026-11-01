@@ -161,6 +161,14 @@
 - `src/services/notifications/plan.ts` calcula qué avisar (recordatorios con fecha, dosis de medicación del día/siguientes, respetando dosis tomadas, fechas de fin y posposición; tope 60; ids estables). `index.ts` los entrega: en el APK con `@capacitor/local-notifications` (se programan con la app cerrada), en el navegador con la API `Notification` (solo mientras la app está abierta).
 - `useNotificationSync` (montado en `App.tsx`) reprograma al cambiar los datos. Ajuste en Configuración (`NotificationSettings.tsx`): activar/desactivar, mostrar o no el detalle en el aviso (texto genérico si está apagado) y aviso de prueba. Requiere rebuild del APK (plugin nuevo + permisos en `AndroidManifest.xml`).
 
+### Cierre de mejoras (exportes, tests, rendimiento, alertas)
+- **Exportes:** `src/utils/exportRows.ts` (mediciones, compras, notas rápidas, categorías) alimenta el Excel/CSV de Respaldos; `measurementsPdf.ts` genera el PDF para el médico (botón en Mediciones y en Respaldos).
+- **Tests/CI:** `npm test` (vitest, `src/__tests__`), `npm run test:server`; workflow `.github/workflows/ci.yml` (tsc + tests + build).
+- **Bundle:** jsPDF y exceljs se cargan con `import()` bajo demanda (principal 2,1 MB → ~780 kB). No volver a importarlos de forma estática.
+- **Alertas (`utils/insights.ts`):** mediciones altas/peligrosas de los últimos 3 días, topes de gasto ≥80 %, listas de compra sobre su presupuesto. El calendario de Finanzas muestra el tope por categoría.
+- **Modelo de IA:** `AssistantModelSetting` en Configuración; se guarda en `lifekeeper:ollama-model` (vacío = automático).
+- **Móvil:** `.mobile-app-shell .stats-grid` en 2 columnas. Auditoría a 390 px de las 26 secciones: sin desbordes horizontales.
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)
