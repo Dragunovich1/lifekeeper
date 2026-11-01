@@ -283,8 +283,8 @@ export const MeasurementsSection = () => {
     }
   }
 
-  const downloadPdf = () => {
-    downloadMeasurementsPdf(
+  const downloadPdf = async () => {
+    await downloadMeasurementsPdf(
       { measurements, userName: data.profile.fullName || data.profile.nickName, days: 30 },
       `mediciones-${new Date().toISOString().slice(0, 10)}.pdf`,
     )

@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf'
 import { saveAs } from 'file-saver'
 import {
   CheckSquare,
@@ -52,13 +51,14 @@ export const DiarySearchExportSection = () => {
   const selectAll = () => setSelectedEntries(filteredEntries.map((entry) => entry.id))
   const clearSelection = () => setSelectedEntries([])
 
-  const exportSelection = (format: 'pdf' | 'txt') => {
+  const exportSelection = async (format: 'pdf' | 'txt') => {
     const selected = filteredEntries.filter((entry) => selectedEntries.includes(entry.id))
     if (selected.length === 0) {
       return
     }
 
     if (format === 'pdf') {
+      const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
       const margin = 40
       let cursorY = margin

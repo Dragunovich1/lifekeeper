@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf'
 import type { WorkoutSession } from '../types'
 import { formatDate } from './dates'
 
@@ -9,12 +8,13 @@ interface WorkoutPdfExportOptions {
   unitSystem?: 'metric' | 'imperial'
 }
 
-export function exportWorkoutsToPDF({
+export async function exportWorkoutsToPDF({
   workouts,
   userName = 'Usuario',
   filterPeriodLabel = 'Historial Completo',
   unitSystem = 'metric',
-}: WorkoutPdfExportOptions): void {
+}: WorkoutPdfExportOptions): Promise<void> {
+  const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = 210
   const pageHeight = 297

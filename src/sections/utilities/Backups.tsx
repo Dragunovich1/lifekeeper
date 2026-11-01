@@ -1,6 +1,4 @@
 import { saveAs } from 'file-saver'
-import { jsPDF } from 'jspdf'
-import * as ExcelJS from 'exceljs'
 import { useEffect, useState } from 'react'
 import { Cloud, RefreshCw, Smartphone } from 'lucide-react'
 import { ConfirmModal } from '../../components/ConfirmModal'
@@ -126,6 +124,7 @@ export const BackupsSection = () => {
   }
 
   const handleExcelExport = async () => {
+    const ExcelJS = await import('exceljs')
     const workbook = new ExcelJS.Workbook()
 
     const createSheet = (name: string, rows: Record<string, unknown>[]) => {
@@ -165,6 +164,7 @@ export const BackupsSection = () => {
   }
 
   const handleCsvExport = async () => {
+    const ExcelJS = await import('exceljs')
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('data')
     const rows: Record<string, unknown>[] = [
@@ -195,12 +195,12 @@ export const BackupsSection = () => {
     setErrorMessage(null)
   }
 
-  const handleMeasurementsPdf = () => {
+  const handleMeasurementsPdf = async () => {
     if (!(data.health.measurements ?? []).length) {
       setErrorMessage('Todavía no cargaste mediciones de salud.')
       return
     }
-    downloadMeasurementsPdf(
+    await downloadMeasurementsPdf(
       { measurements: data.health.measurements ?? [], userName: data.profile.fullName || data.profile.nickName, days: 90 },
       `lifekeeper-mediciones-${timestamp()}.pdf`,
     )
@@ -208,7 +208,8 @@ export const BackupsSection = () => {
     setErrorMessage(null)
   }
 
-  const handleEmergencyPdf = () => {
+  const handleEmergencyPdf = async () => {
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a6' })
     const profile = data.health.emergencyProfile
     let cursorY = 40
@@ -241,7 +242,8 @@ export const BackupsSection = () => {
     setErrorMessage(null)
   }
 
-  const handleHealthAndFitnessPdf = () => {
+  const handleHealthAndFitnessPdf = async () => {
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()

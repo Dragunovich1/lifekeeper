@@ -79,11 +79,11 @@ describe('exportes', () => {
     expect(mapShopping(data)[0]).toMatchObject({ lista: 'Super', comprado: 'Sí' })
     expect(mapQuickNotes(data)[0]).toMatchObject({ fijada: 'Sí', creada: '01/10/2026' })
   })
-  it('el PDF filtra por período y no falla vacío', () => {
+  it('el PDF filtra por período y no falla vacío', async () => {
     const now = new Date('2026-11-01T12:00:00')
     const old = { id: '2', type: 'glucosa', date: '2026-01-01', time: '08:00', value: 90 }
-    const doc = buildMeasurementsPdf({ measurements: [...(data.health.measurements ?? []), old] as never, days: 30, now })
+    const doc = await buildMeasurementsPdf({ measurements: [...(data.health.measurements ?? []), old] as never, days: 30, now })
     expect(doc.getNumberOfPages()).toBe(1)
-    expect(buildMeasurementsPdf({ measurements: [], now }).getNumberOfPages()).toBe(1)
+    expect((await buildMeasurementsPdf({ measurements: [], now })).getNumberOfPages()).toBe(1)
   })
 })

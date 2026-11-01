@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf'
+import type { jsPDF } from 'jspdf'
 import type { HealthMeasurement } from '../types'
 import {
   MEASUREMENT_TYPES,
@@ -16,7 +16,8 @@ interface Options {
 }
 
 /** Informe en PDF de mediciones de salud para llevar al médico. Devuelve el PDF sin guardarlo. */
-export function buildMeasurementsPdf({ measurements, userName = 'Paciente', days = 30, now = new Date() }: Options): jsPDF {
+export async function buildMeasurementsPdf({ measurements, userName = 'Paciente', days = 30, now = new Date() }: Options): Promise<jsPDF> {
+  const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const margin = 15
   const bottom = 282
@@ -80,4 +81,4 @@ export function buildMeasurementsPdf({ measurements, userName = 'Paciente', days
   return doc
 }
 
-export const downloadMeasurementsPdf = (opts: Options, fileName: string) => buildMeasurementsPdf(opts).save(fileName)
+export const downloadMeasurementsPdf = async (opts: Options, fileName: string) => (await buildMeasurementsPdf(opts)).save(fileName)

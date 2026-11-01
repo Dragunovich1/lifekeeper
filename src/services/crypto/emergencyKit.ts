@@ -3,7 +3,6 @@
  * Genera un documento formal imprimible con las 24 palabras mnemónicas de recuperación.
  */
 
-import { jsPDF } from 'jspdf'
 import { generateRecoveryKit } from './zeroKnowledge'
 
 export interface EmergencyKitOptions {
@@ -19,6 +18,7 @@ export async function downloadEmergencyKitPdf(options: EmergencyKitOptions): Pro
 
   const words = kit.phrase.split(' ')
 
+  const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
