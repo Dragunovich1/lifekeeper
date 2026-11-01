@@ -1,133 +1,88 @@
-import {
-  type EmailPayload,
-  getWelcomeEmail,
-  getNewLoginAlertEmail,
-  getBruteForceAlertEmail,
-  getBackupSuccessEmail,
-  getHealthReminderEmail,
-} from './templates'
 import { apiFetch } from '../api/apiConfig'
+import { syncService } from '../sync/syncService'
 
 /**
- * Despacha un correo electrónico seguro a través del backend LifeKeeper (/api/mail/send).
- * Diseñado a prueba de fallos para no interrumpir el flujo del usuario si la red flaquea.
+ * Correos transaccionales de LifeKeeper.
+ *
+ * El servidor arma el contenido con sus propias plantillas y los envía SIEMPRE a la dirección de la cuenta
+ * (la de la sesión en la nube). Por eso hace falta tener la sesión iniciada; sin ella no se envía nada.
+ * El correo de bienvenida y la alerta por intentos fallidos los dispara el servidor por su cuenta.
  */
-export async function dispatchEmail(payload: EmailPayload): Promise<{ success: boolean; error?: string }> {
+
+export type MailTemplateId = 'welcome' | 'new_login' | 'brute_force' | 'backup_success' | 'health_reminder'
+export interface MailResult {
+  success: boolean
+  error?: string
+}
+
+async function notify(template: MailTemplateId, params: Record<string, unknown>): Promise<MailResult> {
+  const token = syncService.getSession()?.token
+  if (!token) return { success: false, error: 'Necesitás tener la sesión en la nube iniciada para enviar correos.' }
   try {
-    const res = await apiFetch('/api/mail/send', {
+    const res = await apiFetch('/api/mail/notify', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ template, params }),
     })
-
-    const data = await res.json().catch(() => ({}))
-
-    if (!res.ok) {
-      console.warn('[MAIL SERVICE] Error al enviar:', data.error || res.statusText)
-      return { success: false, error: data.error || `HTTP ${res.status}` }
-    }
-
-    console.info(`[MAIL SERVICE] Correo "${payload.subject}" enviado exitosamente a ${payload.to}`)
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    if (!res.ok) return { success: false, error: data.error || `HTTP ${res.status}` }
     return { success: true }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error de conexión'
-    console.warn('[MAIL SERVICE] Error de red:', message)
-    return { success: false, error: message }
+    return { success: false, error: err instanceof Error ? err.message : 'Error de conexión' }
   }
 }
 
-/**
- * 1. Envío de Bienvenida y Activación de Bóveda
- */
-export async function notifyWelcome(userName: string, userEmail: string) {
-  if (!userEmail || !userEmail.includes('@')) return
-  const payload = getWelcomeEmail(userName, userEmail)
-  return dispatchEmail(payload)
+/** La bienvenida la envía el servidor al crear la cuenta; se deja por compatibilidad. */
+export async function notifyWelcome(_userName: string, _userEmail: string): Promise<MailResult> {
+  return { success: true }
 }
 
-/**
- * 2. Alerta de Seguridad por Nuevo Inicio de Sesión
- */
+/** Alerta de nuevo inicio de sesión desde otro dispositivo. */
 export async function notifyNewLoginAlert(
-  userEmail: string,
+  _userEmail: string,
   loginInfo: { device: string; ip: string; timestamp: string; locationApprox?: string },
 ) {
-  if (!userEmail || !userEmail.includes('@')) return
-  const payload = getNewLoginAlertEmail(userEmail, loginInfo)
-  return dispatchEmail(payload)
+  return notify('new_login', loginInfo)
 }
 
-/**
- * 3. Alerta Crítica por Intentos Fallidos Consecutivos (Fuerza Bruta)
- */
-export async function notifyBruteForceAlert(userEmail: string, failedCount: number, clientIp = 'Cliente Web') {
-  if (!userEmail || !userEmail.includes('@')) return
-  const payload = getBruteForceAlertEmail(userEmail, failedCount, clientIp)
-  return dispatchEmail(payload)
+/** Las alertas por intentos fallidos las genera el servidor al contarlos; se deja por compatibilidad. */
+export async function notifyBruteForceAlert(_userEmail: string, _failedCount: number, _clientIp = 'Cliente Web'): Promise<MailResult> {
+  return { success: true }
 }
 
-/**
- * 4. Notificación de Respaldo Cifrado Exitoso en PostgreSQL
- */
-export async function notifyBackupSuccess(
-  userEmail: string,
-  backupDetails: { timestamp: string; snapshotId: string; sizeKb: number },
-) {
-  if (!userEmail || !userEmail.includes('@')) return
-  const payload = getBackupSuccessEmail(userEmail, backupDetails)
-  return dispatchEmail(payload)
+export async function notifyBackupSuccess(_userEmail: string, backupDetails: { timestamp: string; snapshotId: string; sizeKb: number }) {
+  return notify('backup_success', backupDetails)
 }
 
-/**
- * 5. Recordatorio Preventivo de Salud y Medicación
- */
 export async function notifyHealthReminder(
-  userEmail: string,
+  _userEmail: string,
   reminder: { title: string; category: 'medicamento' | 'vacuna' | 'turno'; detail: string; dueDateTime: string },
 ) {
-  if (!userEmail || !userEmail.includes('@')) return
-  const payload = getHealthReminderEmail(userEmail, reminder)
-  return dispatchEmail(payload)
+  return notify('health_reminder', reminder)
 }
 
-/**
- * 6. Disparador de Prueba para cualquier template
- */
+/** Envía una plantilla de prueba a la propia cuenta (panel de ajustes). */
 export async function sendTestTemplate(
-  toEmail: string,
+  _toEmail: string,
   type: 'welcome' | 'login' | 'bruteforce' | 'backup' | 'health',
   userName = 'Usuario LifeKeeper',
-) {
+): Promise<MailResult> {
   const now = new Date().toLocaleString('es-AR')
-
   switch (type) {
     case 'welcome':
-      return notifyWelcome(userName, toEmail)
+      return notify('welcome', { name: userName })
     case 'login':
-      return notifyNewLoginAlert(toEmail, {
-        device: `${navigator.platform || 'PC'} • Navegador Web`,
-        ip: 'Servidor Local (Dell Latitude)',
-        timestamp: now,
-        locationApprox: 'Buenos Aires, Argentina',
-      })
+      return notify('new_login', { device: `${navigator.platform || 'PC'} • Navegador Web`, ip: 'Servidor Local', timestamp: now, locationApprox: 'Buenos Aires, Argentina' })
     case 'bruteforce':
-      return notifyBruteForceAlert(toEmail, 3, 'IP de origen no reconocida')
+      return notify('brute_force', { failedCount: 5, ip: 'IP de prueba' })
     case 'backup':
-      return notifyBackupSuccess(toEmail, {
-        timestamp: now,
-        snapshotId: `snap_${Date.now().toString(36)}`,
-        sizeKb: 142,
-      })
+      return notify('backup_success', { timestamp: now, snapshotId: `snap_${Date.now().toString(36)}`, sizeKb: 142 })
     case 'health':
-      return notifyHealthReminder(toEmail, {
+      return notify('health_reminder', {
         title: 'Ibuprofeno 600mg',
         category: 'medicamento',
         detail: 'Tomar 1 comprimido después de la cena con abundante agua.',
         dueDateTime: `${now} (Programado)`,
       })
-    default:
-      return notifyWelcome(userName, toEmail)
   }
 }

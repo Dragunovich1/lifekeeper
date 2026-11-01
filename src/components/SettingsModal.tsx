@@ -205,9 +205,9 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 onClick={async () => {
                   if (!userEmail) return
                   setSendingTemplate('welcome')
-                  await sendTestTemplate(userEmail, 'welcome', userName)
+                  const result = await sendTestTemplate(userEmail, 'welcome', userName)
                   setSendingTemplate(null)
-                  setSentSuccess('¡Template de Bienvenida enviado!')
+                  setSentSuccess(result.success ? '¡Template de Bienvenida enviado!' : `No se pudo enviar: ${result.error ?? 'error desconocido'}`)
                   setTimeout(() => setSentSuccess(null), 5000)
                 }}
                 style={{ fontSize: '0.75rem', padding: '0.5rem 0.65rem' }}
@@ -221,9 +221,9 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 onClick={async () => {
                   if (!userEmail) return
                   setSendingTemplate('login')
-                  await sendTestTemplate(userEmail, 'login', userName)
+                  const result = await sendTestTemplate(userEmail, 'login', userName)
                   setSendingTemplate(null)
-                  setSentSuccess('¡Alerta de Nuevo Login enviada!')
+                  setSentSuccess(result.success ? '¡Alerta de Nuevo Login enviada!' : `No se pudo enviar: ${result.error ?? 'error desconocido'}`)
                   setTimeout(() => setSentSuccess(null), 5000)
                 }}
                 style={{ fontSize: '0.75rem', padding: '0.5rem 0.65rem' }}
@@ -237,9 +237,9 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 onClick={async () => {
                   if (!userEmail) return
                   setSendingTemplate('bruteforce')
-                  await sendTestTemplate(userEmail, 'bruteforce', userName)
+                  const result = await sendTestTemplate(userEmail, 'bruteforce', userName)
                   setSendingTemplate(null)
-                  setSentSuccess('¡Alerta Crítica de Seguridad enviada!')
+                  setSentSuccess(result.success ? '¡Alerta Crítica de Seguridad enviada!' : `No se pudo enviar: ${result.error ?? 'error desconocido'}`)
                   setTimeout(() => setSentSuccess(null), 5000)
                 }}
                 style={{ fontSize: '0.75rem', padding: '0.5rem 0.65rem' }}
@@ -253,9 +253,9 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 onClick={async () => {
                   if (!userEmail) return
                   setSendingTemplate('backup')
-                  await sendTestTemplate(userEmail, 'backup', userName)
+                  const result = await sendTestTemplate(userEmail, 'backup', userName)
                   setSendingTemplate(null)
-                  setSentSuccess('¡Confirmación de Respaldo enviada!')
+                  setSentSuccess(result.success ? '¡Confirmación de Respaldo enviada!' : `No se pudo enviar: ${result.error ?? 'error desconocido'}`)
                   setTimeout(() => setSentSuccess(null), 5000)
                 }}
                 style={{ fontSize: '0.75rem', padding: '0.5rem 0.65rem' }}
@@ -269,9 +269,9 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 onClick={async () => {
                   if (!userEmail) return
                   setSendingTemplate('health')
-                  await sendTestTemplate(userEmail, 'health', userName)
+                  const result = await sendTestTemplate(userEmail, 'health', userName)
                   setSendingTemplate(null)
-                  setSentSuccess('¡Recordatorio de Salud enviado!')
+                  setSentSuccess(result.success ? '¡Recordatorio de Salud enviado!' : `No se pudo enviar: ${result.error ?? 'error desconocido'}`)
                   setTimeout(() => setSentSuccess(null), 5000)
                 }}
                 style={{ fontSize: '0.75rem', padding: '0.5rem 0.65rem' }}

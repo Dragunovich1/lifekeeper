@@ -12,7 +12,7 @@ import {
   enrollBiometrics,
 } from '../services/crypto/webAuthn'
 import { downloadEmergencyKitPdf } from '../services/crypto/emergencyKit'
-import { notifyWelcome, notifyNewLoginAlert, notifyBruteForceAlert } from '../services/mail/mailService'
+import { notifyNewLoginAlert } from '../services/mail/mailService'
 import { getCustomServerUrl, setCustomServerUrl } from '../services/api/apiConfig'
 
 type AuthMode = 'unlock' | 'create' | 'restore'
@@ -207,10 +207,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
           // Ignore
         }
 
-        // Alerta crítica por intentos fallidos de contraseña maestra
-        if (nextAttempts >= 3 && storedMeta?.email) {
-          void notifyBruteForceAlert(storedMeta.email, nextAttempts, 'Cliente Web')
-        }
+        // Las alertas por intentos fallidos contra la cuenta en la nube las envía el servidor
 
         if (nextAttempts >= 10) {
           // Autodestrucción por seguridad tras 10 intentos
@@ -281,10 +278,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
         userName: computedFullName,
       })
 
-      // Envío de correo de bienvenida oficial con template LifeKeeper
-      if (signup.email.trim()) {
-        void notifyWelcome(firstName, signup.email.trim())
-      }
+      // El correo de bienvenida lo envía el servidor al crear la cuenta en la nube
 
       // Si el navegador soporta biometría, enrolar
       if (biometricsReady) {

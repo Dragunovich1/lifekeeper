@@ -4,6 +4,9 @@ import dotenv from 'dotenv'
 import { pool, query } from './db.js'
 import { signToken, requireAuth } from './auth.js'
 import { sendEmail } from './mailer.js'
+import { createMailRouter } from './mailRoutes.js'
+import { renderTemplate } from './mailTemplates.js'
+import { buildCorsOptions, createRateLimiter, limitBy } from './security.js'
 import { createPublicDataRouter } from './publicData.js'
 
 dotenv.config()
@@ -12,8 +15,21 @@ const app = express()
 const PORT = process.env.PORT || 4000
 
 // Configuración de middlewares
-app.use(cors())
-app.use(express.json({ limit: '50mb' }))
+// Detrás de nginx: la IP real del cliente viene en X-Forwarded-For (cantidad de proxies configurable)
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1))
+app.use(cors(buildCorsOptions()))
+// Solo el registro y la sincronización de la bóveda reciben cuerpos grandes; el resto, 1 MB
+app.use(['/api/vault', '/api/auth/register'], express.json({ limit: '50mb' }))
+app.use(express.json({ limit: '1mb' }))
+
+// Límites de intentos (en memoria)
+const clientIp = (req) => req.ip || req.socket.remoteAddress || 'ip-desconocida'
+const MAX_FAILED_LOGINS = 10 // fallos en 15 minutos antes de bloquear la cuenta temporalmente
+const ALERT_AFTER_FAILURES = 5
+const alertedAt = new Map() // userId -> última alerta de fuerza bruta enviada
+app.use('/api/auth/login', limitBy(createRateLimiter({ windowMs: 15 * 60_000, max: 30 }), clientIp))
+app.use('/api/auth/register', limitBy(createRateLimiter({ windowMs: 60 * 60_000, max: 10 }), clientIp, 'Demasiados registros desde esta red. Probá más tarde.'))
+app.use('/api/auth/salt', limitBy(createRateLimiter({ windowMs: 15 * 60_000, max: 60 }), clientIp))
 
 // Datos públicos de solo lectura (feriados, inflación, ejercicios, MedlinePlus) con caché
 app.use('/api/public', createPublicDataRouter())
@@ -176,21 +192,11 @@ app.post('/api/auth/register', async (req, res) => {
 
     const token = signToken({ userId: user.id, email: user.email })
 
-    // Intentar enviar email de bienvenida de forma asíncrona
-    sendEmail({
-      to: user.email,
-      subject: '¡Bienvenido a LifeKeeper! Tu bóveda cifrada está activa',
-      text: `Hola! Tu cuenta en LifeKeeper (${user.email}) ha sido creada con éxito. Recuerda que tus datos están protegidos con cifrado de Conocimiento Cero (Zero-Knowledge).`,
-      html: `
-        <div style="font-family: sans-serif; background: #060b18; color: #e2e8f0; padding: 24px; border-radius: 12px;">
-          <h2 style="color: #38bdf8; margin-top: 0;">¡Bienvenido a LifeKeeper!</h2>
-          <p>Tu bóveda personal ha sido creada exitosamente con cifrado de Conocimiento Cero (Zero-Knowledge).</p>
-          <p>Tus contraseñas, fichas de salud, finanzas y notas están aseguradas con AES-256-GCM y sólo tú tienes la llave.</p>
-          <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;" />
-          <p style="font-size: 12px; color: #94a3b8;">Si no realizaste este registro, por favor ponte en contacto con soporte.</p>
-        </div>
-      `,
-    }).catch((err) => console.warn('[MAIL ERROR REGISTRO]:', err.message))
+    // Correo de bienvenida (plantilla del servidor); un fallo de correo nunca rompe el registro
+    const welcome = renderTemplate('welcome', { name: user.username || user.email.split('@')[0] })
+    sendEmail({ to: user.email, subject: welcome.subject, html: welcome.html, text: welcome.text }).catch((err) =>
+      console.warn('[MAIL ERROR REGISTRO]:', err.message),
+    )
 
     return res.status(201).json({
       success: true,
@@ -240,6 +246,18 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = userRes.rows[0]
 
+    // Bloqueo temporal si hubo demasiados intentos fallidos recientes sobre esta cuenta
+    const recent = await query(
+      `SELECT COUNT(*)::int AS n FROM security_audit_logs
+       WHERE user_id = $1 AND event_type = 'login_failed' AND created_at > NOW() - INTERVAL '15 minutes'`,
+      [user.id],
+    )
+    const failedRecently = recent.rows[0]?.n ?? 0
+    if (failedRecently >= MAX_FAILED_LOGINS) {
+      res.set('Retry-After', '900')
+      return res.status(429).json({ error: 'Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.', retryAfterSec: 900 })
+    }
+
     // Comprobación de hash de autenticación
     if (user.auth_hash !== auth_hash) {
       await query(
@@ -247,6 +265,16 @@ app.post('/api/auth/login', async (req, res) => {
          VALUES ($1, 'login_failed', $2::inet, $3)`,
         [user.id, cleanIp, userAgent],
       )
+      // Aviso al dueño de la cuenta (como mucho una vez por hora)
+      const count = failedRecently + 1
+      const last = alertedAt.get(user.id) ?? 0
+      if (count >= ALERT_AFTER_FAILURES && Date.now() - last > 3_600_000) {
+        alertedAt.set(user.id, Date.now())
+        const alert = renderTemplate('brute_force', { failedCount: count, ip: cleanIp ?? 'desconocida' })
+        sendEmail({ to: user.email, subject: alert.subject, html: alert.html, text: alert.text }).catch((err) =>
+          console.warn('[MAIL ERROR ALERTA]:', err.message),
+        )
+      }
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 
@@ -385,121 +413,9 @@ app.post('/api/vault/sync', requireAuth, async (req, res) => {
 })
 
 // -----------------------------------------------------------------------------
-// 6. ENVIAR CORREO TRANSACCIONAL
+// 6. CORREOS TRANSACCIONALES (solo con sesión, plantillas del servidor, destinatario = la cuenta)
 // -----------------------------------------------------------------------------
-app.post('/api/mail/send', async (req, res) => {
-  const { to, subject, html, text, from } = req.body
-
-  if (!to || !subject || (!html && !text)) {
-    return res.status(400).json({ error: 'Destinatario (to), Asunto (subject) y Contenido son requeridos' })
-  }
-
-  try {
-    const result = await sendEmail({ to, subject, html, text, from })
-    res.json(result)
-  } catch (err) {
-    res.status(500).json({ error: 'Error al enviar correo', details: err.message })
-  }
-})
-
-// -----------------------------------------------------------------------------
-// 7. SIMULAR CORREO DE BIENVENIDA (Test Template)
-// -----------------------------------------------------------------------------
-app.post('/api/mail/test-welcome', async (req, res) => {
-  const { to, name = 'Daniel' } = req.body
-
-  if (!to) {
-    return res.status(400).json({ error: 'El campo "to" (email de destino) es requerido' })
-  }
-
-  const subject = 'Bienvenido a LifeKeeper — Tu bóveda privada está lista'
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
-  <style>
-    body { margin: 0; padding: 0; background-color: #060b18; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0; }
-    .wrapper { width: 100%; table-layout: fixed; background-color: #060b18; padding: 40px 10px; }
-    .main-card { max-width: 580px; margin: 0 auto; background: linear-gradient(180deg, #0e1a38 0%, #0a1329 100%); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4); overflow: hidden; }
-    .header { padding: 32px 36px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-    .brand-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: #ffffff; margin: 0; }
-    .brand-accent { color: #38bdf8; }
-    .body { padding: 32px 36px; font-size: 15px; line-height: 1.6; color: #cbd5e1; }
-    .h1-title { font-size: 20px; font-weight: 600; color: #ffffff; margin-top: 0; margin-bottom: 16px; }
-    .callout { background: rgba(255, 255, 255, 0.03); border-left: 4px solid #1d63dc; border-radius: 8px; padding: 16px 18px; margin: 24px 0; font-size: 14px; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #1d63dc 0%, #0284c7 100%); color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 600; padding: 13px 28px; border-radius: 10px; margin: 20px 0; text-align: center; box-shadow: 0 4px 14px rgba(29, 99, 220, 0.35); }
-    .footer { padding: 24px 36px 32px; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 12px; color: #64748b; text-align: center; }
-    .footer a { color: #38bdf8; text-decoration: none; }
-  </style>
-</head>
-<body>
-  <div class="wrapper">
-    <table class="main-card" role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td class="header">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="vertical-align: middle;">
-                <table cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding-right: 12px; vertical-align: middle;">
-                      <img src="https://app.lifekeeper.lat/brand/isotipo.png?v=2" alt="LifeKeeper" width="36" height="36" style="display: block; border-radius: 8px;" />
-                    </td>
-                    <td style="vertical-align: middle;">
-                      <h1 class="brand-title">Life<span class="brand-accent">Keeper</span></h1>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-              <td align="right" style="font-size: 11px; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">
-                Cero Conocimiento E2EE
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      <tr>
-        <td class="body">
-          <h2 class="h1-title">¡Hola, ${name}! 👋</h2>
-          <p>Tu bóveda personal en <strong>LifeKeeper</strong> ha sido creada exitosamente. A partir de hoy, tus registros de salud, finanzas, contraseñas y diario personal están protegidos bajo cifrado de extremo a extremo.</p>
-          
-          <div class="callout">
-            <strong style="color: #38bdf8;">🛡️ Regla de Oro de Conocimiento Cero (Zero-Knowledge):</strong>
-            <p style="margin: 8px 0 0;">Tu contraseña maestra nunca viaja por la red ni se guarda en nuestros servidores. <strong>Nadie más que vos puede descifrar tu información.</strong></p>
-          </div>
-
-          <p><strong>Paso fundamental:</strong> Si no descargaste tu <strong>Kit de Emergencia (PDF de 24 palabras)</strong> durante el registro, ingresá ahora a tu perfil o a la sección de Respaldos para generarlo e imprimirlo.</p>
-
-          <div style="text-align: center;">
-            <a href="https://app.lifekeeper.lat/#profile:settings" class="btn">Abrir mi Bóveda</a>
-          </div>
-
-          <p style="font-size: 13px; color: #94a3b8;">Si tenés alguna duda sobre el funcionamiento del cifrado o la soberanía de tus datos, estamos a tu disposición.</p>
-        </td>
-      </tr>
-      <tr>
-        <td class="footer">
-          <p style="margin: 0 0 8px;">Este es un mensaje de seguridad automatizado enviado por <strong>LifeKeeper Vault</strong>.</p>
-          <p style="margin: 0 0 8px;">Por arquitectura de conocimiento cero, nosotros nunca te pediremos contraseñas ni frases de rescate.</p>
-          <p style="margin: 0;"><a href="https://app.lifekeeper.lat">https://app.lifekeeper.lat</a> • Servidor Soberano y Seguro</p>
-        </td>
-      </tr>
-    </table>
-  </div>
-</body>
-</html>`
-
-  const text = `¡Hola, ${name}!\n\nTu bóveda en LifeKeeper ha sido creada exitosamente bajo arquitectura Zero-Knowledge E2EE.\n\nRecuerda guardar tu Kit de Emergencia de 24 palabras en un lugar físico seguro.\n\nIngresá a tu bóveda: https://app.lifekeeper.lat`
-
-  try {
-    const result = await sendEmail({ to, subject, html, text })
-    res.json({ success: true, template: 'welcome', result })
-  } catch (err) {
-    res.status(500).json({ error: 'Error al enviar simulación de bienvenida', details: err.message })
-  }
-})
+app.use('/api/mail', createMailRouter({ send: sendEmail, auth: requireAuth }))
 
 // Arrancar servidor
 app.listen(PORT, '0.0.0.0', () => {

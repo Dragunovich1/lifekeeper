@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
+import { resolveJwtSecret } from './security.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'lifekeeper_super_secure_jwt_secret_2026_xyz_default'
+const JWT_SECRET = resolveJwtSecret()
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30d'
 
 export function signToken(payload) {

@@ -20,8 +20,11 @@ services:
       - "127.0.0.1:4000:4000"
     environment:
       PORT: 4000
-      DATABASE_URL: postgres://lifekeeper_admin:lifekeeper_secure_password_2026@postgres:5432/lifekeeper_vault
-      JWT_SECRET: ${JWT_SECRET:-lifekeeper_super_secure_jwt_secret_2026_xyz}
+      DATABASE_URL: postgres://lifekeeper_admin:${POSTGRES_PASSWORD:-lifekeeper_secure_password_2026}@postgres:5432/lifekeeper_vault
+      # Sin JWT_SECRET propio el servidor usa una clave aleatoria temporal (ver .env.example)
+      JWT_SECRET: ${JWT_SECRET:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -40,7 +43,7 @@ services:
     environment:
       POSTGRES_DB: lifekeeper_vault
       POSTGRES_USER: lifekeeper_admin
-      POSTGRES_PASSWORD: lifekeeper_secure_password_2026
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lifekeeper_secure_password_2026}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:

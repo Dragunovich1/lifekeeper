@@ -1,22 +1,20 @@
 /**
- * Templates oficiales de correos electrónicos transaccionales para LifeKeeper.
- * Diseñados con HTML responsive, accesibilidad, branding oficial y remitente @lifekeeper.lat.
+ * Plantillas de correos transaccionales (se arman en el servidor).
+ *
+ * Por qué acá y no en el cliente: así nadie puede mandar contenido libre con la marca y el dominio de
+ * LifeKeeper. El cliente solo elige una plantilla y pasa datos simples, que se validan y se escapan.
  */
-
-export interface EmailPayload {
-  to: string
-  subject: string
-  html: string
-  text: string
-}
 
 const BRAND_COLOR_PRIMARY = '#1d63dc'
 const BRAND_DOMAIN = 'app.lifekeeper.lat'
 
-/**
- * Envoltorio HTML base para todos los correos de LifeKeeper.
- */
-function emailLayout(title: string, bodyContent: string, isAlert = false): string {
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+export const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c])
+
+/** Texto corto y sin saltos de línea: sirve para asuntos y para datos que van dentro del HTML. */
+const clean = (value, max = 120) => String(value ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, max)
+
+function emailLayout(title, bodyContent, isAlert = false) {
   const accentColor = isAlert ? '#ef4444' : BRAND_COLOR_PRIMARY
 
   return `<!DOCTYPE html>
@@ -24,7 +22,7 @@ function emailLayout(title: string, bodyContent: string, isAlert = false): strin
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     body {
       margin: 0;
@@ -158,17 +156,17 @@ function emailLayout(title: string, bodyContent: string, isAlert = false): strin
 </html>`
 }
 
-/**
- * 1. Email de Bienvenida y Creación de Bóveda
- */
-export function getWelcomeEmail(userName: string, userEmail: string): EmailPayload {
-  const subject = 'Bienvenido a LifeKeeper — Tu bóveda privada está lista'
-  const html = emailLayout(
-    subject,
-    `
-    <h2 class="h1-title">¡Hola, ${userName || 'Titular de Bóveda'}! 👋</h2>
+
+const TEMPLATES = {
+  welcome({ name }) {
+    const userName = clean(name, 60) || 'Titular de Bóveda'
+    const subject = 'Bienvenido a LifeKeeper — Tu bóveda privada está lista'
+    const html = emailLayout(
+      subject,
+      `
+    <h2 class="h1-title">¡Hola, ${escapeHtml(userName)}! 👋</h2>
     <p>Tu bóveda personal en <strong>LifeKeeper</strong> ha sido creada exitosamente. A partir de hoy, tus registros de salud, finanzas, contraseñas y diario personal están protegidos bajo cifrado de extremo a extremo.</p>
-    
+
     <div class="callout">
       <strong style="color: #38bdf8;">🛡️ Regla de Oro de Conocimiento Cero (Zero-Knowledge):</strong>
       <p style="margin: 8px 0 0;">Tu contraseña maestra nunca viaja por la red ni se guarda en nuestros servidores. <strong>Nadie más que vos puede descifrar tu información.</strong></p>
@@ -182,33 +180,26 @@ export function getWelcomeEmail(userName: string, userEmail: string): EmailPaylo
 
     <p style="font-size: 13px; color: #94a3b8;">Si tenés alguna duda sobre el funcionamiento del cifrado o la soberanía de tus datos, estamos a tu disposición.</p>
     `,
-  )
+    )
+    const text = `¡Hola, ${userName}!\n\nTu bóveda en LifeKeeper ha sido creada exitosamente bajo arquitectura Zero-Knowledge E2EE.\n\nGuardá tu Kit de Emergencia de 24 palabras en un lugar físico seguro.\n\nIngresá a tu bóveda: https://${BRAND_DOMAIN}`
+    return { subject, html, text }
+  },
 
-  const text = `¡Hola, ${userName || 'Titular de Bóveda'}!\n\nTu bóveda en LifeKeeper ha sido creada exitosamente bajo arquitectura Zero-Knowledge E2EE.\n\nRecuerda guardar tu Kit de Emergencia de 24 palabras en un lugar físico seguro.\n\nIngresá a tu bóveda: https://${BRAND_DOMAIN}`
-
-  return { to: userEmail, subject, html, text }
-}
-
-/**
- * 2. Alerta de Seguridad por Nuevo Inicio de Sesión
- */
-export function getNewLoginAlertEmail(
-  userEmail: string,
-  loginInfo: { device: string; ip: string; timestamp: string; locationApprox?: string },
-): EmailPayload {
-  const subject = '⚠️ Alerta de Seguridad: Nuevo inicio de sesión en tu bóveda'
-  const html = emailLayout(
-    subject,
-    `
+  new_login({ device, ip, timestamp, locationApprox }) {
+    const info = { device: clean(device) || 'Dispositivo desconocido', ip: clean(ip, 64) || 'Desconocida', timestamp: clean(timestamp, 60) || new Date().toLocaleString('es-AR'), location: clean(locationApprox) }
+    const subject = '⚠️ Alerta de Seguridad: Nuevo inicio de sesión en tu bóveda'
+    const html = emailLayout(
+      subject,
+      `
     <h2 class="h1-title" style="color: #fbbf24;">Nuevo inicio de sesión detectado</h2>
     <p>Se acaba de desbloquear tu bóveda de LifeKeeper desde un nuevo dispositivo o navegador.</p>
-    
+
     <div class="callout" style="border-left-color: #fbbf24;">
       <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-        <li><strong>Fecha y hora:</strong> ${loginInfo.timestamp}</li>
-        <li><strong>Dispositivo / Navegador:</strong> ${loginInfo.device}</li>
-        <li><strong>Dirección IP:</strong> ${loginInfo.ip}</li>
-        ${loginInfo.locationApprox ? `<li><strong>Ubicación aproximada:</strong> ${loginInfo.locationApprox}</li>` : ''}
+        <li><strong>Fecha y hora:</strong> ${escapeHtml(info.timestamp)}</li>
+        <li><strong>Dispositivo / Navegador:</strong> ${escapeHtml(info.device)}</li>
+        <li><strong>Dirección IP:</strong> ${escapeHtml(info.ip)}</li>
+        ${info.location ? `<li><strong>Ubicación aproximada:</strong> ${escapeHtml(info.location)}</li>` : ''}
       </ul>
     </div>
 
@@ -219,32 +210,25 @@ export function getNewLoginAlertEmail(
       <a href="https://${BRAND_DOMAIN}/#security:passwords" class="btn btn-alert">Revisar Actividad de Seguridad</a>
     </div>
     `,
-    true,
-  )
+      true,
+    )
+    const text = `Alerta de Seguridad - LifeKeeper\n\nNuevo inicio de sesión detectado:\nFecha: ${info.timestamp}\nDispositivo: ${info.device}\nIP: ${info.ip}\n\nSi no fuiste vos, ingresá a https://${BRAND_DOMAIN} y cambiá tu contraseña maestra.`
+    return { subject, html, text }
+  },
 
-  const text = `Alerta de Seguridad - LifeKeeper\n\nNuevo inicio de sesión detectado:\nFecha: ${loginInfo.timestamp}\nDispositivo: ${loginInfo.device}\nIP: ${loginInfo.ip}\n\nSi no fuiste vos, ingresá a https://${BRAND_DOMAIN} y cambiá tu contraseña maestra.`
-
-  return { to: userEmail, subject, html, text }
-}
-
-/**
- * 3. Alerta Crítica por Intentos Fallidos de Contraseña (Fuerza Bruta)
- */
-export function getBruteForceAlertEmail(
-  userEmail: string,
-  failedCount: number,
-  clientIp: string,
-): EmailPayload {
-  const subject = `🚨 URGENTE: ${failedCount} intentos fallidos de acceso a tu bóveda`
-  const html = emailLayout(
-    subject,
-    `
+  brute_force({ failedCount, ip }) {
+    const count = Math.max(1, Math.min(999, Number(failedCount) || 1))
+    const clientIp = clean(ip, 64) || 'Desconocida'
+    const subject = `🚨 URGENTE: ${count} intentos fallidos de acceso a tu bóveda`
+    const html = emailLayout(
+      subject,
+      `
     <h2 class="h1-title" style="color: #ef4444;">Intento de acceso no autorizado</h2>
-    <p>Hemos registrado <strong>${failedCount} intentos fallidos consecutivos</strong> para descifrar tu bóveda de LifeKeeper desde la dirección IP <code>${clientIp}</code>.</p>
-    
+    <p>Hemos registrado <strong>${count} intentos fallidos consecutivos</strong> para acceder a tu cuenta de LifeKeeper desde la dirección IP <code>${escapeHtml(clientIp)}</code>.</p>
+
     <div class="callout" style="border-left-color: #ef4444; background: rgba(239, 68, 68, 0.08);">
       <strong style="color: #f87171;">Protocolo de Protección Activo:</strong>
-      <p style="margin: 8px 0 0;">Si se alcanzan 10 intentos fallidos continuos, el cliente local activará la autodestrucción de la sesión en ese navegador para resguardar la confidencialidad de tus datos.</p>
+      <p style="margin: 8px 0 0;">Tras varios intentos fallidos seguidos, el acceso desde esa dirección se bloquea temporalmente para resguardar la confidencialidad de tus datos.</p>
     </div>
 
     <p>Si olvidaste tu contraseña maestra, recordá que podés restaurar el acceso con tu <strong>Kit de Emergencia (24 palabras de rescate)</strong>.</p>
@@ -253,75 +237,72 @@ export function getBruteForceAlertEmail(
       <a href="https://${BRAND_DOMAIN}" class="btn btn-alert">Ver Estado de Bóveda</a>
     </div>
     `,
-    true,
-  )
+      true,
+    )
+    const text = `URGENTE: ${count} intentos fallidos de acceso a tu cuenta desde la IP ${clientIp}.\nEl acceso se bloquea temporalmente tras varios intentos.\nUsá tu Kit de Emergencia si necesitás recuperar tu bóveda: https://${BRAND_DOMAIN}`
+    return { subject, html, text }
+  },
 
-  const text = `URGENTE: ${failedCount} intentos fallidos de acceso a tu bóveda desde la IP ${clientIp}.\nAl 10° intento se bloqueará el acceso local.\nUsa tu Kit de Emergencia si necesitas recuperar tu bóveda: https://${BRAND_DOMAIN}`
-
-  return { to: userEmail, subject, html, text }
-}
-
-/**
- * 4. Notificación de Respaldo Cifrado Exitoso
- */
-export function getBackupSuccessEmail(
-  userEmail: string,
-  backupDetails: { timestamp: string; snapshotId: string; sizeKb: number },
-): EmailPayload {
-  const subject = 'Backup seguro completado — LifeKeeper Vault'
-  const html = emailLayout(
-    subject,
-    `
+  backup_success({ timestamp, snapshotId, sizeKb }) {
+    const when = clean(timestamp, 60) || new Date().toLocaleString('es-AR')
+    const snapshot = clean(snapshotId, 64) || 's/d'
+    const size = Math.max(0, Math.min(10_000_000, Number(sizeKb) || 0))
+    const subject = 'Backup seguro completado — LifeKeeper Vault'
+    const html = emailLayout(
+      subject,
+      `
     <h2 class="h1-title">Respaldo de bóveda guardado</h2>
     <p>Se ha generado y sincronizado un nuevo snapshot cifrado de tu bóveda.</p>
-    
+
     <div class="callout">
       <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
-        <li><strong>Fecha del respaldo:</strong> ${backupDetails.timestamp}</li>
-        <li><strong>Identificador de snapshot:</strong> <code style="font-size: 12px; color: #38bdf8;">${backupDetails.snapshotId}</code></li>
-        <li><strong>Tamaño del payload cifrado:</strong> ${backupDetails.sizeKb} KB</li>
+        <li><strong>Fecha del respaldo:</strong> ${escapeHtml(when)}</li>
+        <li><strong>Identificador de snapshot:</strong> <code style="font-size: 12px; color: #38bdf8;">${escapeHtml(snapshot)}</code></li>
+        <li><strong>Tamaño del payload cifrado:</strong> ${size} KB</li>
         <li><strong>Algoritmo:</strong> AES-256-GCM (Zero-Knowledge)</li>
       </ul>
     </div>
 
     <p style="font-size: 13px; color: #94a3b8;">Tu información viaja y se almacena en reposo 100% cifrada. Podés descargar copias locales de respaldo en cualquier momento desde la sección de Utilidades.</p>
     `,
-  )
+    )
+    const text = `Respaldo seguro completado en LifeKeeper.\nFecha: ${when}\nSnapshot: ${snapshot}\nTamaño: ${size} KB\nCifrado con AES-256-GCM.`
+    return { subject, html, text }
+  },
 
-  const text = `Respaldo seguro completado en LifeKeeper.\nFecha: ${backupDetails.timestamp}\nSnapshot: ${backupDetails.snapshotId}\nTamaño: ${backupDetails.sizeKb} KB\nCifrado con AES-256-GCM.`
-
-  return { to: userEmail, subject, html, text }
-}
-
-/**
- * 5. Recordatorio Preventivo de Salud y Medicación
- */
-export function getHealthReminderEmail(
-  userEmail: string,
-  reminder: { title: string; category: 'medicamento' | 'vacuna' | 'turno'; detail: string; dueDateTime: string },
-): EmailPayload {
-  const icon = reminder.category === 'medicamento' ? '💊' : reminder.category === 'vacuna' ? '💉' : '🩺'
-  const subject = `${icon} Recordatorio de Salud: ${reminder.title}`
-
-  const html = emailLayout(
-    subject,
-    `
+  health_reminder({ title, category, detail, dueDateTime }) {
+    const kind = ['medicamento', 'vacuna', 'turno'].includes(category) ? category : 'turno'
+    const icon = kind === 'medicamento' ? '💊' : kind === 'vacuna' ? '💉' : '🩺'
+    const t = clean(title, 100) || 'Recordatorio'
+    const d = clean(detail, 200)
+    const due = clean(dueDateTime, 60)
+    const subject = `${icon} Recordatorio de Salud: ${t}`
+    const html = emailLayout(
+      subject,
+      `
     <h2 class="h1-title">${icon} Recordatorio Programado</h2>
     <p>Tu asistente de salud en LifeKeeper te recuerda el siguiente evento prioritario:</p>
-    
+
     <div class="callout" style="border-left-color: #0ea5e9;">
-      <h3 style="margin: 0 0 8px; color: #38bdf8; font-size: 16px;">${reminder.title}</h3>
-      <p style="margin: 0 0 8px; color: #ffffff;">${reminder.detail}</p>
-      <p style="margin: 0; font-size: 13px; color: #94a3b8;"><strong>Horario programado:</strong> ${reminder.dueDateTime}</p>
+      <h3 style="margin: 0 0 8px; color: #38bdf8; font-size: 16px;">${escapeHtml(t)}</h3>
+      <p style="margin: 0 0 8px; color: #ffffff;">${escapeHtml(d)}</p>
+      <p style="margin: 0; font-size: 13px; color: #94a3b8;"><strong>Horario programado:</strong> ${escapeHtml(due)}</p>
     </div>
 
     <div style="text-align: center;">
       <a href="https://${BRAND_DOMAIN}/#health:medications" class="btn">Abrir Sección Salud</a>
     </div>
     `,
-  )
+    )
+    const text = `Recordatorio de Salud LifeKeeper:\n\n${t}\n${d}\nHorario: ${due}\n\nIngresá a tu bóveda: https://${BRAND_DOMAIN}`
+    return { subject, html, text }
+  },
+}
 
-  const text = `Recordatorio de Salud LifeKeeper:\n\n${reminder.title}\n${reminder.detail}\nHorario: ${reminder.dueDateTime}\n\nIngresá a tu bóveda: https://${BRAND_DOMAIN}`
+export const TEMPLATE_IDS = Object.keys(TEMPLATES)
 
-  return { to: userEmail, subject, html, text }
+/** Devuelve { subject, html, text } o null si la plantilla no existe. */
+export function renderTemplate(id, params = {}) {
+  const build = Object.hasOwn(TEMPLATES, id) ? TEMPLATES[id] : null
+  return build ? build(params && typeof params === 'object' ? params : {}) : null
 }
