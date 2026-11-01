@@ -111,6 +111,10 @@
 - **Action Cards con Deshacer (`Undo2`):** Visualización enriquecida de cada mutación guardada con reversión instantánea.
 - **Historial Persistente Cifrado:** Sesiones de chat guardadas y cifradas Zero-Knowledge en la bóveda, con soporte de múltiples conversaciones y botón **+ Nuevo Chat**.
 
+### 🔄 Sincronización y conexión al servidor (APK / Web / LAN)
+- **`src/services/api/apiConfig.ts` → `apiFetch(path)`:** prueba el mismo origen y, si falla, los servidores conocidos (`app.lifekeeper.lat`, `192.168.0.52`) o el configurado por el usuario ("Configurar servidor"). **Toda llamada a `/api/...` debe usar `apiFetch`**, no `fetch` (en la APK un `/api` relativo apunta al propio teléfono). Ya lo usan Ollama, el extractor de acciones del asistente, Piper TTS y el mail.
+- **`src/services/sync/syncService.ts`:** sincronización bidireccional cifrada (zero-knowledge) de la bóveda completa. `countVaultRecords` evita pisar una bóveda con datos por una vacía: al sumar colecciones nuevas hay que agregarlas ahí.
+
 ### 📅 Finanzas: Calendario, categorías e importación de archivos
 - **Calendario (pestaña por defecto):** `src/sections/personal/finance/FinanceCalendar.tsx`. Arriba **Ingresos | Saldo | Gastos** (montos ocultos hasta tocar el ojo), desglose por categoría con barras y %, y calendario mensual (semana desde el lunes) con marca **roja = gastos** y **verde = ingresos**. Al tocar un día se ven sus movimientos con **Añadir ingreso / Añadir gasto** (modal en móvil, panel lateral en escritorio; FAB "+" en móvil). Cambia de mes con las flechas y de moneda si hay más de una.
 - **Alta de movimiento:** `TransactionModal.tsx` (monto grande, moneda, categoría, nota, fecha, repetir). **Categorías con ícono y color** (`src/utils/financeCategories.ts`, `src/components/CategoryIcon.tsx`): predefinidas de gasto e ingreso + **categorías propias** (`personal.financeCategories`). Las categorías viejas/del asistente (Alimentación, Servicios…) se agrupan por alias.

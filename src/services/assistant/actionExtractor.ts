@@ -15,6 +15,7 @@ import { toLocalDateKey } from '../../utils/dates'
 import type { AssistantMessage, AssistantMutationResult } from './localAssistant'
 import type { ChatHistoryItem } from './ollamaClient'
 import { ALL_ACTIONS, isClarify, type ActionContext, type ActionOutcome, type RawAction } from './actions'
+import { apiFetch } from '../api/apiConfig'
 import { normalizeText } from './actions/helpers'
 
 const MAX_ACTIONS = 4
@@ -112,7 +113,7 @@ const recentContext = (history: ChatHistoryItem[]) =>
   history.slice(-4).map((h) => ({ role: h.role, content: h.content.slice(0, 500) }))
 
 async function askJson(system: string, history: ChatHistoryItem[], userText: string, model: string, maxTokens: number, timeoutMs: number): Promise<unknown> {
-  const res = await fetch('/api/ai/chat', {
+  const res = await apiFetch('/api/ai/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

@@ -1,3 +1,5 @@
+import { apiFetch } from '../api/apiConfig'
+
 /**
  * Cliente de voz neural local (Piper TTS) para el asistente.
  * El texto viaja únicamente hacia el contenedor `tts` del servidor propio (vía nginx).
@@ -17,7 +19,7 @@ export async function isPiperAvailable(): Promise<boolean> {
   const now = Date.now()
   if (availability && now - availability.checkedAt < AVAILABILITY_TTL_MS) return availability.value
   try {
-    const res = await fetch('/api/tts/health', { signal: AbortSignal.timeout(3000) })
+    const res = await apiFetch('/api/tts/health', { signal: AbortSignal.timeout(3000) })
     // Se valida el JSON: un servidor de desarrollo puede responder 200 con el index.html
     const body = res.ok ? await res.json() : null
     availability = { value: body?.ok === true, checkedAt: now }
@@ -55,7 +57,7 @@ export async function speakWithPiper(
   const ctrl = new AbortController()
   controller = ctrl
   try {
-    const res = await fetch('/api/tts/speak', {
+    const res = await apiFetch('/api/tts/speak', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, voice, speed: opts.speed ?? 1.0 }),

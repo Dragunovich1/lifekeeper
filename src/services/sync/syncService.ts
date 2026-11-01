@@ -51,6 +51,13 @@ function countVaultRecords(data: AppData): number {
       (data.personal?.vehicles?.length || 0) +
       (data.personal?.workouts?.length || 0) +
       (data.utilities?.reminders?.length || 0) +
+      (data.utilities?.quickNotes?.length || 0) +
+      (data.health?.measurements?.length || 0) +
+      (data.personal?.shopping?.lists?.length || 0) +
+      (data.personal?.financeCategories?.length || 0) +
+      (data.personal?.financeImports?.length || 0) +
+      (data.personal?.nutrition?.dailyLogs?.length || 0) +
+      (data.personal?.vehicleProfiles?.length || 0) +
       (data.profile?.fullName ? 1 : 0)
     )
   } catch {
