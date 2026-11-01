@@ -113,3 +113,14 @@ describe('alertas (insights)', () => {
     expect(ids).toContain('shopping-over-l')
   })
 })
+
+describe('selector de modelo (Ollama)', () => {
+  it('respeta la elección si sigue instalada y si no cae al mejor disponible', async () => {
+    const { pickModel } = await import('../services/assistant/ollamaClient')
+    const models = ['mistral:7b', 'llama3.2:3b', 'qwen2.5:7b']
+    expect(pickModel(models, 'qwen2.5:7b')).toBe('qwen2.5:7b')
+    expect(pickModel(models, 'borrado:1b')).toBe('llama3.2:3b')
+    expect(pickModel(models, '')).toBe('llama3.2:3b')
+    expect(pickModel(['raro:1b'], '')).toBe('raro:1b')
+  })
+})

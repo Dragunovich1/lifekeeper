@@ -29,6 +29,36 @@ const PREFERRED_MODELS = [
   'phi4-mini',
 ]
 
+const MODEL_KEY = 'lifekeeper:ollama-model'
+
+/** Modelo elegido a mano por la persona ('' = automático). */
+export const getPreferredModel = (): string => {
+  try {
+    return localStorage.getItem(MODEL_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+export const setPreferredModel = (name: string): void => {
+  try {
+    if (name) localStorage.setItem(MODEL_KEY, name)
+    else localStorage.removeItem(MODEL_KEY)
+  } catch {
+    /* sin almacenamiento: queda en automático */
+  }
+}
+
+/** Elige el modelo: el de la persona si sigue instalado; si no, el mejor disponible. */
+export function pickModel(modelNames: string[], preferred = getPreferredModel()): string {
+  if (preferred && modelNames.includes(preferred)) return preferred
+  for (const pref of PREFERRED_MODELS) {
+    const match = modelNames.find((m) => m.toLowerCase().startsWith(pref))
+    if (match) return match
+  }
+  return modelNames[0]
+}
+
 /**
  * Comprueba si Ollama está en línea y qué modelos tiene descargados.
  */
@@ -50,15 +80,7 @@ export async function checkOllamaStatus(): Promise<OllamaStatus> {
       return { online: true, models: [], activeModel: null }
     }
 
-    // Elegir el mejor modelo disponible según prioridad
-    let selected: string = modelNames[0]
-    for (const pref of PREFERRED_MODELS) {
-      const match = modelNames.find((m) => m.toLowerCase().startsWith(pref))
-      if (match) {
-        selected = match
-        break
-      }
-    }
+    const selected = pickModel(modelNames)
 
     return {
       online: true,

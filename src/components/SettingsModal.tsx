@@ -6,6 +6,7 @@ import { usePreferences } from '../preferences/context'
 import { ScrollbarOverlay } from '../scrollbar/ScrollbarOverlay'
 import { Select } from './Select'
 import { NotificationSettings } from './NotificationSettings'
+import { AssistantModelSetting } from './AssistantModelSetting'
 import { sendTestTemplate } from '../services/mail/mailService'
 
 interface SettingsModalProps {
@@ -137,6 +138,8 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
               </div>
 
               <NotificationSettings />
+
+              <AssistantModelSetting />
 
               <div className="pref-field">
                 <label htmlFor="settings-start">Sección inicial</label>
