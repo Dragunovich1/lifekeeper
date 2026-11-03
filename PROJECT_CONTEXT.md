@@ -92,6 +92,12 @@
 - **Series Especiales:** Biseries, Drop Sets, Series al Fallo, Calentamiento y notas/comentarios por cada serie individual.
 - **Exportación en PDF Profesional:** Generador en `src/utils/workoutPdfExport.ts` con formato A4, métricas consolidadas (volumen en kg, distancia, tiempo) y desglose completo para enviar a un Personal Trainer.
 
+### 🐾 Mascotas (Vida personal → Mascotas)
+- **Archivos:** `src/sections/personal/pets/` (`PetsSection` lista de tarjetas + `PetDetail` ficha con solapas Resumen · Salud · Peso · Medicación · Turnos · Gastos, `PetFormModal` alta/edición con foto, `RecordModals` un modal por tipo de registro), lógica pura y testeada en `src/utils/pets.ts`, PDF de la ficha en `src/utils/petPdfExport.ts`, estilos `src/styles/pets.css`. Datos en `personal.pets: Pet[]` (todo cifrado en el snapshot).
+- **Foto:** se elige de galería/cámara y se reduce a JPEG ≤640 px (`utils/image.ts: fileToResizedDataUrl`) para no inflar la bóveda.
+- **Avisos:** `petAlerts` mira, de cada vacuna/control (por nombre), solo el registro más reciente; si tiene `nextDate` vencida o a ≤30 días avisa. También turnos próximos y vigencia del seguro. Se muestran en la ficha, en la tarjeta y en las alertas del Dashboard (`insights.ts`). Una mascota con `deceasedDate` queda como recuerdo y no avisa.
+- **Patrón de modales:** todo "agregar/editar" va en un modal con `components/FormModal.tsx` (formulario + Cancelar/Guardar; `Modal` pide confirmación si se sale con datos cargados). Es el patrón a usar en toda la web; los listados quedan limpios.
+
 ### 🥗 Nutrición y Salud Femenina
 - **Nutrición (`NutritionSection.tsx`):** Registro de comidas diarias, desglose de macronutrientes (proteínas, carbohidratos, grasas), consumo de agua e historial calórico.
 - **Ciclo Menstrual (`MenstrualCycleSection.tsx`):** Activado cuando el perfil tiene género Femenino. Predicción de ovulación, fase lútea/folicular, registro de síntomas y vinculación directa con el Calendario de la app.

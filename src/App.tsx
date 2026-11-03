@@ -59,6 +59,7 @@ const LazyPersonalFinances = lazy(() => import('./sections/personal/index').then
 const LazyPersonalProjects = lazy(() => import('./sections/personal/index').then(m => ({ default: m.ProjectsSection })))
 const LazyPersonalVehicles = lazy(() => import('./sections/personal/index').then(m => ({ default: m.VehiclesSection })))
 const LazyPersonalWorkouts = lazy(() => import('./sections/personal/index').then(m => ({ default: m.WorkoutsSection })))
+const LazyPersonalPets = lazy(() => import('./sections/personal/index').then(m => ({ default: m.PetsSection })))
 const LazyPersonalNutrition = lazy(() => import('./sections/personal/index').then(m => ({ default: m.NutritionSection })))
 const LazyUtilitiesReminders = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.RemindersSection })))
 const LazyUtilitiesCalendar = lazy(() => import('./sections/utilities/index').then(m => ({ default: m.CalendarSection })))
@@ -87,6 +88,7 @@ const sectionComponents = {
   'personal:projects': LazyPersonalProjects,
   'personal:vehicles': LazyPersonalVehicles,
   'personal:workouts': LazyPersonalWorkouts,
+  'personal:pets': LazyPersonalPets,
   'health:nutrition': LazyPersonalNutrition,
   'utilities:reminders': LazyUtilitiesReminders,
   'utilities:calendar': LazyUtilitiesCalendar,

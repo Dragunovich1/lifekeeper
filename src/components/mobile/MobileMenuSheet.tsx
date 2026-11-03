@@ -10,6 +10,7 @@ import {
   HardDriveDownload,
   Lock,
   Palette,
+  PawPrint,
   Settings,
   Share2,
   ShoppingCart,
@@ -186,6 +187,19 @@ export const MobileMenuSheet = ({
             <div>
               <div className="mobile-sheet-card-label">Vehículos</div>
               <div className="mobile-sheet-card-sub">Mantenimientos</div>
+            </div>
+          </button>
+
+          <button
+            className="mobile-sheet-card"
+            onClick={() => handleItemClick(() => onNavigate('personal', 'pets'))}
+          >
+            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
+              <PawPrint size={20} />
+            </div>
+            <div>
+              <div className="mobile-sheet-card-label">Mascotas</div>
+              <div className="mobile-sheet-card-sub">Fichas, vacunas y gastos</div>
             </div>
           </button>
 

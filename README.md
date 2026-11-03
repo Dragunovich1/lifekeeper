@@ -7,7 +7,7 @@ Bóveda digital personal **zero-knowledge**: tus datos se cifran en el dispositi
 - **Salud**: vacunas, consultas, medicación (con info de MedlinePlus), hidratación, **nutrición**, **mediciones** (glucosa, presión, pulso… con momento y cómo te sentías, estado orientativo y PDF para el médico), historial clínico, ciclo menstrual, tarjeta de emergencia.
 - **Diario**: notas, estado de ánimo, búsqueda y exportación.
 - **Seguridad**: contraseñas, documentos sensibles, notas privadas.
-- **Vida personal**: **finanzas** (calendario, categorías, topes, importación CSV/Excel/PDF, inflación), proyectos, vehículos, entrenamientos (catálogo wger), deudas y ahorros.
+- **Vida personal**: **mascotas** (ficha con foto, vacunas, peso, medicación, turnos, gastos y avisos), **finanzas** (calendario, categorías, topes, importación CSV/Excel/PDF, inflación), proyectos, vehículos, entrenamientos (catálogo wger), deudas y ahorros.
 - **Utilidades**: recordatorios, calendario con feriados, **lista de compras**, **notas rápidas** (fijables al Dashboard), **calculadora**, respaldos y exportación (JSON, Excel, CSV, PDF).
 - **Asistente**: LLM local (Ollama) que entiende lenguaje natural y carga datos de toda la suite; voces Piper (es-AR). Modelo elegible en Configuración.
 - **Avisos**: recordatorios y medicación con notificaciones nativas (APK) o del navegador.

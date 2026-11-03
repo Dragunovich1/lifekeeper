@@ -641,7 +641,101 @@ export interface ShoppingData {
   priceMemory: Record<string, ShoppingPriceMemory>
 }
 
+/* ---------- Mascotas ---------- */
+export type PetSpecies = 'perro' | 'gato' | 'ave' | 'conejo' | 'roedor' | 'reptil' | 'pez' | 'caballo' | 'otro'
+export type PetSex = 'macho' | 'hembra' | 'desconocido'
+
+/** Registro de salud: vacunas, desparasitaciones, controles, cirugías, estudios… */
+export type PetHealthKind = 'vacuna' | 'desparasitacion' | 'antipulgas' | 'control' | 'cirugia' | 'estudio' | 'tratamiento' | 'otro'
+
+export interface PetHealthRecord {
+  id: string
+  kind: PetHealthKind
+  name: string
+  date: string
+  /** Próxima dosis o control (dispara el aviso de vencimiento). */
+  nextDate?: string
+  vet?: string
+  lot?: string
+  cost?: number
+  notes?: string
+}
+
+export interface PetWeightEntry {
+  id: string
+  date: string
+  kg: number
+  notes?: string
+}
+
+export interface PetMedication {
+  id: string
+  name: string
+  dose?: string
+  frequency?: string
+  startDate: string
+  endDate?: string
+  notes?: string
+}
+
+export interface PetAppointment {
+  id: string
+  date: string
+  time?: string
+  reason: string
+  vet?: string
+  place?: string
+  done?: boolean
+  cost?: number
+  notes?: string
+}
+
+export type PetExpenseCategory = 'alimento' | 'veterinario' | 'medicacion' | 'higiene' | 'accesorios' | 'seguro' | 'guarderia' | 'otro'
+
+export interface PetExpense {
+  id: string
+  date: string
+  category: PetExpenseCategory
+  amount: number
+  description?: string
+}
+
+export interface Pet {
+  id: string
+  name: string
+  species: PetSpecies
+  /** Si la especie es 'otro' o se quiere precisar (ej. "Cobayo"). */
+  speciesDetail?: string
+  breed?: string
+  sex?: PetSex
+  neutered?: boolean
+  birthDate?: string
+  adoptionDate?: string
+  color?: string
+  /** Foto de la mascota (JPEG reducido, data URL). */
+  photo?: string
+  microchip?: string
+  registration?: string
+  temperament?: string
+  allergies?: string
+  conditions?: string
+  vet?: { name?: string; clinic?: string; phone?: string; address?: string }
+  insurance?: { company?: string; policy?: string; phone?: string; validUntil?: string }
+  diet?: { food?: string; brand?: string; portion?: string; mealsPerDay?: number; notes?: string }
+  notes?: string
+  /** Fecha en que falleció (la mascota queda como recuerdo, sin avisos). */
+  deceasedDate?: string
+  health: PetHealthRecord[]
+  weights: PetWeightEntry[]
+  medications: PetMedication[]
+  appointments: PetAppointment[]
+  expenses: PetExpense[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface PersonalData {
+  pets?: Pet[]
   finances: FinanceTransaction[]
   budgets?: Record<string, number>
   /** Categorías propias (las predefinidas viven en el código). */

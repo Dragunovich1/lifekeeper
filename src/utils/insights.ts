@@ -3,6 +3,7 @@ import { navigation } from '../navigation'
 import type { AppData, MoodLevel } from '../types'
 import { computeCycle, dayKey } from './cycle'
 import { METHODS, methodStatus } from './contraceptives'
+import { allPetAlerts } from './pets'
 import { MEASUREMENT_META, classifyMeasurement, formatMeasurement, measurementTimestamp } from './measurements'
 import {
   formatCurrency,
@@ -637,6 +638,22 @@ export const computeSmartSummary = (data: AppData, now = new Date()): DashboardS
       }
     })
   }
+
+  // Mascotas: vacunas/controles vencidos o por vencer, turnos próximos y seguro
+  allPetAlerts(data.personal.pets ?? [], now)
+    .slice(0, 6)
+    .forEach((a) => {
+      insights.push({
+        id: `pet-${a.petId}-${a.recordId ?? a.kind}`,
+        title: `${a.petName}: ${a.title}`,
+        description: `${a.label} (${formatDate(a.date)}).`,
+        severity: a.status === 'overdue' ? 'warning' : 'info',
+        category: 'personal',
+        actionLabel: 'Ver mascota',
+        targetHash: '#personal:pets',
+        meta: 'Mascotas',
+      })
+    })
 
   // Ordenar insights por severidad: critical -> warning -> info -> success
   const severityOrder: Record<InsightSeverity, number> = {

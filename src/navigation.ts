@@ -67,6 +67,7 @@ export const getNavigation = (profile?: UserProfile): NavSection[] => {
         { key: 'projects', label: 'Proyectos e ideas' },
         { key: 'vehicles', label: 'Vehículos' },
         { key: 'workouts', label: 'Entrenamientos' },
+        { key: 'pets', label: 'Mascotas' },
       ],
     },
     {
