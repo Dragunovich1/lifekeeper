@@ -35,6 +35,15 @@ const FALSE_SAVE_CLAIM =
 /** Si el LLM afirma haber guardado algo (y la app no ejecutó ninguna acción), se aclara. */
 export function guardFalseSaveClaims(text: string): string {
   if (!FALSE_SAVE_CLAIM.test(text)) return text
+  // Si el LLM imitó el formato de confirmación de la app ("✅ ¡Listo! Esto quedó guardado…"), esa respuesta es falsa:
+  // se descarta entera en lugar de dejarla a la vista con un aviso al final.
+  if (/✅|esto qued[oó] guardad|¡listo,? che!/i.test(text)) {
+    return (
+      '⚠️ **Eso no quedó guardado, che:** no logré interpretarlo como una carga. Pedímelo más directo, por ejemplo: ' +
+      '**"cargá el medicamento Noster 5/160, 1 vez al día a las 11:30"**, **"se me vence la VTV el 15 de noviembre"** ' +
+      'o **"tomé 3 vasos de agua"**.'
+    )
+  }
   return (
     text.trim() +
     '\n\n⚠️ **Ojo, che:** eso todavía **no quedó guardado**. Decímelo directo y lo hago, por ejemplo: ' +
@@ -200,7 +209,10 @@ export async function planLlmActions(
     types = fallback.map((a) => a.type)
   }
 
-  const defs = ALL_ACTIONS.filter((a) => types.includes(a.type)).slice(0, 6)
+  let defs = ALL_ACTIONS.filter((a) => types.includes(a.type)).slice(0, 6)
+  // Red de seguridad: si el clasificador no vio nada pero el texto trae pistas claras, el extractor lo intenta igual.
+  // (Si no hay nada para guardar, devuelve acciones vacías y se sigue como conversación.)
+  if (defs.length === 0) defs = relevantActions(userText, lastAssistantText).slice(0, 4)
   if (defs.length === 0) return null
 
   // 2. Completar los datos de esas áreas

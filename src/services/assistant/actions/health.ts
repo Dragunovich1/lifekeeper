@@ -63,8 +63,8 @@ export const medicationTakenAction: ActionDef = {
 
 export const medicationAddAction: ActionDef = {
   type: 'medication_add',
-  about: 'empieza o le recetaron un medicamento o tratamiento nuevo',
-  hints: /empece|empiezo|me recetaron|me indicaron|tengo que tomar|tratamiento|antibiotic|\bmg\b|cada \d+ horas/,
+  about: 'quiere cargar, agregar o anotar un medicamento o tratamiento que toma (nombre, dosis, cada cuánto, a qué hora), o le recetaron uno nuevo o empieza a tomarlo',
+  hints: /medicaci|medicamento|remedio|pastilla|comprimido|capsula|jarabe|empece|empiezo|me recetaron|me indicaron|tengo que tomar|tomo \w+ (todos|cada)|tratamiento|antibiotic|\bmg\b|\d+\s*\/\s*\d+\s*(mg)?|dosis|cada \d+ horas|\d+ veces? al dia/,
   schema: '{"type":"medication_add","name":"...","dosage":"ej. 500 mg","frequency":"ej. cada 8 horas","times":["08:00","16:00"],"startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD o vacío","instructions":"..."}',
   example: '"me recetaron amoxicilina 500 mg cada 8 horas por 7 días" → {"type":"medication_add","name":"Amoxicilina","dosage":"500 mg","frequency":"Cada 8 horas","times":["08:00","16:00","00:00"],"endDate":"(hoy + 7 días)"}',
   build(raw, { todayKey }) {

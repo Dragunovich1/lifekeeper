@@ -136,3 +136,24 @@ describe('layout del Dashboard', () => {
     expect(normalizeDashboardLayout(null).hidden).toEqual([])
   })
 })
+
+describe('asistente: honestidad y detección de medicación', () => {
+  it('descarta una confirmación falsa del LLM en lugar de mostrarla', async () => {
+    const { guardFalseSaveClaims } = await import('../services/assistant/actionExtractor')
+    const fake = '✅ ¡Listo, che! Esto quedó guardado:\n• Medicación: Noster 5/160'
+    const out = guardFalseSaveClaims(fake)
+    expect(out).not.toContain('Listo')
+    expect(out).toContain('no quedó guardado')
+    expect(guardFalseSaveClaims('Hoy tenés 2 recordatorios.')).toBe('Hoy tenés 2 recordatorios.')
+  })
+  it('las pistas de medicación reconocen pedidos de carga habituales', async () => {
+    const { ALL_ACTIONS } = await import('../services/assistant/actions')
+    const { normalizeText } = await import('../services/assistant/actions/helpers')
+    const med = ALL_ACTIONS.find((a) => a.type === 'medication_add')!
+    for (const t of [
+      'cargame la medicacion noster 5/160 amlodipina/valsartan 1 vez al dia a las 11:30',
+      'agregá la pastilla para la presión, 1 por día',
+      'tomo enalapril 10 mg todos los dias',
+    ]) expect(med.hints.test(normalizeText(t))).toBe(true)
+  })
+})
