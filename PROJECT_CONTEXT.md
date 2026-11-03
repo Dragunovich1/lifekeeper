@@ -188,6 +188,17 @@
 - **Nublado / Nieve:** cielo propio y más cuerpo en nubes y escarcha. La posición del sol/luna es `--sky-x` (33 % en escritorio, 82 % en celular).
 - Para revisar todos los estados: Dashboard, tocar el clima y usar "Vista previa de atmósfera en portada".
 
+### Reglas aprendidas de la APK (no romper de nuevo)
+- **Scroll:** NO poner `overscroll-behavior` en `.mobile-app-shell` (es un scroller por su `overflow-x`; corta el scroll táctil hacia el documento y deja la pantalla sin scroll). El que scrollea en el celular es el **documento**, no `.mobile-main-content`: el gesto de "tirar para sincronizar" debe mirar `window.scrollY`.
+- **Descargas:** el WebView de Android NO descarga blobs. Todo exporte debe pasar por `utils/saveFile.ts` (`saveFile` / `savePdf`): en la web usa file-saver; en la APK escribe en el caché y abre el menú Compartir. Nunca usar `saveAs`/`doc.save` directo. `window.print()` tampoco existe.
+- **Voz:** `speechSynthesis` y `webkitSpeechRecognition` no son confiables en el WebView: la APK usa `@capacitor-community/text-to-speech` y `@capacitor-community/speech-recognition` (`services/assistant/nativeTts.ts` / `nativeStt.ts`). Piper y todo servicio detrás de nginx (no Express) necesita **CORS** propio (la APK corre en `https://localhost`): ya está en `tts/server.py`.
+- **Compatibilidad de WebViews viejos:** no usar `AbortSignal.timeout` (usar `utils/abort.ts`).
+- **Animaciones:** `prefers-reduced-motion` de Android las apagaba todas. Preferencia `forceAnimations` + `<html data-motion="on">`. El fondo animado (`.bg-fx`) quedaba tapado por el fondo sólido de `.mobile-app-shell`: `html.has-fx .mobile-app-shell {background: transparent}`.
+- **Sync:** si el token de la nube vence (el servidor se reinició con otra clave JWT), `syncService` vuelve a iniciar sesión solo (`reauth`) y los errores se muestran con un mensaje claro (`getLastError`).
+- **Tablas:** en el celular se muestran como tarjetas (`hooks/useStackedTables.ts` + CSS al final de `mobile.css`); la lista va antes que el formulario de alta. Los formularios sueltos usan `.form-label`/`.form-input` (estilos en `components.css`).
+- **Cómo auditar:** cargar datos realistas con el catálogo de acciones del asistente, importarlos por Respaldos y recorrer las 26 secciones y los modales a 390 px (pantallas vacías esconden los desbordes). Para probar scroll táctil usar `Input.dispatchTouchEvent` (CDP); `synthesizeScrollGesture` no funciona en headless.
+- **Botón "+":** movible (arrastrar, se pega al borde, posición en `localStorage`) y ocultable (Configuración o la hoja del botón).
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)
