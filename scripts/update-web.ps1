@@ -72,7 +72,8 @@ $flags = @()
 if ($NoCache)  { $flags += '--no-cache' }
 if ($NoBackup) { $flags += '--no-backup' }
 if ($DryRun)   { $flags += '--dry-run' }
-$remoteCmd = "cd $RemotePath && chmod +x scripts/update-web.sh && ./scripts/update-web.sh $Branch $($flags -join ' ')"
+# Primero se trae la rama (si el servidor tiene una versión vieja, todavía no tiene scripts/update-web.sh)
+$remoteCmd = "cd $RemotePath && git fetch origin $Branch && git checkout $Branch && git pull --ff-only origin $Branch && chmod +x scripts/update-web.sh && ./scripts/update-web.sh $Branch $($flags -join ' ')"
 
 Step "Conectando al servidor y actualizando (puede pedirte la contraseña de $User)"
 Info $remoteCmd
