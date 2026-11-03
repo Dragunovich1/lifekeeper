@@ -21,6 +21,7 @@ import { PreferencesProvider } from './preferences/PreferencesProvider'
 import { useMobileLayout } from './hooks/useMobileLayout'
 import { useSwipeGesture } from './hooks/useSwipeGesture'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
+import { useCloudAutoRetry } from './hooks/useCloudStatus'
 import { MobileTopBar } from './components/mobile/MobileTopBar'
 import { MobileBottomNav } from './components/mobile/MobileBottomNav'
 import { MobileMenuSheet } from './components/mobile/MobileMenuSheet'
@@ -171,6 +172,8 @@ const VaultApp = () => {
     },
     { enabled: isMobile && Boolean(activeSection) },
   )
+
+  useCloudAutoRetry(syncNow, true)
 
   const [syncToast, setSyncToast] = useState<string | null>(null)
   const { pull, refreshing } = usePullToRefresh(

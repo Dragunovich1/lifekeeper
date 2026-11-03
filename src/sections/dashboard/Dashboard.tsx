@@ -49,6 +49,7 @@ import { Modal } from '../../components/Modal'
 import { ShareModal } from '../../components/ShareModal'
 import { VaultScoreCard } from '../../components/VaultScoreCard'
 import { PinnedNotesCard } from '../../components/PinnedNotesCard'
+import { SyncStatusChip } from '../../components/SyncStatusChip'
 import { fetchAirQuality, type AirQualityData } from '../../services/api'
 import { useAppData } from '../../hooks/useAppData'
 import { useInsights } from '../../hooks/useInsights'
@@ -1144,6 +1145,7 @@ export const DashboardSection = () => {
               <Share2 size={13} aria-hidden />
               <span>Compartir app</span>
             </button>
+            <SyncStatusChip />
           </div>
         </div>
 
