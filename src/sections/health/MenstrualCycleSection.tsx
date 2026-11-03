@@ -382,17 +382,21 @@ export const MenstrualCycleSection = () => {
               marginBottom: '1rem',
               padding: '1.25rem',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'row',
+              alignItems: 'flex-start',
               gap: '1rem',
               background: 'linear-gradient(135deg, rgba(244, 63, 94, 0.05) 0%, rgba(56, 189, 248, 0.05) 100%)',
             }}
           >
             <CalendarHeart size={32} style={{ color: '#f43f5e', flexShrink: 0 }} />
-            <div>
+            <div style={{ minWidth: 0 }}>
               <h4 style={{ margin: 0, fontSize: '1rem' }}>Comenzá a registrar tu ciclo</h4>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                Anotá la fecha de tu último período en el formulario de abajo para calcular tu fase actual, ovulación y predicciones automáticas en el calendario.
+              <p style={{ margin: '0.25rem 0 0.75rem', fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                Cargá la <b>fecha de inicio</b> de tu último período (el <b>primer día</b> que sangraste). Con eso calculamos tu fase actual, la ovulación y las predicciones del calendario. La fecha de fin es opcional.
               </p>
+              <button type="button" className="primary-button" onClick={() => setTab('registros')}>
+                <Plus size={16} /> Registrar mi último período
+              </button>
             </div>
           </div>
         )}
@@ -461,7 +465,7 @@ export const MenstrualCycleSection = () => {
 
           <form onSubmit={handleSaveEntry} className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
             <div className="field">
-              <label htmlFor="period-start">Fecha de inicio</label>
+              <label htmlFor="period-start">Fecha de inicio (primer día del sangrado)</label>
               <DatePicker
                 id="period-start"
                 value={startDate}
@@ -471,7 +475,7 @@ export const MenstrualCycleSection = () => {
             </div>
 
             <div className="field">
-              <label htmlFor="period-end">Fecha de fin (opcional)</label>
+              <label htmlFor="period-end">Fecha de fin (último día, opcional)</label>
               <DatePicker
                 id="period-end"
                 value={endDate}

@@ -157,7 +157,7 @@ export const mealAction: ActionDef = {
       },
       line: `• 🥗 **${capitalize(mealType)}:** ${food.name} — ${calories} kcal${given ? '' : ' (estimado)'}`,
       card: { category: 'nutricion', title: `${food.name} (${mealType})`, details: `+${calories} kcal`, badge: `${calories} kcal`, entityId: food.id },
-      link: { label: 'Ver Nutrición', hash: '#personal:nutrition' },
+      link: { label: 'Ver Nutrición', hash: '#health:nutrition' },
     }
   },
 }

@@ -616,7 +616,7 @@ export function tryExecuteAssistantMutation(query: string, data: AppData): Assis
     return {
       message: createAssistantMessage(
         `🥗 **¡Bien ahí con los nutrientes, che!**\n\n• **Comida:** ${mealType.toUpperCase()}\n• **Alimento:** ${foodName}${grams ? ` (${grams} g)` : ''}\n• **Aporte calórico:** **${calories} kcal**\n• **Fecha:** Hoy (${todayKey})\n\n¡Sumado impecable a tu diario nutricional!`,
-        { label: 'Ver Nutrición', hash: '#personal:nutrition' },
+        { label: 'Ver Nutrición', hash: '#health:nutrition' },
         {
           category: 'nutricion',
           title: `${foodName} (${mealType})`,
@@ -1095,7 +1095,7 @@ export async function processAssistantQuery(query: string, data: AppData): Promi
         `• **Merienda (400 kcal):** Yogur griego o queso descremado con frutos secos y una banana.\n` +
         `• **Cena (550 kcal):** Filet de pescado o lomo con batatas al horno y vegetales al vapor.\n\n` +
         `👇 **Podés tocar el botón de abajo para fijar estas metas directamente en tu sección de Nutrición.**`,
-      { label: 'Ir a Nutrición', hash: '#personal:nutrition' },
+      { label: 'Ir a Nutrición', hash: '#health:nutrition' },
       undefined,
       {
         type: 'nutrition_plan',

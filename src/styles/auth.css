@@ -467,3 +467,26 @@
     font-size: 0.8125rem;
   }
 }
+
+/* Campo de contraseña con ojito */
+.pw-wrap { position: relative; display: block; width: 100%; }
+.pw-wrap .pw-input { padding-right: 2.75rem; }
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.pw-toggle:hover, .pw-toggle:focus-visible { color: var(--color-text-primary); background: var(--color-surface-hover); outline: none; }
+.pw-toggle[aria-pressed='true'] { color: var(--color-accent-blue); }

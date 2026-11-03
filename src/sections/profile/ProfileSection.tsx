@@ -1,7 +1,7 @@
 import { LocationFields } from '../../components/LocationFields'
 import type { FormEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import { CalendarHeart, Dumbbell, HeartPulse, Info, Sparkles, ShieldCheck } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Check, CalendarHeart, Dumbbell, HeartPulse, Info, Loader2, Sparkles, ShieldCheck } from 'lucide-react'
 import { DatePicker } from '../../components/DatePicker'
 import { SectionHeader } from '../../components/SectionHeader'
 import { Select } from '../../components/Select'
@@ -92,10 +92,21 @@ export const ProfileSection = () => {
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // 'saved' se muestra unos segundos después de guardar
+  const [justSaved, setJustSaved] = useState(false)
+  const savedTimer = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     setFormState(toFormState(data.profile))
   }, [data.profile])
+
+  useEffect(() => () => window.clearTimeout(savedTimer.current), [])
+
+  // ¿Hay cambios sin guardar? (compara el formulario con lo que está guardado)
+  const dirty = useMemo(
+    () => JSON.stringify(formState) !== JSON.stringify(toFormState(data.profile)),
+    [formState, data.profile],
+  )
 
   const avatarInitials = useMemo(() => {
     if (formState.fullName) {
@@ -178,6 +189,7 @@ export const ProfileSection = () => {
     setSaving(true)
     setStatus(null)
     setError(null)
+    setJustSaved(false)
 
     try {
       updateData((previous) => ({
@@ -223,7 +235,9 @@ export const ProfileSection = () => {
           updatedAt: new Date().toISOString(),
         },
       }))
-      setStatus('Datos de perfil actualizados correctamente.')
+      setJustSaved(true)
+      window.clearTimeout(savedTimer.current)
+      savedTimer.current = window.setTimeout(() => setJustSaved(false), 3500)
     } catch {
       setError('No pudimos guardar los cambios, intentá nuevamente.')
     } finally {
@@ -817,13 +831,52 @@ export const ProfileSection = () => {
           </div>
         </div>
 
-        <div className="section-actions">
-          <button className="primary-button" type="submit" disabled={saving}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-        </div>
+        {error ? <p className="auth-error" role="alert">{error}</p> : null}
         {status ? <p className="panel-subtitle">{status}</p> : null}
-        {error ? <p className="auth-error">{error}</p> : null}
+
+        {/* Barra de guardado: avisa cambios pendientes, el guardado en curso y la confirmación */}
+        {dirty || saving || justSaved ? <div className="save-bar-spacer" aria-hidden /> : null}
+        {dirty || saving || justSaved ? (
+          <div
+            className={`save-bar${dirty ? ' is-dirty' : ''}${saving ? ' is-saving' : ''}${justSaved && !dirty ? ' is-saved' : ''}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="save-bar-msg">
+              {saving ? (
+                <><Loader2 size={18} className="save-bar-spin" aria-hidden /> Guardando…</>
+              ) : dirty ? (
+                <><span className="save-bar-dot" aria-hidden /> Tenés cambios sin guardar</>
+              ) : (
+                <><Check size={18} aria-hidden /> Cambios guardados</>
+              )}
+            </span>
+            {dirty ? (
+              <span className="save-bar-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={saving}
+                  onClick={() => {
+                    setFormState(toFormState(data.profile))
+                    setError(null)
+                  }}
+                >
+                  Descartar
+                </button>
+                <button className="primary-button" type="submit" disabled={saving}>
+                  {saving ? 'Guardando…' : 'Guardar cambios'}
+                </button>
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <div className="section-actions">
+            <button className="primary-button" type="submit" disabled>
+              Guardar cambios
+            </button>
+          </div>
+        )}
       </form>
     </div>
   )

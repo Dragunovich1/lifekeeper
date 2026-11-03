@@ -21,6 +21,17 @@ interface SelectProps {
 const MENU_MIN_WIDTH = 180
 const MENU_GAP = 6
 const MENU_MAX_HEIGHT = 280
+const OPTION_HEIGHT = 36
+const EDGE = 8
+
+interface MenuPosition {
+  left: number
+  width: number
+  maxHeight: number
+  /** Si cabe abajo se ancla por arriba del menú; si se abre hacia arriba, se ancla por su borde inferior (así queda pegado al campo sin importar su alto real). */
+  top?: number
+  bottom?: number
+}
 
 export const Select = ({
   id,
@@ -36,21 +47,22 @@ export const Select = ({
   const menuRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
-  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null)
+  const [position, setPosition] = useState<MenuPosition | null>(null)
   const selected = options.find((option) => option.value === value)
 
-  const computePosition = () => {
+  const computePosition = (): MenuPosition | null => {
     const trigger = triggerRef.current
     if (!trigger) return null
     const rect = trigger.getBoundingClientRect()
     const width = Math.max(rect.width, MENU_MIN_WIDTH)
-    const spaceBelow = window.innerHeight - rect.bottom - MENU_GAP
-    const top =
-      spaceBelow >= Math.min(MENU_MAX_HEIGHT, 220) || rect.top < MENU_MAX_HEIGHT
-        ? rect.bottom + MENU_GAP
-        : Math.max(8, rect.top - MENU_GAP - Math.min(MENU_MAX_HEIGHT, 220))
-    const left = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - width - 8))
-    return { top, left, width }
+    const left = Math.min(Math.max(EDGE, rect.left), Math.max(EDGE, window.innerWidth - width - EDGE))
+    const spaceBelow = window.innerHeight - rect.bottom - MENU_GAP - EDGE
+    const spaceAbove = rect.top - MENU_GAP - EDGE
+    const needed = Math.min(MENU_MAX_HEIGHT, Math.max(1, options.length) * OPTION_HEIGHT + 12)
+    if (spaceBelow >= needed || spaceBelow >= spaceAbove) {
+      return { left, width, top: rect.bottom + MENU_GAP, maxHeight: Math.max(120, Math.min(MENU_MAX_HEIGHT, spaceBelow)) }
+    }
+    return { left, width, bottom: window.innerHeight - rect.top + MENU_GAP, maxHeight: Math.max(120, Math.min(MENU_MAX_HEIGHT, spaceAbove)) }
   }
 
   const openMenu = () => {
@@ -75,15 +87,23 @@ export const Select = ({
 
   useLayoutEffect(() => {
     if (!open) return
-    setPosition(computePosition())
-    const onResize = () => setPosition(computePosition())
-    window.addEventListener('resize', onResize)
-    window.addEventListener('scroll', onResize, true)
-    return () => {
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('scroll', onResize, true)
+    // Sigue al campo mientras está abierto: si la página se desplaza o el contenido cambia de alto
+    // (imágenes que cargan, avisos que aparecen) el menú no se queda en el lugar viejo.
+    let frame = 0
+    let last = ''
+    const track = () => {
+      const next = computePosition()
+      const key = JSON.stringify(next)
+      if (key !== last) {
+        last = key
+        setPosition(next)
+      }
+      frame = window.requestAnimationFrame(track)
     }
-  }, [open])
+    track()
+    return () => window.cancelAnimationFrame(frame)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, options.length])
 
   useEffect(() => {
     if (!open) return
@@ -153,7 +173,7 @@ export const Select = ({
               className="app-select-menu"
               role="listbox"
               aria-label={ariaLabel}
-              style={{ top: position.top, left: position.left, minWidth: position.width }}
+              style={{ top: position.top, bottom: position.bottom, left: position.left, minWidth: position.width, maxHeight: position.maxHeight }}
             >
               {options.length === 0 ? (
                 <div className="app-select-empty">Sin opciones</div>

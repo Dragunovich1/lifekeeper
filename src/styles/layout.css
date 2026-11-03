@@ -478,3 +478,45 @@
   max-width: var(--content-max);
   margin: 0 auto;
 }
+
+/* Barra de guardado (perfil): cambios pendientes → guardando → guardado.
+   Fija (no sticky): el contenedor del layout móvil es un scroller y rompe a sticky. */
+.save-bar {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  /* En escritorio hay un pie fijo: la barra va encima */
+  bottom: calc(var(--footer-height, 3rem) + var(--safe-bottom, 0px) + 0.75rem);
+  max-width: 760px;
+  margin: 0 auto;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--color-border-strong, var(--color-border));
+  background: var(--color-bg-elevated, var(--color-surface));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  animation: save-bar-in 0.18s ease-out;
+}
+/* En el celular: sobre la barra de navegación y por encima del botón "+" */
+.mobile-app-shell .save-bar { bottom: calc(var(--mobile-bottom-height, 64px) + var(--safe-bottom, 0px) + 5.25rem); }
+.save-bar-spacer { height: 6rem; }
+.save-bar-msg { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 600; min-width: 0; }
+.save-bar-actions { display: flex; gap: 0.5rem; margin-left: auto; }
+.save-bar-actions button { padding: 0.45rem 0.95rem; }
+.save-bar.is-dirty { border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 60%, transparent); }
+.save-bar-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--color-warning, #f59e0b); box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning, #f59e0b) 25%, transparent); }
+.save-bar.is-saving { border-color: var(--color-accent-blue); }
+.save-bar-spin { animation: save-bar-spin 0.9s linear infinite; }
+.save-bar.is-saved { border-color: color-mix(in srgb, var(--color-success, #10b981) 60%, transparent); }
+.save-bar.is-saved .save-bar-msg { color: var(--color-success, #10b981); }
+@keyframes save-bar-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes save-bar-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .save-bar, .save-bar-spin { animation: none; } }
+@media (max-width: 520px) { .save-bar-actions { width: 100%; } .save-bar-actions button { flex: 1; } }

@@ -4,6 +4,7 @@ import { CloudDownload, Fingerprint, HeartPulse, LockKeyhole, Server, ShieldChec
 import { useAppDataUnsafe } from '../hooks/useAppData'
 import { loadProfileMeta, storeProfileMeta, type StoredProfileMeta } from '../utils/storage'
 import { Footer } from './Footer'
+import { PasswordInput } from './PasswordInput'
 import { usePreferences } from '../preferences/context'
 import {
   isBiometricsAvailable,
@@ -387,10 +388,8 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                     <label className="auth-label" htmlFor="restore-password">
                       Contraseña maestra
                     </label>
-                    <input
+                    <PasswordInput
                       id="restore-password"
-                      className="auth-input"
-                      type="password"
                       autoComplete="current-password"
                       value={loginPassword}
                       onChange={(event) => setLoginPassword(event.target.value)}
@@ -418,10 +417,8 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                     <label className="auth-label" htmlFor="login-password">
                       Contraseña maestra
                     </label>
-                    <input
+                    <PasswordInput
                       id="login-password"
-                      className="auth-input"
-                      type="password"
                       autoComplete="current-password"
                       value={loginPassword}
                       onChange={(event) => setLoginPassword(event.target.value)}
@@ -489,10 +486,8 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                     <label className="auth-label" htmlFor="signup-password">
                       Contraseña maestra
                     </label>
-                    <input
+                    <PasswordInput
                       id="signup-password"
-                      className="auth-input"
-                      type="password"
                       autoComplete="new-password"
                       value={signup.password}
                       onChange={(event) => setSignup((prev) => ({ ...prev, password: event.target.value }))}
@@ -503,10 +498,8 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
                     <label className="auth-label" htmlFor="signup-confirm">
                       Confirma tu contraseña
                     </label>
-                    <input
+                    <PasswordInput
                       id="signup-confirm"
-                      className="auth-input"
-                      type="password"
                       autoComplete="new-password"
                       value={signup.confirm}
                       onChange={(event) => setSignup((prev) => ({ ...prev, confirm: event.target.value }))}

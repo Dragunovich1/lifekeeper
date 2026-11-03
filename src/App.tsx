@@ -87,7 +87,7 @@ const sectionComponents = {
   'personal:projects': LazyPersonalProjects,
   'personal:vehicles': LazyPersonalVehicles,
   'personal:workouts': LazyPersonalWorkouts,
-  'personal:nutrition': LazyPersonalNutrition,
+  'health:nutrition': LazyPersonalNutrition,
   'utilities:reminders': LazyUtilitiesReminders,
   'utilities:calendar': LazyUtilitiesCalendar,
   'utilities:shopping': LazyUtilitiesShopping,
@@ -197,7 +197,12 @@ const VaultApp = () => {
   // Deep-link via hash: #section:sub
   useEffect(() => {
     const syncFromHash = () => {
-      const raw = window.location.hash.replace(/^#/, '')
+      let raw = window.location.hash.replace(/^#/, '')
+      // Enlaces viejos: Nutrición ahora vive en Salud
+      if (raw === 'personal:nutrition') {
+        raw = 'health:nutrition'
+        window.history.replaceState(null, '', '#health:nutrition')
+      }
       if (!raw) {
         setActiveSection(null)
         return

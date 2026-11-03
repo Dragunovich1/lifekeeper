@@ -115,6 +115,38 @@ export const MobileMenuSheet = ({
           </div>
         </button>
 
+        {/* Salud: nutrición y ciclo menstrual viven acá */}
+        <div className="mobile-sheet-section-title">Salud</div>
+        <div className="mobile-sheet-grid">
+          <button
+            className="mobile-sheet-card"
+            onClick={() => handleItemClick(() => onNavigate('health', 'nutrition'))}
+          >
+            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+              <Utensils size={20} />
+            </div>
+            <div>
+              <div className="mobile-sheet-card-label">Nutrición</div>
+              <div className="mobile-sheet-card-sub">Calorías y comidas</div>
+            </div>
+          </button>
+
+          {isFemale && (
+            <button
+              className="mobile-sheet-card"
+              onClick={() => handleItemClick(() => onNavigate('health', 'menstrual'))}
+            >
+              <div className="mobile-sheet-card-icon" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e' }}>
+                <CalendarHeart size={20} />
+              </div>
+              <div>
+                <div className="mobile-sheet-card-label">Ciclo Menstrual</div>
+                <div className="mobile-sheet-card-sub">Fases y bienestar</div>
+              </div>
+            </button>
+          )}
+        </div>
+
         {/* 1. Vida Personal */}
         <div className="mobile-sheet-section-title">Vida Personal</div>
         <div className="mobile-sheet-grid">
@@ -169,34 +201,6 @@ export const MobileMenuSheet = ({
               <div className="mobile-sheet-card-sub">Rutinas físicas</div>
             </div>
           </button>
-
-          <button
-            className="mobile-sheet-card"
-            onClick={() => handleItemClick(() => onNavigate('personal', 'nutrition'))}
-          >
-            <div className="mobile-sheet-card-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
-              <Utensils size={20} />
-            </div>
-            <div>
-              <div className="mobile-sheet-card-label">Nutrición</div>
-              <div className="mobile-sheet-card-sub">Calorías y comidas</div>
-            </div>
-          </button>
-
-          {isFemale && (
-            <button
-              className="mobile-sheet-card"
-              onClick={() => handleItemClick(() => onNavigate('health', 'menstrual'))}
-            >
-              <div className="mobile-sheet-card-icon" style={{ background: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e' }}>
-                <CalendarHeart size={20} />
-              </div>
-              <div>
-                <div className="mobile-sheet-card-label">Ciclo Menstrual</div>
-                <div className="mobile-sheet-card-sub">Fases y bienestar</div>
-              </div>
-            </button>
-          )}
         </div>
 
         {/* 2. Utilidades */}
