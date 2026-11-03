@@ -199,6 +199,12 @@
 - **Cómo auditar:** cargar datos realistas con el catálogo de acciones del asistente, importarlos por Respaldos y recorrer las 26 secciones y los modales a 390 px (pantallas vacías esconden los desbordes). Para probar scroll táctil usar `Input.dispatchTouchEvent` (CDP); `synthesizeScrollGesture` no funciona en headless.
 - **Botón "+":** movible (arrastrar, se pega al borde, posición en `localStorage`) y ocultable (Configuración o la hoja del botón).
 
+### Reglas de escritorio (modales, campos y header)
+- **Modales:** en un efecto que enfoca algo, NUNCA poner `onClose` (ni otro callback) en las dependencias: es una función nueva en cada render y el efecto se reinicia, devolviendo el foco a la "X" en cada tecla (el espacio la presiona). Usar el patrón `onCloseRef`. Ya aplicado en `Modal`, `ConfirmModal`, `ShareModal`, `LegalModal`.
+- **Cerrar con datos cargados:** `Modal` pide confirmación ("¿Salir sin guardar?") si se tocó un campo dentro de un `<form>` (tocar fuera, X o Esc). Las búsquedas se excluyen con `role="search"` o `data-no-dirty`; se desactiva con `confirmDiscard={false}`.
+- **Campos:** todo input/select/textarea debe estar dentro de `.field` (no basta `.field-full`) o `.form-input`. Los campos sueltos en modales toman el estilo por una red de seguridad (`:where(.pref-modal-body ...)` en `components.css`). Los inputs numéricos no muestran las flechitas nativas.
+- **Header:** el carrusel de navegación se muestra desde 821 px (debajo entra el layout móvil con hamburguesa). Entre 821 y 1279 la marca conserva su ancho natural.
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)

@@ -214,7 +214,9 @@
   );
 }
 
-@media (min-width: 1280px) {
+/* Desde 821 px ya es layout de escritorio (menos de eso entra el layout móvil): el menú es un carrusel con flechas,
+   así que entra bien en notebooks aunque Windows tenga escala 125-150 %. */
+@media (min-width: 821px) {
   .app-header-inner {
     display: grid;
     grid-template-columns: minmax(0, 0.55fr) minmax(0, 1.95fr) auto;
@@ -235,6 +237,17 @@
     display: flex;
     justify-content: center;
     min-width: 0;
+  }
+}
+
+/* Notebooks (821-1279 px): la marca conserva su ancho natural y el carrusel usa el resto (sin pisar el logo) */
+@media (min-width: 821px) and (max-width: 1279px) {
+  .app-header-inner {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .app-header-brand {
+    min-width: max-content;
   }
 }
 
