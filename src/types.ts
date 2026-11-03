@@ -311,6 +311,13 @@ export interface UserProfile {
   bio?: string
   birthDate?: string
   country?: string
+  /** Código ISO del país (AR, UY…), cuando se eligió de la lista. */
+  countryCode?: string
+  province?: string
+  city?: string
+  /** Coordenadas de la ciudad elegida (sirven, por ejemplo, para el clima de tu zona). */
+  latitude?: number
+  longitude?: number
   avatar?: string
   gender?: Gender
   heightCm?: number

@@ -4,6 +4,7 @@
  *  - Inflación / IPC del INDEC (API de Series de Tiempo de datos.gob.ar, con ArgentinaDatos de respaldo)
  *  - Catálogo de ejercicios (wger)
  *  - Información de salud en español (MedlinePlus, de la Biblioteca Nacional de Medicina de EE.UU.)
+ *  - Búsqueda de ciudades para el autocompletado de ubicación (geocodificación abierta de Open-Meteo / GeoNames)
  *
  * Por qué pasa por el servidor y no directo desde el navegador:
  *  - Privacidad: la IP del usuario no llega a cada API externa y no se envía ningún dato personal.
@@ -424,8 +425,52 @@ export function createPublicDataRouter({ fetchImpl = globalThis.fetch, cacheFile
     }
   })
 
+  // -------------------------------------------------------------------------
+  // Ciudades (autocompletado de ubicación). Solo se envía el texto escrito y, opcionalmente, el código de país.
+  // -------------------------------------------------------------------------
+  /** Respuesta de Open-Meteo → lista corta y sin repetidos de { name, admin1, country, countryCode, latitude, longitude }. */
+  function normalizePlaces(raw) {
+    const seen = new Set()
+    const out = []
+    for (const r of raw?.results ?? []) {
+      if (!r?.name || typeof r.latitude !== 'number' || typeof r.longitude !== 'number') continue
+      const key = `${normalize(r.name)}|${normalize(r.admin1 ?? '')}|${r.country_code ?? ''}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({
+        name: String(r.name),
+        admin1: r.admin1 ? String(r.admin1) : undefined,
+        admin2: r.admin2 ? String(r.admin2) : undefined,
+        country: String(r.country ?? r.country_code ?? ''),
+        countryCode: String(r.country_code ?? ''),
+        latitude: r.latitude,
+        longitude: r.longitude,
+        population: typeof r.population === 'number' ? r.population : undefined,
+      })
+    }
+    return out
+  }
+
+  router.get('/geocode', async (req, res) => {
+    const q = String(req.query.q ?? '').trim().slice(0, 60)
+    const countryCode = /^[A-Za-z]{2}$/.test(String(req.query.country ?? '')) ? String(req.query.country).toUpperCase() : ''
+    const count = Math.min(10, Math.max(1, Number(req.query.count) || 8))
+    if (q.length < 2) return res.status(400).json({ error: 'Búsqueda demasiado corta' })
+    try {
+      const { value, stale } = await cached(`geo:${countryCode}:${normalize(q)}:${count}`, 30 * DAY, async () => {
+        const url =
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=${count}&language=es&format=json` +
+          (countryCode ? `&countryCode=${countryCode}` : '')
+        return normalizePlaces(await getJson(url))
+      })
+      res.json({ query: q, source: 'Open-Meteo / GeoNames', places: value, stale })
+    } catch (err) {
+      fail(res, err)
+    }
+  })
+
   router.get('/status', (_req, res) => {
-    res.json({ ok: true, services: ['holidays', 'inflation', 'exercises', 'medlineplus'], exercises: { ready: catalog.ready, total: catalog.items.length } })
+    res.json({ ok: true, services: ['holidays', 'inflation', 'exercises', 'medlineplus', 'geocode'], exercises: { ready: catalog.ready, total: catalog.items.length } })
   })
 
   return router

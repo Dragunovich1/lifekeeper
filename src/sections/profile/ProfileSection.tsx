@@ -1,3 +1,4 @@
+import { LocationFields } from '../../components/LocationFields'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarHeart, Dumbbell, HeartPulse, Info, Sparkles, ShieldCheck } from 'lucide-react'
@@ -18,6 +19,11 @@ interface ProfileFormState {
   bio: string
   birthDate: string
   country: string
+  countryCode?: string
+  province: string
+  city: string
+  latitude?: number
+  longitude?: number
   avatar?: string
   gender: Gender
   heightCm: number | ''
@@ -56,6 +62,11 @@ const toFormState = (profile: UserProfile): ProfileFormState => {
     bio: profile.bio ?? '',
     birthDate: profile.birthDate ?? '',
     country: profile.country ?? '',
+    countryCode: profile.countryCode,
+    province: profile.province ?? '',
+    city: profile.city ?? '',
+    latitude: profile.latitude,
+    longitude: profile.longitude,
     avatar: profile.avatar,
     gender: profile.gender || 'Masculino',
     heightCm: typeof profile.heightCm === 'number' && profile.heightCm > 0 ? profile.heightCm : '',
@@ -183,7 +194,12 @@ export const ProfileSection = () => {
           birthDate: formState.birthDate
             ? fromLocalDateOrDateTime(formState.birthDate) || undefined
             : undefined,
-          country: formState.country || undefined,
+          country: formState.country.trim() || undefined,
+          countryCode: formState.country.trim() ? formState.countryCode : undefined,
+          province: formState.province.trim() || undefined,
+          city: formState.city.trim() || undefined,
+          latitude: formState.city.trim() ? formState.latitude : undefined,
+          longitude: formState.city.trim() ? formState.longitude : undefined,
           avatar: formState.avatar,
           gender: formState.gender,
           heightCm:
@@ -334,15 +350,18 @@ export const ProfileSection = () => {
                 ariaLabel="Fecha de nacimiento"
               />
             </div>
-            <div className="field">
-              <label htmlFor="profile-country">País o ciudad</label>
-              <input
-                id="profile-country"
-                value={formState.country}
-                onChange={(event) => setFormState({ ...formState, country: event.target.value })}
-                placeholder="Ubicación"
-              />
-            </div>
+            <LocationFields
+              idPrefix="profile"
+              value={{
+                country: formState.country,
+                countryCode: formState.countryCode,
+                province: formState.province,
+                city: formState.city,
+                latitude: formState.latitude,
+                longitude: formState.longitude,
+              }}
+              onChange={(next) => setFormState((prev) => ({ ...prev, ...next }))}
+            />
             <div className="field">
               <label htmlFor="profile-height">
                 Altura {isImperial ? '(pulgadas / in)' : '(cm)'}

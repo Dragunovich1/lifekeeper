@@ -212,6 +212,10 @@
 - **Relaciones:** registro **privado** (`IntimacyEntry`): no va al Calendario, Dashboard, alertas ni al asistente. Solo se muestra dentro de la pestaña, con avisos de anticoncepción de emergencia / test / ITS.
 - **UI:** `sections/health/cycle/*` (pestañas Resumen, Calendario, Anticoncepción, Relaciones, Registros) con gráficos SVG propios (línea de tiempo del ciclo, duración de ciclos, síntomas, cumplimiento, protección usada). Estilos en `styles/cycle.css`.
 
+### Selector de fechas y autocompletado de ubicación
+- **`DatePicker`:** conserva las flechas de mes y año; tocar el mes o el año abre la vista rápida (años en páginas de 12 + campo para escribirlo → mes → día). **Nada cambia hasta "Aceptar"** (Cancelar, tocar afuera y Esc descartan; doble toque en un día confirma). En celular es un panel inferior con botones grandes.
+- **Ubicación del perfil:** `components/LocationFields.tsx` (País → Provincia/estado → Ciudad) sobre el combobox accesible `components/Autocomplete.tsx`. Países (`Intl.DisplayNames` en español, con siglas/apodos) y provincias/estados de 11 países (`data/places.ts`) funcionan **sin internet**; las ciudades vienen de `/api/public/geocode` (servidor, con caché de 30 días, Open-Meteo/GeoNames) con respaldo local (`services/api/geocode.ts`). Elegir una ciudad completa provincia, país y coordenadas (`profile.countryCode/province/city/latitude/longitude`). Si cambia el país, se limpian provincia y ciudad.
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)

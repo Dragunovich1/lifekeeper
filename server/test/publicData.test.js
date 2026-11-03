@@ -32,6 +32,12 @@ const fetchImpl = async (url) => {
       { id: 2, category: { name: 'Espalda' }, muscles: [{ name: 'Latissimus dorsi', name_en: 'Lats' }], equipment: [], images: [], translations: [{ name: 'Dominadas', language: 4 }] },
     ] })
   }
+  if (u.includes('geocoding-api.open-meteo.com')) return json({ results: [
+    { id: 1, name: 'Quilmes', latitude: -34.72, longitude: -58.26, country_code: 'AR', country: 'Argentina', admin1: 'Buenos Aires', admin2: 'Partido de Quilmes', population: 580000 },
+    { id: 2, name: 'Quilmes', latitude: -34.72, longitude: -58.26, country_code: 'AR', country: 'Argentina', admin1: 'Buenos Aires' },
+    { id: 3, name: 'Quilmes', latitude: -26.6, longitude: -66.0, country_code: 'AR', country: 'Argentina', admin1: 'Tucumán' },
+    { id: 4, name: 'sin coordenadas', country_code: 'AR' },
+  ] })
   if (u.includes('wsearch.nlm.nih.gov')) return mode.medline === 'ok' ? text(MEDLINE_XML) : json({}, 500)
   if (u.includes('approximateTerm')) return json({ approximateGroup: { candidate: [{ rxcui: '5640' }] } })
   if (u.includes('/related.json')) return json({ relatedGroup: { conceptGroup: [{ tty: 'IN', conceptProperties: [{ rxcui: '5640', name: 'ibuprofen' }] }] } })
@@ -44,6 +50,11 @@ test('datos públicos: feriados, inflación, ejercicios y MedlinePlus (con respa
   const server = app.listen(0); const base = `http://localhost:${server.address().port}/api/public`
   const get = async (p) => { const r = await fetch(base + p); return { status: r.status, body: await r.json() } }
   const ok = (name, cond, extra = '') => assert.ok(cond, `${name} ${extra}`)
+
+  const geo = await get('/geocode?q=quil&country=ar'); ok('ciudades: normaliza, sin repetidos ni resultados inválidos', geo.status === 200 && geo.body.places.length === 2 && geo.body.places[0].admin1 === 'Buenos Aires' && geo.body.places[1].admin1 === 'Tucumán', JSON.stringify(geo.body.places))
+  ok('ciudades: manda el país en mayúsculas', calls.some((u) => u.includes('geocoding-api.open-meteo.com') && u.includes('countryCode=AR')))
+  ok('ciudades: texto muy corto', (await get('/geocode?q=a')).status === 400)
+  const callsBefore = calls.length; await get('/geocode?q=quil&country=ar'); ok('ciudades: la segunda vez sale de la caché', calls.length === callsBefore)
 
   let r = await get('/holidays?year=2026'); ok('feriados', r.status === 200 && r.body.holidays.length === 2 && r.body.holidays[0].date === '2026-01-01', JSON.stringify(r.body.holidays))
   ok('feriados año inválido', (await get('/holidays?year=1800')).status === 400)
