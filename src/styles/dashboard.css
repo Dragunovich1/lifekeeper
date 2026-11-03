@@ -2091,3 +2091,11 @@
 /* Celular: el sol/luna van arriba a la derecha (la fila de la fecha está libre) */
 .mobile-app-shell .dashboard-hero { --sky-x: 82%; }
 .mobile-app-shell .fx-sun-rays { top: -170px; }
+
+/* Rendimiento en celulares modestos: nada de backdrop-filter animado en los efectos del clima */
+.mobile-app-shell .fx-glass-drop,
+.mobile-app-shell .fx-fogged-glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.mobile-app-shell .fx-fogged-glass { animation: none; }
