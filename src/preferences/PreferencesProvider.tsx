@@ -65,6 +65,10 @@ const loadPreferences = (): Preferences => {
       privacyCurtain: typeof parsed.privacyCurtain === 'boolean' ? parsed.privacyCurtain : DEFAULT_PREFERENCES.privacyCurtain,
       notifications: parsed.notifications === true,
       notificationDetails: parsed.notificationDetails === true,
+      lockOnBackgroundSec:
+        typeof parsed.lockOnBackgroundSec === 'number' && parsed.lockOnBackgroundSec >= -1
+          ? parsed.lockOnBackgroundSec
+          : DEFAULT_PREFERENCES.lockOnBackgroundSec,
       dashboardLayout: normalizeDashboardLayout(parsed.dashboardLayout),
     }
   } catch {

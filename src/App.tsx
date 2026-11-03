@@ -253,6 +253,25 @@ const VaultApp = () => {
     }
   }, [preferences.autoLockMinutes, lock])
 
+  // Bloqueo al salir de la app (pasar a segundo plano / cambiar de pestaña) tras un tiempo de gracia
+  useEffect(() => {
+    const grace = preferences.lockOnBackgroundSec
+    if (grace < 0) return
+    let leftAt: number | null = null
+    const onChange = () => {
+      if (document.visibilityState === 'hidden') {
+        leftAt = Date.now()
+      } else if (leftAt !== null) {
+        const away = (Date.now() - leftAt) / 1000
+        leftAt = null
+        if (away >= grace) handleLock()
+      }
+    }
+    document.addEventListener('visibilitychange', onChange)
+    return () => document.removeEventListener('visibilitychange', onChange)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferences.lockOnBackgroundSec, lock])
+
   const [assistantOpen, setAssistantOpen] = useState(false)
 
   useEffect(() => {

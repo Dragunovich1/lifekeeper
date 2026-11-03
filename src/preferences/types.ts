@@ -108,9 +108,19 @@ export interface Preferences {
   notifications: boolean
   /** true: la notificación muestra el nombre del medicamento o del recordatorio; false: texto genérico. */
   notificationDetails: boolean
+  /** Segundos fuera de la app tras los cuales se bloquea la bóveda (-1 = no bloquear, 0 = al salir). */
+  lockOnBackgroundSec: number
   /** Orden y visibilidad de los bloques del Dashboard. */
   dashboardLayout: DashboardLayout
 }
+
+export const LOCK_ON_BACKGROUND_OPTIONS = [
+  { value: -1, label: 'No bloquear' },
+  { value: 0, label: 'Al salir de la app' },
+  { value: 30, label: 'Tras 30 segundos fuera' },
+  { value: 60, label: 'Tras 1 minuto fuera' },
+  { value: 300, label: 'Tras 5 minutos fuera' },
+] as const
 
 export const DASHBOARD_BLOCKS = [
   { id: 'kpis', label: 'Resumen (tarjetas)' },
@@ -159,6 +169,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   privacyCurtain: false,
   notifications: false,
   notificationDetails: false,
+  lockOnBackgroundSec: -1,
   dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,
 }
 

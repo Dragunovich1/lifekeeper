@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Mail, CheckCircle2 } from 'lucide-react'
-import { AUTO_LOCK_OPTIONS, CURRENCY_OPTIONS, UNIT_SYSTEM_OPTIONS, type CurrencyCode, type UnitSystem } from '../preferences/types'
+import { AUTO_LOCK_OPTIONS, LOCK_ON_BACKGROUND_OPTIONS, CURRENCY_OPTIONS, UNIT_SYSTEM_OPTIONS, type CurrencyCode, type UnitSystem } from '../preferences/types'
 import { usePreferences } from '../preferences/context'
 import { ScrollbarOverlay } from '../scrollbar/ScrollbarOverlay'
 import { Select } from './Select'
@@ -118,6 +118,18 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 <p className="pref-help">
                   Cierra la bóveda automáticamente después de este tiempo sin actividad.
                 </p>
+              </div>
+
+              <div className="pref-field">
+                <label htmlFor="settings-lock-bg">Bloquear al salir de la app</label>
+                <Select
+                  id="settings-lock-bg"
+                  value={String(preferences.lockOnBackgroundSec)}
+                  onChange={(value) => updatePreferences({ lockOnBackgroundSec: Number(value) })}
+                  options={LOCK_ON_BACKGROUND_OPTIONS.map((option) => ({ value: String(option.value), label: option.label }))}
+                  ariaLabel="Bloquear al salir de la app"
+                />
+                <p className="pref-help">Pide la contraseña maestra al volver si estuviste fuera de la app ese tiempo.</p>
               </div>
 
               <div className="pref-field">
