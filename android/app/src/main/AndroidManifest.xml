@@ -6,6 +6,10 @@
     <!-- Alarmas exactas: que el aviso llegue a la hora, no unos minutos después -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- Clima: ubicación aproximada para el pronóstico de tu zona (si no se concede, se usa la ubicación por IP) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:allowBackup="true"
         android:usesCleartextTraffic="true"

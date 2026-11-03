@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isPiperAvailable, speakWithPiper, stopPiper } from '../../services/assistant/piperTts'
 import { isNativeTtsAvailable, speakNative, stopNative } from '../../services/assistant/nativeTts'
+import { isNativeSttAvailable, startNativeStt, stopNativeStt } from '../../services/assistant/nativeStt'
 
 export type VoiceChoice = 'piper-female' | 'piper-male' | 'female' | 'male' | 'system'
 
@@ -67,6 +68,7 @@ export function useAssistantVoice({ open, showVoiceMenu, onTranscript }: Options
     if (!open) {
       stopSpeaking()
       recognitionRef.current?.stop?.()
+      if (isNativeSttAvailable()) void stopNativeStt()
     }
   }, [open, stopSpeaking])
 
@@ -166,8 +168,23 @@ export function useAssistantVoice({ open, showVoiceMenu, onTranscript }: Options
     speakText(text, msgId)
   }
 
-  const toggleSpeechRecognition = () => {
+  const toggleSpeechRecognition = async () => {
     if (typeof window === 'undefined') return
+
+    // APK: el WebView no tiene reconocimiento de voz propio, se usa el de Android
+    if (isNativeSttAvailable()) {
+      if (isListening) {
+        await stopNativeStt()
+        setIsListening(false)
+        return
+      }
+      const result = await startNativeStt(onTranscript, () => setIsListening(false))
+      if (result === 'ok') setIsListening(true)
+      else if (result === 'denied') alert('Para dictar necesito permiso del micrófono. Podés darlo en Ajustes > Apps > LifeKeeper > Permisos.')
+      else if (result === 'unavailable') alert('Este teléfono no tiene un servicio de reconocimiento de voz disponible (instalá o activá "Servicios de voz de Google").')
+      else alert('No se pudo iniciar el dictado. Probá de nuevo.')
+      return
+    }
 
     const w = window as unknown as { webkitSpeechRecognition?: any; SpeechRecognition?: any }
     const SpeechRec = w.SpeechRecognition || w.webkitSpeechRecognition
