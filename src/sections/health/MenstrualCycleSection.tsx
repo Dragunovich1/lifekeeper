@@ -1,10 +1,10 @@
+import { Modal } from '../../components/Modal'
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
 import {
   Calendar,
   CalendarHeart,
   CheckCircle2,
-  Droplets,
   Plus,
   Trash2,
 } from 'lucide-react'
@@ -71,6 +71,15 @@ export const MenstrualCycleSection = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([])
   const [notes, setNotes] = useState('')
   const [deletingEntry, setDeletingEntry] = useState<MenstrualCycleEntry | null>(null)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setStartDate(toLocalDateKey(new Date()))
+    setEndDate('')
+    setFlow('moderado')
+    setSelectedSymptoms([])
+    setNotes('')
+  }
 
   // Configuración de promedios
   const [averageCycleDays, setAverageCycleDays] = useState(cycleData.averageCycleDays || 28)
@@ -154,10 +163,7 @@ export const MenstrualCycleSection = () => {
       }
     })
 
-    // Resetear formulario
-    setEndDate('')
-    setSelectedSymptoms([])
-    setNotes('')
+    closeAdd()
   }
 
   const handleSaveConfig = (e: FormEvent) => {
@@ -394,7 +400,7 @@ export const MenstrualCycleSection = () => {
               <p style={{ margin: '0.25rem 0 0.75rem', fontSize: '0.85rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
                 Cargá la <b>fecha de inicio</b> de tu último período (el <b>primer día</b> que sangraste). Con eso calculamos tu fase actual, la ovulación y las predicciones del calendario. La fecha de fin es opcional.
               </p>
-              <button type="button" className="primary-button" onClick={() => setTab('registros')}>
+              <button type="button" className="primary-button" onClick={() => { setTab('registros'); setAdding(true) }}>
                 <Plus size={16} /> Registrar mi último período
               </button>
             </div>
@@ -455,15 +461,20 @@ export const MenstrualCycleSection = () => {
         {tab === 'registros' ? (
           <>
         {/* Formulario de Registro Rápido */}
-        <div className="panel" style={{ marginBottom: '1.5rem' }}>
-          <div className="panel-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Droplets size={18} style={{ color: '#f43f5e' }} />
-              <h3 className="panel-title">Registrar período o síntomas</h3>
-            </div>
-          </div>
-
-          <form onSubmit={handleSaveEntry} className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Registrar período o síntomas"
+          subtitle="Cargá el primer día del sangrado; el día de fin es opcional"
+          maxWidth={680}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="cycle-entry-form" className="primary-button"><Plus size={16} aria-hidden /> Guardar registro</button>
+            </>
+          }
+        >
+          <form id="cycle-entry-form" onSubmit={handleSaveEntry} className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
             <div className="field">
               <label htmlFor="period-start">Fecha de inicio (primer día del sangrado)</label>
               <DatePicker
@@ -535,21 +546,17 @@ export const MenstrualCycleSection = () => {
                 placeholder="Ej. Cólicos suaves el 2do día, descanso reparador..."
               />
             </div>
-
-            <div className="form-actions field-full" style={{ justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <button type="submit" className="primary-button">
-                <Plus size={16} />
-                Guardar registro
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         {/* Historial de Períodos Registrados */}
         <div className="panel" style={{ marginBottom: '1.5rem' }}>
           <div className="panel-header">
             <h3 className="panel-title">Historial de ciclos y registros</h3>
-            <span className="panel-subtitle">{entries.length} registro(s)</span>
+            <div className="section-actions">
+              <span className="panel-subtitle">{entries.length} registro(s)</span>
+              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo registro</button>
+            </div>
           </div>
 
           {entries.length === 0 ? (
