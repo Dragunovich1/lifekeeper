@@ -28,6 +28,25 @@ npm run test:server
 
 CI (GitHub Actions): tipos + tests + build del front y tests del servidor.
 
+## Actualizar con un solo comando
+
+**Web (en el servidor Ubuntu, por SSH):**
+
+```bash
+cd ~/lifekeeper && ./scripts/update-web.sh        # --no-cache | --no-backup | --dry-run
+```
+
+Hace copia de la base de datos, trae el código, asegura el `.env` y el `JWT_SECRET`, reconstruye `api`, `web` y `tts`, reinicia y verifica.
+
+**APK (en Windows, desde la carpeta del proyecto):**
+
+```powershell
+.\build-apk.bat                  # doble clic o desde la consola
+.\scripts\build-apk.ps1 -Install # además lo instala por USB en el celular
+```
+
+Hace `git pull`, `npm install`, build, `cap sync` y `gradlew assembleDebug`; deja el APK en `apk\`.
+
 ## Servidor (Docker Compose)
 
 ```bash
