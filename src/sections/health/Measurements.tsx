@@ -22,6 +22,7 @@ import {
   statsFor,
 } from '../../utils/measurements'
 import { downloadMeasurementsPdf } from '../../utils/measurementsPdf'
+import { useQuickAction } from '../../utils/quickAction'
 import '../../styles/measurements.css'
 
 const ICONS: Record<MeasurementType, typeof Droplet> = {
@@ -193,6 +194,8 @@ export const MeasurementsSection = () => {
     setError('')
     setFormOpen(true)
   }
+
+  useQuickAction(['measurement'], () => openNew())
 
   const openEdit = (m: HealthMeasurement) => {
     setEditingId(m.id)

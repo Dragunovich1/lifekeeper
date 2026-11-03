@@ -1,3 +1,4 @@
+import { useQuickAction } from '../../../utils/quickAction'
 import { useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { ChevronLeft, ChevronRight, Eye, EyeOff, FileUp, Minus, Pencil, Plus } from 'lucide-react'
@@ -158,6 +159,8 @@ export function FinanceCalendar({ onImport }: { onImport: () => void }) {
     setTxOpen(true)
     setFabOpen(false)
   }
+
+  useQuickAction(['expense', 'income'], (k) => openNew(k === 'income' ? 'income' : 'expense'))
 
   const openEdit = (t: FinanceTransaction) => {
     setDraft({ id: t.id, type: t.type, amount: String(t.amount), currency: curOf(t), category: t.category, date: toLocalDateKey(t.date), description: t.description ?? '', recurring: Boolean(t.recurring), recurrence: t.recurrence ?? 'monthly' })

@@ -1,3 +1,4 @@
+import { useQuickAction } from '../../utils/quickAction'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -39,6 +40,11 @@ export const RemindersSection = () => {
   const [editFormState, setEditFormState] = useState<Omit<Reminder, 'id' | 'done'>>(createInitialFormState)
   const [deletingReminder, setDeletingReminder] = useState<Reminder | null>(null)
   const [dueSoon, setDueSoon] = useState<string[]>([])
+  useQuickAction(['reminder'], () => {
+    const el = document.getElementById('rem-title') as HTMLInputElement | null
+    el?.scrollIntoView({ block: 'center' })
+    el?.focus()
+  })
 
   useEffect(() => {
     const evaluate = () => {

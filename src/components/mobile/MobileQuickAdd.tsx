@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid'
 import { useAppData } from '../../hooks/useAppData'
 import { triggerHaptic, triggerHapticNotification } from '../../services/platform'
 import { toLocalDateKey } from '../../utils/dates'
+import { requestQuickAction, type QuickActionKind } from '../../utils/quickAction'
 
 interface Props {
   onNavigate: (section: string, subSection: string) => void
@@ -62,8 +63,9 @@ export const MobileQuickAdd = ({ onNavigate, hidden }: Props) => {
     toast('Nota guardada')
   }
 
-  const go = (section: string, sub: string) => {
+  const go = (section: string, sub: string, action?: QuickActionKind) => {
     setOpen(false)
+    if (action) requestQuickAction(action)
     onNavigate(section, sub)
   }
 
@@ -91,13 +93,13 @@ export const MobileQuickAdd = ({ onNavigate, hidden }: Props) => {
             <button type="button" onClick={addGlass}>
               <Droplet size={20} /> <span>Vaso de agua</span>
             </button>
-            <button type="button" onClick={() => go('personal', 'finances')}>
+            <button type="button" onClick={() => go('personal', 'finances', 'expense')}>
               <Wallet size={20} /> <span>Gasto / ingreso</span>
             </button>
-            <button type="button" onClick={() => go('health', 'measurements')}>
+            <button type="button" onClick={() => go('health', 'measurements', 'measurement')}>
               <HeartPulse size={20} /> <span>Medición</span>
             </button>
-            <button type="button" onClick={() => go('utilities', 'reminders')}>
+            <button type="button" onClick={() => go('utilities', 'reminders', 'reminder')}>
               <Bell size={20} /> <span>Recordatorio</span>
             </button>
             <button type="button" onClick={() => go('utilities', 'shopping')}>
