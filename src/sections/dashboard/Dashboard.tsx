@@ -125,14 +125,6 @@ const GLASS_DROPS: GlassDropSpec[] = [
   { left: '58%', top: '88%', width: 8, height: 10 },
 ]
 
-const RAIN_STREAKS: Array<{ left: string; top: string; height: number; delay: string }> = [
-  { left: '17%', top: '6%', height: 68, delay: '0.4s' },
-  { left: '39%', top: '4%', height: 82, delay: '2.1s' },
-  { left: '61%', top: '8%', height: 74, delay: '1.2s' },
-  { left: '84%', top: '5%', height: 88, delay: '3.3s' },
-  { left: '95%', top: '10%', height: 64, delay: '1.8s' },
-]
-
 const BOKEH_DOTS: Array<{
   left: string
   top: string
@@ -1006,21 +998,9 @@ export const DashboardSection = () => {
           {(effectiveWeatherKind === 'rain' || effectiveWeatherKind === 'storm') && (
             <div className="fx-glass-drops">
               <div className="fx-glass-condensation" />
+              <div className="fx-fogged-glass" />
+              <div className="fx-fog-speckle" />
               {effectiveWeatherKind === 'storm' ? <div className="fx-lightning-flash" /> : null}
-              {RAIN_STREAKS.map((streak, index) => (
-                <span
-                  key={`streak-${index}`}
-                  className="fx-rain-streak"
-                  style={
-                    {
-                      left: streak.left,
-                      top: streak.top,
-                      height: `${streak.height}px`,
-                      animationDelay: streak.delay,
-                    } as CSSProperties
-                  }
-                />
-              ))}
               {GLASS_DROPS.map((drop, index) => (
                 <span
                   key={`drop-${index}`}
@@ -1042,7 +1022,12 @@ export const DashboardSection = () => {
 
           {effectiveWeatherKind === 'clear' && effectiveDayPeriod !== 'night' && (
             <div className="fx-sunny-layer">
+              <span className="fx-sky" />
+              <span className="fx-sun-rays" />
               <span className="fx-sun-orb" />
+              <span className="fx-sun-core" />
+              <span className="fx-cirrus fx-cirrus-1" />
+              <span className="fx-cirrus fx-cirrus-2" />
               <span className="fx-sunbeam fx-sunbeam-1" />
               <span className="fx-sunbeam fx-sunbeam-2" />
               <span className="fx-sunbeam fx-sunbeam-3" />
@@ -1067,7 +1052,10 @@ export const DashboardSection = () => {
 
           {effectiveWeatherKind === 'clear' && effectiveDayPeriod === 'night' && (
             <div className="fx-night-layer">
+              <span className="fx-sky" />
+              <span className="fx-milky-way" />
               <span className="fx-moon-orb" />
+              <span className="fx-moon" />
               <span className="fx-shooting-star" />
               {NIGHT_STARS.map((star, index) => (
                 <span
@@ -1090,6 +1078,7 @@ export const DashboardSection = () => {
 
           {effectiveWeatherKind === 'cloudy' && (
             <div className="fx-cloudy-layer">
+              <span className="fx-sky fx-sky-cloudy" />
               <span className="fx-cloud-bank fx-cloud-1" />
               <span className="fx-cloud-bank fx-cloud-2" />
               <span className="fx-cloud-bank fx-cloud-3" />
@@ -1108,6 +1097,7 @@ export const DashboardSection = () => {
 
           {effectiveWeatherKind === 'snow' && (
             <div className="fx-snow-layer">
+              <span className="fx-sky fx-sky-snow" />
               <span className="fx-frost-vignette" />
               {SNOWFLAKES.map((flake, index) => (
                 <span

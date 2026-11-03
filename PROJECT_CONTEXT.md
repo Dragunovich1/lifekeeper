@@ -182,6 +182,12 @@
 - **Seguridad:** bloqueo al salir de la app con tiempo de gracia (Configuración). El desbloqueo biométrico real (huella con Keystore de Android) queda pendiente: requiere decidir guardar la contraseña maestra en el Keystore y un plugin nativo.
 - **Sync:** chip de estado en el Dashboard (`SyncStatusChip`) y reintento automático (`useCloudAutoRetry`). **Carga rápida** (`utils/quickAction.ts`) abre directo gasto/medición/recordatorio. **Dashboard** personalizable (`DashboardTrends`, `preferences.dashboardLayout`).
 
+### Efectos de clima del hero (Dashboard)
+- **Lluvia:** vidrio empañado (`.fx-fogged-glass`: tinte lechoso + ruido SVG, más cerrado en los bordes para no tapar el texto) + microgotas de condensación (`.fx-fog-speckle`) + gotas con estela cónica suave. Se eliminaron las rayas diagonales (`::after` repetido) y las líneas verticales rígidas (`.fx-rain-streak`).
+- **Despejado:** cielo (`.fx-sky`, cambia por mañana/tarde), sol con núcleo, halo y rayos que giran despacio, cirros. **Noche:** cielo profundo, luna creciente con halo, vía láctea tenue, estrellas y estrella fugaz.
+- **Nublado / Nieve:** cielo propio y más cuerpo en nubes y escarcha. La posición del sol/luna es `--sky-x` (33 % en escritorio, 82 % en celular).
+- Para revisar todos los estados: Dashboard, tocar el clima y usar "Vista previa de atmósfera en portada".
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)

@@ -156,19 +156,6 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 48%);
 }
 
-.dashboard-hero[data-weather="rain"]::after,
-.dashboard-hero[data-weather="storm"]::after {
-  background:
-    repeating-linear-gradient(
-      112deg,
-      transparent 0px,
-      transparent 16px,
-      rgba(125, 211, 252, 0.04) 16px,
-      rgba(125, 211, 252, 0.04) 17px
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 52%);
-}
-
 /* === CAPAS DE EFECTOS ATMOSFÉRICOS (.dashboard-hero-fx) === */
 .dashboard-hero-fx {
   position: absolute;
@@ -191,31 +178,6 @@
   background:
     radial-gradient(circle at 82% 24%, rgba(186, 230, 253, 0.08), transparent 45%),
     radial-gradient(circle at 18% 78%, rgba(56, 189, 248, 0.06), transparent 50%);
-}
-
-.fx-rain-streak {
-  position: absolute;
-  width: 1.5px;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(186, 230, 253, 0.16) 45%,
-    rgba(255, 255, 255, 0.38) 92%,
-    transparent 100%
-  );
-  opacity: 0.7;
-  animation: fxStreakPulse 7.5s ease-in-out infinite;
-}
-
-:root.light-theme .fx-rain-streak {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(2, 132, 199, 0.18) 45%,
-    rgba(14, 165, 233, 0.42) 92%,
-    transparent 100%
-  );
 }
 
 .fx-glass-drop {
@@ -542,8 +504,8 @@
   border-radius: 999px;
   background: radial-gradient(
     closest-side,
-    rgba(226, 232, 240, 0.16) 0%,
-    rgba(148, 163, 184, 0.08) 60%,
+    rgba(226, 232, 240, 0.3) 0%,
+    rgba(148, 163, 184, 0.14) 60%,
     transparent 100%
   );
   filter: blur(12px);
@@ -611,9 +573,9 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(203, 213, 225, 0.08) 0%,
-    rgba(148, 163, 184, 0.04) 50%,
-    rgba(203, 213, 225, 0.1) 100%
+    rgba(203, 213, 225, 0.14) 0%,
+    rgba(148, 163, 184, 0.07) 50%,
+    rgba(203, 213, 225, 0.16) 100%
   );
 }
 
@@ -681,7 +643,7 @@
 .fx-frost-vignette {
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 0 36px rgba(186, 230, 253, 0.16);
+  box-shadow: inset 0 0 56px rgba(186, 230, 253, 0.26), inset 0 -24px 40px rgba(224, 242, 254, 0.12);
 }
 
 .fx-snowflake {
@@ -720,8 +682,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fx-drop-runner,
-  .fx-rain-streak,
+  .fx-fogged-glass,
   .fx-lightning-flash,
+  .fx-sun-rays,
+  .fx-cirrus,
+  .fx-milky-way,
   .fx-sun-orb,
   .fx-bokeh-dot,
   .fx-star,
@@ -1940,3 +1905,189 @@
 .dash-order-list li.is-hidden span.lbl { opacity: 0.45; text-decoration: line-through; }
 .dash-order-list .lbl { flex: 1; min-width: 0; font-size: 0.9rem; }
 .dash-order-list button { padding: 0.3rem 0.5rem; }
+
+
+/* ==========================================================================
+   LLUVIA: vidrio empañado + condensación (reemplaza rayas y líneas rígidas)
+   ========================================================================== */
+.fx-fogged-glass {
+  position: absolute;
+  inset: 0;
+  /* Más empañado en los bordes y abajo; el centro (texto) queda más limpio */
+  background:
+    radial-gradient(ellipse 55% 70% at 36% 46%, transparent 0%, rgba(214, 232, 245, 0.05) 55%, rgba(214, 232, 245, 0.16) 100%),
+    linear-gradient(180deg, rgba(214, 232, 245, 0.05) 0%, rgba(214, 232, 245, 0.13) 100%);
+  -webkit-backdrop-filter: blur(1.4px);
+  backdrop-filter: blur(1.4px);
+  animation: fxFogBreath 14s ease-in-out infinite;
+}
+
+.fx-fogged-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .86  0 0 0 0 .93  0 0 0 0 1  0 0 0 1.1 -.25'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  -webkit-mask-image: radial-gradient(ellipse 60% 85% at 36% 48%, transparent 0%, #000 100%);
+  mask-image: radial-gradient(ellipse 60% 85% at 36% 48%, transparent 0%, #000 100%);
+}
+
+/* Microgotas de condensación (puntitos irregulares, no una grilla) */
+.fx-fog-speckle {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='s' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='1' seed='7'/><feColorMatrix values='0 0 0 0 .85  0 0 0 0 .94  0 0 0 0 1  0 0 0 9 -6.1'/></filter><rect width='100%25' height='100%25' filter='url(%23s)'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='s' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='1' seed='3'/><feColorMatrix values='0 0 0 0 .75  0 0 0 0 .88  0 0 0 0 1  0 0 0 12 -8.6'/></filter><rect width='100%25' height='100%25' filter='url(%23s)'/></svg>");
+  background-size: 300px 300px, 260px 260px;
+  -webkit-mask-image: radial-gradient(ellipse 62% 88% at 36% 48%, transparent 8%, #000 100%);
+  mask-image: radial-gradient(ellipse 62% 88% at 36% 48%, transparent 8%, #000 100%);
+}
+
+:root.light-theme .fx-fogged-glass {
+  background:
+    radial-gradient(ellipse 55% 70% at 36% 46%, transparent 0%, rgba(100, 130, 160, 0.05) 55%, rgba(100, 130, 160, 0.14) 100%),
+    linear-gradient(180deg, rgba(100, 130, 160, 0.04) 0%, rgba(100, 130, 160, 0.1) 100%);
+}
+:root.light-theme .fx-fogged-glass::before { mix-blend-mode: soft-light; opacity: 0.32; }
+:root.light-theme .fx-fog-speckle { opacity: 0.4; filter: brightness(0.55) saturate(1.4); }
+
+@keyframes fxFogBreath {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* Estela suave y cónica detrás de las gotas que resbalan (en lugar de una línea recta) */
+.fx-drop-runner::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 70%;
+  width: 70%;
+  height: 34px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, transparent 0%, rgba(214, 232, 245, 0.1) 100%);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  filter: blur(1.3px);
+  border-radius: 0 0 50% 50%;
+  pointer-events: none;
+}
+:root.light-theme .fx-drop-runner::before {
+  background: linear-gradient(180deg, transparent 0%, rgba(2, 132, 199, 0.2) 100%);
+}
+
+/* ==========================================================================
+   CIELO: despejado de día y de noche (más presencia de sol, luna y estrellas)
+   ========================================================================== */
+.fx-sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.2) 0%, rgba(125, 211, 252, 0.08) 48%, transparent 100%);
+}
+.dashboard-hero[data-day-period="morning"] .fx-sunny-layer .fx-sky {
+  background:
+    radial-gradient(ellipse 70% 90% at 88% 0%, rgba(253, 224, 71, 0.22), transparent 65%),
+    linear-gradient(180deg, rgba(56, 189, 248, 0.24) 0%, rgba(186, 230, 253, 0.08) 52%, transparent 100%);
+}
+.dashboard-hero[data-day-period="afternoon"] .fx-sunny-layer .fx-sky {
+  background:
+    radial-gradient(ellipse 70% 90% at 88% 0%, rgba(251, 146, 60, 0.26), transparent 65%),
+    linear-gradient(180deg, rgba(56, 189, 248, 0.16) 0%, rgba(251, 146, 60, 0.12) 100%);
+}
+:root.light-theme .fx-sunny-layer .fx-sky {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.22) 0%, rgba(125, 211, 252, 0.1) 55%, transparent 100%);
+}
+
+/* Sol: disco brillante + halo + rayos que giran despacio */
+.fx-sun-core {
+  position: absolute;
+  top: 22px;
+  left: calc(var(--sky-x, 33%) - 23px);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffbe6 0%, #fde68a 45%, rgba(251, 191, 36, 0.55) 70%, transparent 100%);
+  box-shadow: 0 0 36px 14px rgba(253, 224, 71, 0.38), 0 0 90px 36px rgba(251, 146, 60, 0.2);
+  animation: fxSunPulse 7s ease-in-out infinite;
+}
+.fx-sun-rays {
+  position: absolute;
+  top: -150px;
+  left: calc(var(--sky-x, 33%) - 173px);
+  width: 346px;
+  height: 346px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(254, 240, 138, 0.13) 0deg 6deg, transparent 6deg 24deg);
+  filter: blur(2px);
+  -webkit-mask-image: radial-gradient(circle, transparent 12%, #000 24%, transparent 58%);
+  mask-image: radial-gradient(circle, transparent 12%, #000 24%, transparent 58%);
+  animation: fxRaysTurn 90s linear infinite;
+}
+:root.light-theme .fx-sun-rays {
+  background: repeating-conic-gradient(from 0deg, rgba(250, 204, 21, 0.3) 0deg 5deg, transparent 5deg 22deg);
+}
+.fx-sun-orb { width: 260px; height: 260px; top: -108px; left: calc(var(--sky-x, 33%) - 130px); right: auto; }
+.fx-sunbeam { display: none; }
+
+@keyframes fxRaysTurn { to { transform: rotate(360deg); } }
+
+/* Cirros: nubes finas y lejanas que cruzan el cielo */
+.fx-cirrus {
+  position: absolute;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  filter: blur(6px);
+  animation: fxCirrus 40s linear infinite;
+}
+.fx-cirrus-1 { top: 30%; left: -30%; width: 38%; }
+.fx-cirrus-2 { top: 62%; left: -45%; width: 30%; animation-duration: 55s; animation-delay: -20s; opacity: 0.7; }
+:root.light-theme .fx-cirrus { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent); }
+@keyframes fxCirrus { to { transform: translateX(380%); } }
+
+/* Noche: cielo profundo, luna creciente con halo, vía láctea tenue */
+.fx-night-layer .fx-sky {
+  background:
+    radial-gradient(ellipse 60% 90% at 88% 0%, rgba(129, 140, 248, 0.24), transparent 65%),
+    linear-gradient(180deg, rgba(30, 27, 75, 0.55) 0%, rgba(30, 41, 92, 0.25) 55%, transparent 100%);
+}
+:root.light-theme .fx-night-layer .fx-sky {
+  background: linear-gradient(180deg, rgba(49, 46, 129, 0.34) 0%, rgba(79, 70, 229, 0.12) 60%, transparent 100%);
+}
+.fx-moon {
+  position: absolute;
+  top: 26px;
+  left: calc(var(--sky-x, 33%) - 20px);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: inset -13px -4px 0 0 rgba(241, 245, 249, 0.96);
+  transform: rotate(-14deg);
+  filter: drop-shadow(0 0 12px rgba(186, 230, 253, 0.7));
+}
+.fx-night-layer .fx-moon-orb { width: 210px; height: 210px; top: -78px; left: calc(var(--sky-x, 33%) - 105px); right: auto; }
+.fx-milky-way {
+  position: absolute;
+  top: -20%;
+  left: 18%;
+  width: 70%;
+  height: 90%;
+  transform: rotate(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(165, 180, 252, 0.14) 40%, rgba(196, 181, 253, 0.12) 60%, transparent);
+  filter: blur(18px);
+  animation: fxMilky 26s ease-in-out infinite alternate;
+}
+@keyframes fxMilky { from { opacity: 0.55; transform: rotate(-18deg) translateX(-2%); } to { opacity: 1; transform: rotate(-18deg) translateX(3%); } }
+.fx-star { box-shadow: 0 0 8px rgba(186, 230, 253, 0.9); }
+.fx-shooting-star { width: 90px; height: 2px; }
+
+.fx-sky-cloudy { background: linear-gradient(180deg, rgba(148, 163, 184, 0.3) 0%, rgba(100, 116, 139, 0.14) 60%, transparent 100%); }
+.fx-sky-snow { background: linear-gradient(180deg, rgba(186, 230, 253, 0.24) 0%, rgba(148, 163, 184, 0.1) 62%, transparent 100%); }
+:root.light-theme .fx-sky-cloudy { background: linear-gradient(180deg, rgba(100, 116, 139, 0.26) 0%, rgba(148, 163, 184, 0.12) 60%, transparent 100%); }
+.fx-snowflake { box-shadow: 0 0 8px rgba(224, 242, 254, 0.85); }
+
+/* Celular: el sol/luna van arriba a la derecha (la fila de la fecha está libre) */
+.mobile-app-shell .dashboard-hero { --sky-x: 82%; }
+.mobile-app-shell .fx-sun-rays { top: -170px; }
