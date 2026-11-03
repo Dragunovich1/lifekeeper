@@ -15,7 +15,14 @@ import { SectionHeader } from '../../components/SectionHeader'
 import { Select } from '../../components/Select'
 import { useAppData } from '../../hooks/useAppData'
 import type { MenstrualCycleEntry, MenstrualFlow } from '../../types'
-import { formatDate, fromLocalDateOrDateTime, toLocalDateKey } from '../../utils/dates'
+import { formatDate, toLocalDateKey } from '../../utils/dates'
+import { PHASE_INFO, RELIABILITY_TEXT, computeCycle, dayKey, dayStatusFor, normalizeEntries, type DayStatus } from '../../utils/cycle'
+import { hasActiveHormonal } from '../../utils/contraceptives'
+import { Contraceptives } from './cycle/Contraceptives'
+import { CycleCalendar } from './cycle/CycleCalendar'
+import { CycleLengthChart, CycleTimeline, SymptomChart } from './cycle/CycleCharts'
+import { Intimacy } from './cycle/Intimacy'
+import '../../styles/cycle.css'
 
 const FLOW_OPTIONS: Array<{ value: MenstrualFlow; label: string; badgeColor: string }> = [
   { value: 'ligero', label: 'Ligero / Leve', badgeColor: '#f472b6' },
@@ -53,9 +60,9 @@ export const MenstrualCycleSection = () => {
     )
   }, [data.health.menstrualCycle])
 
-  const entries = useMemo(() => {
-    return (cycleData.entries ?? []).slice().sort((a, b) => b.startDate.localeCompare(a.startDate))
-  }, [cycleData.entries])
+  const entries = useMemo(() => normalizeEntries(cycleData.entries).map((r) => r.entry), [cycleData.entries])
+  const todayKey = dayKey(new Date())
+  const [tab, setTab] = useState<'resumen' | 'calendario' | 'metodos' | 'relaciones' | 'registros'>('resumen')
 
   // Formulario para registrar un período o síntoma
   const [startDate, setStartDate] = useState(() => toLocalDateKey(new Date()))
@@ -70,81 +77,42 @@ export const MenstrualCycleSection = () => {
   const [averagePeriodDays, setAveragePeriodDays] = useState(cycleData.averagePeriodDays || 5)
   const [configSuccess, setConfigSuccess] = useState(false)
 
-  // Calcular la fase actual y predicciones
+  // Fase actual y predicciones (lógica en utils/cycle.ts: fechas normalizadas, sin NaN)
+  const cycleMath = useMemo(
+    () => computeCycle(cycleData.entries, { averageCycleDays: cycleData.averageCycleDays, averagePeriodDays: cycleData.averagePeriodDays }, todayKey),
+    [cycleData.entries, cycleData.averageCycleDays, cycleData.averagePeriodDays, todayKey],
+  )
+
   const cycleInsights = useMemo(() => {
-    if (entries.length === 0) {
-      return null
+    if (!cycleMath) return null
+    const info = PHASE_INFO[cycleMath.phase]
+    const m = cycleMath
+    const text: Record<typeof m.phase, string> = {
+      menstruacion: `Día ${m.cycleDay} de tu período. Priorizá el descanso, la hidratación y alimentos ricos en hierro.`,
+      folicular: 'Aumento gradual de energía y estrógenos. Momento ideal para proyectos creativos y fuerza física.',
+      fertil: `Ventana fértil estimada (${m.fertileIsReliable ? 'según tus ciclos' : 'aproximada'}). Ovulación estimada el ${formatDate(m.ovulationKey)}.`,
+      lutea: 'Sube la progesterona. Podés notar antojos o cambios de ánimo leves. Excelente para tareas de foco.',
+      extendido:
+        m.lateDays > 0
+          ? `Llevás ${m.lateDays} día(s) de atraso respecto de la fecha estimada.${m.lateDays >= 7 ? ' Si hubo relaciones sin protección, considerá un test de embarazo; si el atraso sigue o es inusual en vos, consultá con tu ginecólogo/a.' : ''}`
+          : 'Tu ciclo se extendió respecto del promedio.',
     }
-
-    const last = entries[0]
-    const lastDate = new Date(last.startDate + 'T00:00:00')
-    const now = new Date()
-    now.setHours(0, 0, 0, 0)
-
-    const diffMs = now.getTime() - lastDate.getTime()
-    const cycleDay = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
-
-    const avgCycle = cycleData.averageCycleDays || 28
-    const avgPeriod = cycleData.averagePeriodDays || 5
-
-    // Próximo inicio estimado
-    const nextPeriodDate = new Date(lastDate.getTime() + avgCycle * 24 * 60 * 60 * 1000)
-    const nextPeriodKey = toLocalDateKey(nextPeriodDate)
-
-    // Ovulación estimada: ~14 días antes del próximo período
-    const ovulationDate = new Date(lastDate.getTime() + (avgCycle - 14) * 24 * 60 * 60 * 1000)
-    const fertileStart = new Date(ovulationDate.getTime() - 4 * 24 * 60 * 60 * 1000)
-    const fertileEnd = new Date(ovulationDate.getTime() + 1 * 24 * 60 * 60 * 1000)
-
-    let phaseName = ''
-    let phaseDescription = ''
-    let phaseColor = ''
-    let phaseEmoji = '🌸'
-
-    if (cycleDay <= avgPeriod) {
-      phaseName = 'Menstruación'
-      phaseDescription = `Día ${cycleDay} de tu período. Priorizá el descanso, la hidratación y alimentos ricos en hierro.`
-      phaseColor = '#f43f5e'
-      phaseEmoji = '🌸'
-    } else if (cycleDay < avgCycle - 16) {
-      phaseName = 'Fase Folicular'
-      phaseDescription = 'Aumento gradual de energía y estrógenos. Momento ideal para proyectos creativos y fuerza física.'
-      phaseColor = '#10b981'
-      phaseEmoji = '🌱'
-    } else if (cycleDay >= avgCycle - 16 && cycleDay <= avgCycle - 12) {
-      phaseName = 'Ventana de Ovulación (Fértil)'
-      phaseDescription = `Pico de estrógenos y fertilidad. Ovulación estimada el ${formatDate(toLocalDateKey(ovulationDate))}.`
-      phaseColor = '#f59e0b'
-      phaseEmoji = '🌺'
-    } else if (cycleDay <= avgCycle) {
-      phaseName = 'Fase Lútea'
-      phaseDescription = 'Sube la progesterona. Podés notar antojos o cambios de ánimo leves. Excelente para tareas de foco.'
-      phaseColor = '#818cf8'
-      phaseEmoji = '🌙'
-    } else {
-      const lateDays = cycleDay - avgCycle
-      phaseName = 'Ciclo extendido'
-      phaseDescription = `Llevás ${lateDays} día(s) posterior(es) a la fecha estimada de tu ciclo habitual.`
-      phaseColor = '#a855f7'
-      phaseEmoji = '⏳'
-    }
-
-    const daysRemaining = avgCycle - cycleDay
-
     return {
-      cycleDay,
-      phaseName,
-      phaseDescription,
-      phaseColor,
-      phaseEmoji,
-      nextPeriodKey,
-      nextPeriodDate,
-      daysRemaining,
-      ovulationDateKey: toLocalDateKey(ovulationDate),
-      fertileStartKey: toLocalDateKey(fertileStart),
-      fertileEndKey: toLocalDateKey(fertileEnd),
+      cycleDay: m.cycleDay,
+      phaseName: info.name,
+      phaseDescription: text[m.phase],
+      phaseColor: info.color,
+      phaseEmoji: info.emoji,
+      nextPeriodKey: m.nextPeriodKey,
+      daysRemaining: m.daysUntilNext,
+      ovulationDateKey: m.ovulationKey,
+      fertileStartKey: m.fertileStartKey,
+      fertileEndKey: m.fertileEndKey,
     }
-  }, [entries, cycleData.averageCycleDays, cycleData.averagePeriodDays])
+  }, [cycleMath])
+
+  const todayStatus: DayStatus = dayStatusFor(todayKey, cycleData.entries, { averageCycleDays: cycleData.averageCycleDays, averagePeriodDays: cycleData.averagePeriodDays }, todayKey)
+  const hormonal = hasActiveHormonal(cycleData.contraceptives)
 
   const toggleSymptom = (sym: string) => {
     setSelectedSymptoms((prev) =>
@@ -158,8 +126,8 @@ export const MenstrualCycleSection = () => {
 
     const newEntry: MenstrualCycleEntry = {
       id: uuid(),
-      startDate: fromLocalDateOrDateTime(startDate),
-      endDate: endDate ? fromLocalDateOrDateTime(endDate) : undefined,
+      startDate: dayKey(startDate),
+      endDate: endDate ? dayKey(endDate) : undefined,
       flow,
       symptoms: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
       notes: notes.trim() || undefined,
@@ -242,7 +210,27 @@ export const MenstrualCycleSection = () => {
         subtitle="Monitoreá tus fases hormonales, síntomas, ventana de fertilidad y predicciones sincronizadas con el calendario"
       />
 
+      <div className="cy-tabs" role="tablist" aria-label="Secciones del ciclo">
+        {([
+          ['resumen', 'Resumen'],
+          ['calendario', 'Calendario'],
+          ['metodos', 'Anticoncepción'],
+          ['relaciones', 'Relaciones'],
+          ['registros', 'Registros'],
+        ] as const).map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} className={`cy-tab${tab === key ? ' is-active' : ''}`} onClick={() => setTab(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="section-body">
+        {tab === 'calendario' ? <CycleCalendar /> : null}
+        {tab === 'metodos' ? <Contraceptives /> : null}
+        {tab === 'relaciones' ? <Intimacy /> : null}
+
+        {tab === 'resumen' ? (
+          <>
         {/* Panel de Estado y Fase Actual */}
         {cycleInsights ? (
           <div
@@ -409,6 +397,59 @@ export const MenstrualCycleSection = () => {
           </div>
         )}
 
+        {cycleMath ? (
+          <>
+            <div className="cy-card">
+              <h3 className="cy-h">Tu ciclo de un vistazo</h3>
+              <CycleTimeline insights={cycleMath} />
+            </div>
+
+            <div className="cy-summary-grid">
+              <div className="cy-card cy-fert">
+                <h3 className="cy-h">Fertilidad hoy</h3>
+                <span className={`cy-fert-badge is-${todayStatus}`}>
+                  {{ period: 'Período', ovulation: 'Ovulación estimada', fertile: 'Ventana fértil', low: 'Menor fertilidad', unknown: 'Sin estimación' }[todayStatus]}
+                </span>
+                {cycleMath.lateDays > 3 ? (
+                  <p className="cy-muted">⏳ Tu período está atrasado: no se estiman días de fertilidad hasta que registres el inicio del nuevo ciclo.</p>
+                ) : (
+                <p className="cy-muted">
+                  Próxima ventana fértil estimada: <b>{formatDate(cycleMath.fertileStartKey)}</b> al <b>{formatDate(cycleMath.fertileEndKey)}</b>
+                  {cycleMath.fertileIsReliable ? '' : ' (aproximada)'}.
+                </p>
+                )}
+                <p className="cy-muted">{RELIABILITY_TEXT[cycleMath.stats.reliability]}</p>
+                {hormonal ? <p className="cy-muted">💡 Usás un método hormonal: la ventana fértil natural no aplica.</p> : null}
+                <button type="button" className="secondary-button" onClick={() => setTab('calendario')}>
+                  Ver calendario con días de menor fertilidad
+                </button>
+              </div>
+
+              <div className="cy-card">
+                <h3 className="cy-h">Duración de tus ciclos</h3>
+                <CycleLengthChart entries={cycleData.entries} average={cycleMath.stats.avg} />
+                <p className="cy-muted">
+                  Promedio {cycleMath.stats.avg} días{cycleMath.stats.samples >= 1 ? ` · más corto ${cycleMath.stats.shortest} · más largo ${cycleMath.stats.longest}` : ''}
+                  {cycleMath.stats.source === 'configurado' ? ' (valor configurado: registrá más períodos para calcularlo)' : ''}
+                </p>
+              </div>
+
+              <div className="cy-card">
+                <h3 className="cy-h">Síntomas frecuentes</h3>
+                <SymptomChart entries={cycleData.entries} />
+              </div>
+            </div>
+
+            <div className="cy-note">
+              <b>Importante:</b> las estimaciones por calendario no son un método anticonceptivo confiable ni protegen de infecciones de transmisión sexual. Información general; no reemplaza la consulta con tu profesional de la salud.
+            </div>
+          </>
+        ) : null}
+          </>
+        ) : null}
+
+        {tab === 'registros' ? (
+          <>
         {/* Formulario de Registro Rápido */}
         <div className="panel" style={{ marginBottom: '1.5rem' }}>
           <div className="panel-header">
@@ -640,6 +681,8 @@ export const MenstrualCycleSection = () => {
             </div>
           </form>
         </div>
+          </>
+        ) : null}
       </div>
 
       <ConfirmModal

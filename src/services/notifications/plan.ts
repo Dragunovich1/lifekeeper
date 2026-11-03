@@ -7,6 +7,7 @@
  * La lista se vuelve a calcular cada vez que cambian los datos o se abre la app.
  */
 
+import { METHODS, methodStatus } from '../../utils/contraceptives'
 import type { AppData } from '../../types'
 import { safeParseDate, toLocalDateKey } from '../../utils/dates'
 
@@ -96,6 +97,44 @@ export function buildNotificationPlan(data: AppData, { now = new Date(), showDet
           at,
           channel: 'medication',
         })
+      }
+    }
+  }
+
+  // --- Anticonceptivos (pastilla diaria, cambio de parche/anillo, inyección, vencimiento de DIU/implante) ------
+  for (const m of data.health.menstrualCycle?.contraceptives ?? []) {
+    if (!m.active) continue
+    const time = m.reminderTime || '09:00'
+    const label = METHODS[m.type].label
+    const body = (detail: string) => (showDetails ? detail : 'Es hora de tu medicación')
+    for (let offset = 0; offset < 14; offset++) {
+      const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
+      const key = dateKey(day)
+      const st = methodStatus(m, key)
+      let due = false
+      let text = ''
+      if (m.type === 'pastilla') {
+        due = Boolean(st.pillDue) && !(m.takenLog ?? []).includes(key)
+        text = `Pastilla anticonceptiva${m.name ? ` (${m.name})` : ''}`
+      } else if (m.type === 'parche' || m.type === 'anillo') {
+        due = st.severity === 'due'
+        text = `${label}: ${st.headline}`
+      } else if (m.type === 'inyeccion') {
+        due = st.daysUntil === 0 || st.daysUntil === 7
+        text = `Inyección anticonceptiva ${st.daysUntil === 0 ? 'hoy' : 'en 7 días'}`
+      }
+      if (!due) continue
+      const at = atLocal(day, time)
+      if (!at || at.getTime() <= now.getTime()) continue
+      const k = `contra:${m.id}:${key}`
+      plan.push({ id: stableId(k), key: k, title: 'Medicación', body: body(text), at, channel: 'medication' })
+    }
+    // DIU / implante: aviso 30 días antes del vencimiento
+    if (m.validUntil && (m.type === 'diu_cobre' || m.type === 'diu_hormonal' || m.type === 'implante')) {
+      const warnAt = atLocal(new Date(safeParseDate(m.validUntil)!.getTime() - 30 * DAY), '09:00')
+      if (warnAt && warnAt.getTime() > now.getTime() && warnAt.getTime() <= horizon) {
+        const k = `contra-exp:${m.id}`
+        plan.push({ id: stableId(k), key: k, title: 'Recordatorio', body: showDetails ? `${label}: vence en 30 días, pedí turno para el recambio` : 'Tenés un recordatorio pendiente', at: warnAt, channel: 'reminders' })
       }
     }
   }

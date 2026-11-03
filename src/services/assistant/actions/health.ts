@@ -61,6 +61,54 @@ export const medicationTakenAction: ActionDef = {
   },
 }
 
+// ---------------------------------------------------------------------------
+// Pastilla anticonceptiva de hoy
+// ---------------------------------------------------------------------------
+export const contraceptiveTakenAction: ActionDef = {
+  type: 'contraceptive_taken',
+  about: 'se tomó la pastilla anticonceptiva de hoy',
+  hints: /anticonceptiv|pastilla|pildora/,
+  schema: '{"type":"contraceptive_taken"}',
+  example: '"ya me tomé la pastilla anticonceptiva" → {"type":"contraceptive_taken"}',
+  local(text, { data }) {
+    const n = normalizeText(text)
+    const hasPill = (data.health.menstrualCycle?.contraceptives ?? []).some((m) => m.active && m.type === 'pastilla')
+    if (!hasPill || !/\b(tome|me tome|ya tome|ya me tome|tomada)\b/.test(n)) return null
+    return /\b(anticonceptiv|pastilla)\b/.test(n) && !/\b(ibuprof|paracetam|antibiotic)\b/.test(n) ? [{ type: 'contraceptive_taken' }] : null
+  },
+  build(_raw, { data, todayKey }) {
+    const pill = (data.health.menstrualCycle?.contraceptives ?? []).find((m) => m.active && m.type === 'pastilla')
+    if (!pill) return { clarify: 'No tenés una pastilla anticonceptiva cargada. Agregala en Salud > Ciclo menstrual > Anticoncepción y después la registro desde acá.' }
+    if ((pill.takenLog ?? []).includes(todayKey)) {
+      return {
+        apply: (prev) => prev,
+        line: '• 💊 La pastilla de hoy ya estaba registrada.',
+        card: { category: 'salud', title: 'Pastilla de hoy', details: 'Ya registrada', badge: 'Tomada', entityId: pill.id },
+        link: { label: 'Ver Anticoncepción', hash: '#health:menstrual' },
+      }
+    }
+    return {
+      apply: (prev) => {
+        const cycle = prev.health.menstrualCycle
+        if (!cycle) return prev
+        return {
+          ...prev,
+          health: {
+            ...prev.health,
+            menstrualCycle: {
+              ...cycle,
+              contraceptives: (cycle.contraceptives ?? []).map((m) => (m.id === pill.id ? { ...m, takenLog: [...new Set([...(m.takenLog ?? []), todayKey])].sort() } : m)),
+            },
+          },
+        }
+      },
+      line: `• 💊 **Pastilla de hoy registrada**${pill.name ? ` (${pill.name})` : ''}`,
+      card: { category: 'salud', title: 'Pastilla anticonceptiva', details: fmtDate(todayKey), badge: 'Tomada', entityId: pill.id },
+      link: { label: 'Ver Anticoncepción', hash: '#health:menstrual' },
+    }
+  },
+}
+
 export const medicationAddAction: ActionDef = {
   type: 'medication_add',
   about: 'quiere cargar, agregar o anotar un medicamento o tratamiento que toma (nombre, dosis, cada cuánto, a qué hora), o le recetaron uno nuevo o empieza a tomarlo',
@@ -321,5 +369,5 @@ export const measurementAction: ActionDef = {
   },
 }
 
-export const HEALTH_ACTIONS = [measurementAction, medicationTakenAction, medicationAddAction, vaccineAction, consultationAction, clinicalNoteAction, menstrualAction]
+export const HEALTH_ACTIONS = [measurementAction, contraceptiveTakenAction, medicationTakenAction, medicationAddAction, vaccineAction, consultationAction, clinicalNoteAction, menstrualAction]
 

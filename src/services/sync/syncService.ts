@@ -53,6 +53,9 @@ function countVaultRecords(data: AppData): number {
       (data.utilities?.reminders?.length || 0) +
       (data.utilities?.quickNotes?.length || 0) +
       (data.health?.measurements?.length || 0) +
+      (data.health?.menstrualCycle?.entries?.length || 0) +
+      (data.health?.menstrualCycle?.contraceptives?.length || 0) +
+      (data.health?.menstrualCycle?.intimacy?.length || 0) +
       (data.personal?.shopping?.lists?.length || 0) +
       (data.personal?.financeCategories?.length || 0) +
       (data.personal?.financeImports?.length || 0) +

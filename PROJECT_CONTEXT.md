@@ -205,6 +205,13 @@
 - **Campos:** todo input/select/textarea debe estar dentro de `.field` (no basta `.field-full`) o `.form-input`. Los campos sueltos en modales toman el estilo por una red de seguridad (`:where(.pref-modal-body ...)` en `components.css`). Los inputs numéricos no muestran las flechitas nativas.
 - **Header:** el carrusel de navegación se muestra desde 821 px (debajo entra el layout móvil con hamburguesa). Entre 821 y 1279 la marca conserva su ancho natural.
 
+### Ciclo menstrual, anticoncepción y días de menor fertilidad
+- **Bug del NaN:** el formulario guardaba `startDate` como ISO con hora y el código hacía `startDate + 'T00:00:00'` (fecha inválida). Ahora TODO el cálculo vive en `utils/cycle.ts` (`dayKey`, `computeCycle`, `dayStatusFor`), que unifica ambos formatos. El Calendario general y el contexto del asistente usan lo mismo. No volver a concatenar strings de fecha.
+- **Días de menor fertilidad:** método del calendario (Ogino-Knaus con los ciclos reales; días estándar 8–19 si hay pocos datos y el ciclo es de 26–32 días). Si el ciclo es irregular (variación > 9 días), faltan datos, o el período está atrasado (> 3 días), **no se estima nada**. Nunca se llama "seguros" a secas y siempre va el aviso: no es anticonceptivo confiable ni protege de ITS.
+- **Anticoncepción** (`utils/contraceptives.ts`): pastilla (blíster + pausa, cumplimiento), parche, anillo, inyección (mensual/trimestral), DIU, implante, preservativo. Avisos nativos (`notifications/plan.ts`), alertas del Dashboard (`utils/insights.ts`) y acción del asistente `contraceptive_taken`.
+- **Relaciones:** registro **privado** (`IntimacyEntry`): no va al Calendario, Dashboard, alertas ni al asistente. Solo se muestra dentro de la pestaña, con avisos de anticoncepción de emergencia / test / ITS.
+- **UI:** `sections/health/cycle/*` (pestañas Resumen, Calendario, Anticoncepción, Relaciones, Registros) con gráficos SVG propios (línea de tiempo del ciclo, duración de ciclos, síntomas, cumplimiento, protección usada). Estilos en `styles/cycle.css`.
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)

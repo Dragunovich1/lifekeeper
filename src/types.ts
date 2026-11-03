@@ -336,12 +336,63 @@ export interface MenstrualCycleEntry {
   notes?: string
 }
 
+export type ContraceptiveType =
+  | 'pastilla'
+  | 'parche'
+  | 'anillo'
+  | 'inyeccion'
+  | 'diu_cobre'
+  | 'diu_hormonal'
+  | 'implante'
+  | 'preservativo'
+  | 'otro'
+
+/** Método anticonceptivo en uso (o que se usó). */
+export interface ContraceptiveMethod {
+  id: string
+  type: ContraceptiveType
+  /** Nombre comercial o aclaración (ej. "Yasmin", "DIU Mirena"). */
+  name?: string
+  /** Inicio del método o del blíster/parche/anillo actual (YYYY-MM-DD). */
+  startDate: string
+  active: boolean
+  /** Hora del recordatorio diario o del día de cambio (HH:mm). */
+  reminderTime?: string
+  /** Pastillas: cantidad de pastillas activas del blíster (21, 28, 24…). */
+  packDays?: number
+  /** Pastillas: días de pausa o placebo (0 si es continua). */
+  pauseDays?: number
+  /** Inyección: días entre dosis (28 = mensual, 84 = trimestral). */
+  intervalDays?: number
+  /** Inyección/parche/anillo: fecha de la última aplicación o cambio (YYYY-MM-DD). */
+  lastDoseDate?: string
+  /** DIU/implante: hasta cuándo es efectivo (YYYY-MM-DD). */
+  validUntil?: string
+  /** Pastillas: días en que se tomó (YYYY-MM-DD). */
+  takenLog?: string[]
+  notes?: string
+}
+
+export type IntimacyProtection = 'preservativo' | 'anticonceptivo' | 'ambos' | 'ninguna' | 'otra'
+
+/** Registro privado de una relación sexual (para contexto del ciclo y avisos de salud). */
+export interface IntimacyEntry {
+  id: string
+  date: string // YYYY-MM-DD
+  protection: IntimacyProtection
+  /** Se tomó anticoncepción de emergencia. */
+  emergencyPill?: boolean
+  notes?: string
+}
+
 export interface MenstrualCycleData {
   enabled: boolean
   averageCycleDays: number // e.g. 28
   averagePeriodDays: number // e.g. 5
   lastPeriodStart?: string
   entries: MenstrualCycleEntry[]
+  contraceptives?: ContraceptiveMethod[]
+  intimacy?: IntimacyEntry[]
 }
 
 export type MeasurementType = 'glucosa' | 'presion' | 'pulso' | 'saturacion' | 'temperatura' | 'colesterol'

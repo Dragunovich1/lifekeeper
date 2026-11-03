@@ -182,6 +182,10 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
             entries: Array.isArray(data.health.menstrualCycle.entries)
               ? [...data.health.menstrualCycle.entries]
               : [],
+            contraceptives: Array.isArray(data.health.menstrualCycle.contraceptives)
+              ? [...data.health.menstrualCycle.contraceptives]
+              : [],
+            intimacy: Array.isArray(data.health.menstrualCycle.intimacy) ? [...data.health.menstrualCycle.intimacy] : [],
           }
         : defaults.health.menstrualCycle,
     },

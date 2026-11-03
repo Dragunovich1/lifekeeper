@@ -5,6 +5,7 @@
  * únicamente hacia la instancia privada de Ollama en la red local.
  */
 
+import { computeCycle, normalizeEntries } from '../../utils/cycle'
 import type { AppData } from '../../types'
 import { toLocalDateKey, toLocalTimeKey, formatDate } from '../../utils/dates'
 import { fetchWeatherData, describeWeatherCode, type WeatherData } from '../api/weather'
@@ -121,11 +122,11 @@ export function buildVaultSystemPrompt(data: AppData, weather: WeatherData | nul
   let menstrualText = 'No aplica o sin registros.'
   if (gender === 'Femenino' && data.health.menstrualCycle?.entries?.length) {
     const cycle = data.health.menstrualCycle
-    const sorted = [...cycle.entries].sort((a, b) => b.startDate.localeCompare(a.startDate))
-    const last = sorted[0]
-    const diffDays = Math.max(0, Math.floor((now.getTime() - new Date(last.startDate + 'T00:00:00').getTime()) / 86400000))
-    const dayInCycle = (diffDays % cycle.averageCycleDays) + 1
-    menstrualText = `Ciclo: día ${dayInCycle} de ${cycle.averageCycleDays}. Último inicio: ${formatDate(last.startDate)} (flujo: ${last.flow || 'moderado'}). Período prom.: ${cycle.averagePeriodDays} días.`
+    const c = computeCycle(cycle.entries, cycle, todayKey)
+    if (c) {
+      const last = normalizeEntries(cycle.entries)[0]
+      menstrualText = `Ciclo: día ${c.cycleDay} de ${c.stats.avg}${c.lateDays > 0 ? ` (${c.lateDays} día(s) de atraso)` : ''}. Último inicio: ${formatDate(c.lastStartKey)} (flujo: ${last?.entry.flow || 'moderado'}). Período prom.: ${c.periodDays} días.`
+    }
   }
 
   // 3. Nutrición de hoy

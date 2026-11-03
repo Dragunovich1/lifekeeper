@@ -1,6 +1,8 @@
 import { differenceInCalendarDays, isSameMonth, subMonths } from 'date-fns'
 import { navigation } from '../navigation'
 import type { AppData, MoodLevel } from '../types'
+import { computeCycle, dayKey } from './cycle'
+import { METHODS, methodStatus } from './contraceptives'
 import { MEASUREMENT_META, classifyMeasurement, formatMeasurement, measurementTimestamp } from './measurements'
 import {
   formatCurrency,
@@ -588,6 +590,53 @@ export const computeSmartSummary = (data: AppData, now = new Date()): DashboardS
       meta: 'Compras',
     })
   })
+
+  // 13. Ciclo y anticoncepción (solo perfil femenino; en la bóveda, redactado en forma neutral)
+  if (data.profile.gender === 'Femenino' && data.health.menstrualCycle) {
+    const cyc = data.health.menstrualCycle
+    const todayK = dayKey(now)
+    const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const c = computeCycle(cyc.entries, cyc, todayK)
+    if (c && c.lateDays >= 7) {
+      insights.push({
+        id: 'cycle-late',
+        title: `Ciclo: ${c.lateDays} días de atraso`,
+        description: 'Tu período viene más tarde que tu promedio. Si es inusual en vos o hubo relaciones sin protección, considerá un test o consultá a tu ginecólogo/a.',
+        severity: 'warning',
+        category: 'salud',
+        actionLabel: 'Ver ciclo',
+        targetHash: '#health:menstrual',
+        meta: 'Ciclo',
+      })
+    } else if (c && c.daysUntilNext >= 0 && c.daysUntilNext <= 2) {
+      insights.push({
+        id: 'cycle-soon',
+        title: c.daysUntilNext === 0 ? 'Período previsto para hoy' : `Período previsto en ${c.daysUntilNext} día(s)`,
+        description: `Estimado según tus ciclos (${c.stats.avg} días en promedio).`,
+        severity: 'info',
+        category: 'salud',
+        actionLabel: 'Ver ciclo',
+        targetHash: '#health:menstrual',
+        meta: 'Ciclo',
+      })
+    }
+    ;(cyc.contraceptives ?? []).forEach((m) => {
+      if (!m.active) return
+      const st = methodStatus(m, todayK, hm)
+      if (st.severity === 'overdue' || st.severity === 'soon' || (st.severity === 'due' && m.type !== 'pastilla')) {
+        insights.push({
+          id: `contra-${m.id}`,
+          title: `${METHODS[m.type].label}: ${st.headline}`,
+          description: st.detail ?? 'Revisá tu método en la sección Ciclo.',
+          severity: st.severity === 'overdue' ? 'warning' : 'info',
+          category: 'salud',
+          actionLabel: 'Ver método',
+          targetHash: '#health:menstrual',
+          meta: 'Anticoncepción',
+        })
+      }
+    })
+  }
 
   // Ordenar insights por severidad: critical -> warning -> info -> success
   const severityOrder: Record<InsightSeverity, number> = {

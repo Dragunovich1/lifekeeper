@@ -1,3 +1,5 @@
+import { addDaysKey, computeCycle, dayKey, normalizeEntries } from '../../utils/cycle'
+import { METHODS, methodStatus } from '../../utils/contraceptives'
 import type { FormEvent } from 'react'
 import {
   addMonths,
@@ -732,23 +734,24 @@ const buildEvents = (data: AppData, includeCompleted: boolean, currency: string 
     })
   })
 
-  // Sincronización del ciclo menstrual para usuarias
+  // Sincronización del ciclo menstrual para usuarias (la lógica vive en utils/cycle.ts: fechas normalizadas, sin NaN)
   const cycle = data.health.menstrualCycle
   if (data.profile.gender === 'Femenino' && cycle) {
-    const cycleEntries = cycle.entries || []
-    cycleEntries.forEach((entry) => {
+    const todayKey = dayKey(new Date())
+    normalizeEntries(cycle.entries).forEach((record) => {
+      const entry = record.entry
       events.push({
         id: `cycle-${entry.id}`,
-        date: entry.startDate,
+        date: record.startKey,
         title: `🌸 Inicio de período menstrual${entry.flow ? ` (${entry.flow})` : ''}`,
         description: entry.symptoms?.length ? `Síntomas: ${entry.symptoms.join(', ')}` : 'Período registrado',
         category: 'salud',
         targetHash: '#health:menstrual',
       })
-      if (entry.endDate) {
+      if (record.endKey) {
         events.push({
           id: `cycle-end-${entry.id}`,
-          date: entry.endDate,
+          date: record.endKey,
           title: '🌸 Fin del período menstrual',
           description: 'Fin del sangrado registrado',
           category: 'salud',
@@ -757,41 +760,47 @@ const buildEvents = (data: AppData, includeCompleted: boolean, currency: string 
       }
     })
 
-    // Proyecciones estimadas de próximos ciclos y ovulación
-    if (cycleEntries.length > 0) {
-      const sorted = cycleEntries.slice().sort((a, b) => b.startDate.localeCompare(a.startDate))
-      const last = sorted[0]
-      const avgCycle = cycle.averageCycleDays || 28
-      const avgPeriod = cycle.averagePeriodDays || 5
-      let nextDate = new Date(last.startDate + 'T00:00:00')
-
-      for (let i = 1; i <= 3; i++) {
-        nextDate = new Date(nextDate.getTime() + avgCycle * 24 * 60 * 60 * 1000)
-        const nextKey = toLocalDateKey(nextDate)
-
+    // Proyecciones: solo si el período no está atrasado (si lo está, no se predice nada hasta registrar el nuevo inicio)
+    const insights = computeCycle(cycle.entries, cycle, todayKey)
+    if (insights && insights.lateDays <= 3) {
+      for (let i = 0; i < 3; i++) {
+        const nextKey = addDaysKey(insights.nextPeriodKey, i * insights.stats.avg)
         events.push({
-          id: `pred-cycle-${i}`,
+          id: `pred-cycle-${i + 1}`,
           date: nextKey,
           title: '🌸 Período menstrual estimado',
-          description: `Inicio previsto de ciclo (${avgPeriod} días de duración estimada)`,
+          description: `Inicio previsto de ciclo (${insights.periodDays} días de duración estimada)`,
           category: 'salud',
           targetHash: '#health:menstrual',
         })
+        if (insights.stats.window) {
+          events.push({
+            id: `pred-ovulation-${i + 1}`,
+            date: addDaysKey(nextKey, -14),
+            title: '🌺 Ovulación estimada',
+            description: 'Estimación por calendario; no es un método anticonceptivo confiable',
+            category: 'salud',
+            targetHash: '#health:menstrual',
+          })
+        }
+      }
+    }
 
-        // Ovulación estimada: ~14 días antes del próximo período
-        const ovulationDate = new Date(nextDate.getTime() - 14 * 24 * 60 * 60 * 1000)
-        const ovulationKey = toLocalDateKey(ovulationDate)
-
+    // Fechas de método anticonceptivo (próxima inyección, vencimiento de DIU/implante)
+    ;(cycle.contraceptives ?? []).forEach((m) => {
+      if (!m.active) return
+      const st = methodStatus(m, todayKey)
+      if (st.nextKey && (m.type === 'inyeccion' || m.type === 'diu_cobre' || m.type === 'diu_hormonal' || m.type === 'implante')) {
         events.push({
-          id: `pred-ovulation-${i}`,
-          date: ovulationKey,
-          title: '🌺 Ovulación estimada (pico fértil)',
-          description: 'Ventana de máxima probabilidad de fertilidad',
+          id: `contra-${m.id}`,
+          date: st.nextKey,
+          title: m.type === 'inyeccion' ? '💉 Próxima inyección anticonceptiva' : `${METHODS[m.type].emoji} Vence ${METHODS[m.type].label}`,
+          description: st.detail ?? st.headline,
           category: 'salud',
           targetHash: '#health:menstrual',
         })
       }
-    }
+    })
   }
 
   data.utilities.reminders.forEach((reminder) => {
