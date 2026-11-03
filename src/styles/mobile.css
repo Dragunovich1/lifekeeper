@@ -291,7 +291,7 @@
    ========================================================================== */
 .mobile-main-content {
   flex: 1;
-  padding-bottom: calc(var(--mobile-bottom-height) + var(--safe-bottom) + 20px);
+  padding-bottom: calc(var(--mobile-bottom-height) + var(--safe-bottom) + 84px); /* deja lugar al botón flotante */
   touch-action: pan-y;
   position: relative;
   overflow-y: auto;
@@ -662,3 +662,6 @@
 /* Ojo: NO poner overscroll-behavior en .mobile-app-shell: es un scroller (por overflow-x) y corta el scroll táctil hacia el documento. */
 body { overscroll-behavior-y: none; }
 .mobile-app-shell button, .mobile-app-shell a, .mobile-app-shell [role='button'] { touch-action: manipulation; }
+
+/* En una sesión de gym en vivo el botón flotante tapa los controles de las series */
+.mobile-app-shell:has(.lw-title-row) .mqa-fab { display: none; }

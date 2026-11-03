@@ -1,0 +1,51 @@
+/* Gym en vivo: pensado primero para celular (390 px) — nada debe crecer en horizontal */
+.lw-title-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; min-width: 0; }
+.lw-title-row input { flex: 1 1 200px; min-width: 0; font-size: 1.05rem; font-weight: 700; padding: 0.6rem 0.8rem; }
+.lw-title-actions { display: flex; gap: 0.5rem; flex: 1 1 auto; min-width: 0; }
+.lw-title-actions button { flex: 1 1 0; min-width: 0; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; }
+.lw-finish { background-color: #10b981; border-color: #10b981; }
+.lw-discard { color: var(--color-error, #ef4444); }
+
+.lw-exercises { display: flex; flex-direction: column; gap: 0.85rem; min-width: 0; }
+.lw-exercise { background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 0.85rem; min-width: 0; }
+.lw-ex-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.7rem; min-width: 0; }
+.lw-ex-title { margin: 0; font-size: 1.05rem; font-weight: 700; min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.lw-ex-actions { display: flex; gap: 0.4rem; flex: 0 0 auto; }
+.lw-ex-actions button { padding: 0.35rem 0.65rem; font-size: 0.8rem; }
+.lw-empty { margin: 0 0 0.5rem; font-size: 0.85rem; opacity: 0.7; }
+
+.lw-sets { display: flex; flex-direction: column; gap: 0.55rem; min-width: 0; }
+/* Fila de serie: [#] [reps ±] [peso ±] en una línea y [Completar][🗑] debajo, ocupando todo el ancho */
+.lw-set {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.55rem 0.6rem;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  min-width: 0;
+}
+.lw-set.is-done { background-color: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.3); }
+.lw-set-num { font-weight: 700; font-size: 0.85rem; }
+.lw-stepper { display: flex; align-items: center; justify-content: space-between; gap: 0.2rem; min-width: 0; }
+.lw-stepper button { flex: 0 0 auto; width: 2rem; height: 2.25rem; padding: 0; font-size: 1.05rem; font-weight: 800; line-height: 1; }
+.lw-stepper-value { flex: 1 1 auto; min-width: 0; text-align: center; font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lw-stepper-value small { font-weight: 500; opacity: 0.7; font-size: 0.7rem; }
+.lw-set-actions { grid-column: 1 / -1; display: flex; gap: 0.5rem; min-width: 0; }
+.lw-done { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.5rem 0.75rem; font-size: 0.88rem; }
+.lw-set.is-done .lw-done { background-color: #10b981; border-color: #10b981; color: #fff; }
+.lw-icon-btn { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; }
+.lw-set-actions .lw-icon-btn { width: 2.6rem; padding: 0; }
+.lw-danger { color: var(--color-error, #ef4444); }
+
+/* Pantallas anchas: todo en una sola línea */
+@media (min-width: 700px) {
+  .lw-set { grid-template-columns: 1.6rem minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .lw-set-actions { grid-column: auto; }
+  .lw-title-actions { flex: 0 0 auto; }
+}
+
+/* El buscador de ejercicios no puede ensanchar la página */
+.lw-exercises + .ex-adder, .ex-adder { max-width: 100%; min-width: 0; }

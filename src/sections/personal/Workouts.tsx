@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import '../../styles/live-workout.css'
 import { ExerciseAdder, type ExerciseMeta } from '../../components/ExerciseAdder'
 import { DatePicker } from '../../components/DatePicker'
 import { Modal } from '../../components/Modal'
@@ -195,6 +196,7 @@ export const WorkoutsSection = () => {
   // Estado Sesión en Vivo
   const [sessionActive, setSessionActive] = useState(false)
   const [sessionElapsedSeconds, setSessionElapsedSeconds] = useState(0)
+  const [discardLiveOpen, setDiscardLiveOpen] = useState(false)
 
   // Temporizador de descanso (Rest Timer)
   const [restTimerSeconds, setRestTimerSeconds] = useState(60)
@@ -309,6 +311,29 @@ export const WorkoutsSection = () => {
         }
       }),
     }))
+  }
+
+  // Eliminar en Live Mode
+  const removeLiveExercise = (exerciseId: string) => {
+    setFormState((prev) => ({ ...prev, exercises: prev.exercises.filter((ex) => ex.id !== exerciseId) }))
+  }
+
+  const removeLiveSet = (exerciseId: string, setIndex: number) => {
+    setFormState((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((ex) =>
+        ex.id === exerciseId ? { ...ex, sets: ex.sets.filter((_, idx) => idx !== setIndex) } : ex,
+      ),
+    }))
+  }
+
+  const discardLiveSession = () => {
+    setSessionActive(false)
+    setSessionElapsedSeconds(0)
+    setRestActive(false)
+    setDiscardLiveOpen(false)
+    setFormState(createInitialFormState())
+    setCreationMode('plan')
   }
 
   // Métricas en vivo
@@ -1212,21 +1237,21 @@ export const WorkoutsSection = () => {
                 </div>
 
                 {/* Título y Foco del Entrenamiento en Vivo */}
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <div className="lw-title-row">
                   <input
                     value={formState.title}
                     onChange={(e) => setFormState({ ...formState, title: e.target.value })}
                     placeholder="Nombre del entrenamiento (Ej. Pecho y Bíceps)"
-                    style={{ fontSize: '1.1rem', fontWeight: 700, padding: '0.6rem 0.8rem' }}
+                    aria-label="Nombre del entrenamiento"
                   />
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => setFinishModalOpen(true)}
-                    style={{ whiteSpace: 'nowrap', backgroundColor: '#10b981', borderColor: '#10b981' }}
-                  >
-                    🏁 Finalizar Sesión
-                  </button>
+                  <div className="lw-title-actions">
+                    <button type="button" className="secondary-button lw-discard" onClick={() => setDiscardLiveOpen(true)}>
+                      <Trash2 size={15} aria-hidden /> Descartar
+                    </button>
+                    <button type="button" className="primary-button lw-finish" onClick={() => setFinishModalOpen(true)}>
+                      🏁 Finalizar
+                    </button>
+                  </div>
                 </div>
 
                 {/* Lista de Ejercicios en Vivo con Botones Táctiles Grandes */}
@@ -1248,126 +1273,80 @@ export const WorkoutsSection = () => {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div className="lw-exercises">
                     {formState.exercises.map((ex, exIdx) => (
-                      <div
-                        key={ex.id}
-                        className="subpanel"
-                        style={{
-                          backgroundColor: 'var(--color-surface)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '10px',
-                          padding: '1rem',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                      <div key={ex.id} className="subpanel lw-exercise">
+                        <div className="lw-ex-head">
+                          <h4 className="lw-ex-title">
                             {exIdx + 1}. {ex.name}
                           </h4>
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
-                            onClick={() => {
-                              const newSet = { reps: 10, weight: 0, rpe: 8, setType: 'normal' as WorkoutSetType }
-                              setFormState((prev) => ({
-                                ...prev,
-                                exercises: prev.exercises.map((e) =>
-                                  e.id === ex.id ? { ...e, sets: [...e.sets, newSet] } : e
-                                ),
-                              }))
-                            }}
-                          >
-                            + Serie
-                          </button>
-                        </div>
-
-                        {/* Series con botones táctiles grandes */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {ex.sets.map((set, setIdx) => (
-                            <div
-                              key={setIdx}
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'auto 1fr 1fr auto',
-                                gap: '0.5rem',
-                                alignItems: 'center',
-                                padding: '0.5rem 0.75rem',
-                                borderRadius: '8px',
-                                backgroundColor: set.done ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                                border: set.done ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid var(--color-border)',
+                          <div className="lw-ex-actions">
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() => {
+                                const last = ex.sets[ex.sets.length - 1]
+                                const newSet = { reps: last?.reps ?? 10, weight: last?.weight ?? 0, rpe: last?.rpe ?? 8, setType: 'normal' as WorkoutSetType }
+                                setFormState((prev) => ({
+                                  ...prev,
+                                  exercises: prev.exercises.map((e) => (e.id === ex.id ? { ...e, sets: [...e.sets, newSet] } : e)),
+                                }))
                               }}
                             >
-                              {/* Número de serie */}
-                              <span style={{ fontWeight: 700, width: '24px', fontSize: '0.85rem' }}>
-                                #{setIdx + 1}
-                              </span>
+                              + Serie
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary-button lw-icon-btn lw-danger"
+                              onClick={() => removeLiveExercise(ex.id)}
+                              aria-label={`Eliminar ${ex.name}`}
+                              title="Eliminar ejercicio"
+                            >
+                              <Trash2 size={16} aria-hidden />
+                            </button>
+                          </div>
+                        </div>
 
-                              {/* Repeticiones con botones +/- */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <button
-                                  type="button"
-                                  className="secondary-button"
-                                  style={{ padding: '0.3rem 0.6rem', fontSize: '0.9rem', fontWeight: 800 }}
-                                  onClick={() => adjustLiveSetReps(ex.id, setIdx, -1)}
-                                >
-                                  -
-                                </button>
-                                <span style={{ minWidth: '48px', textAlign: 'center', fontWeight: 700 }}>
-                                  {set.reps} reps
-                                </span>
-                                <button
-                                  type="button"
-                                  className="secondary-button"
-                                  style={{ padding: '0.3rem 0.6rem', fontSize: '0.9rem', fontWeight: 800 }}
-                                  onClick={() => adjustLiveSetReps(ex.id, setIdx, +1)}
-                                >
-                                  +
-                                </button>
+                        {ex.sets.length === 0 ? (
+                          <p className="lw-empty">Sin series. Tocá "+ Serie" para agregar una.</p>
+                        ) : null}
+
+                        <div className="lw-sets">
+                          {ex.sets.map((set, setIdx) => (
+                            <div key={setIdx} className={`lw-set${set.done ? ' is-done' : ''}`}>
+                              <span className="lw-set-num">#{setIdx + 1}</span>
+
+                              <div className="lw-stepper" aria-label={`Repeticiones de la serie ${setIdx + 1}`}>
+                                <button type="button" className="secondary-button" onClick={() => adjustLiveSetReps(ex.id, setIdx, -1)} aria-label="Menos repeticiones">−</button>
+                                <span className="lw-stepper-value">{set.reps} <small>reps</small></span>
+                                <button type="button" className="secondary-button" onClick={() => adjustLiveSetReps(ex.id, setIdx, +1)} aria-label="Más repeticiones">+</button>
                               </div>
 
-                              {/* Carga con botones +/- */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                <button
-                                  type="button"
-                                  className="secondary-button"
-                                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', fontWeight: 800 }}
-                                  onClick={() => adjustLiveSetWeight(ex.id, setIdx, isImperial ? -5 : -2.5)}
-                                >
-                                  -
-                                </button>
-                                <span style={{ minWidth: '54px', textAlign: 'center', fontWeight: 700 }}>
-                                  {set.weight ?? 0} {weightUnit}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="secondary-button"
-                                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', fontWeight: 800 }}
-                                  onClick={() => adjustLiveSetWeight(ex.id, setIdx, isImperial ? +5 : +2.5)}
-                                >
-                                  +
-                                </button>
+                              <div className="lw-stepper" aria-label={`Carga de la serie ${setIdx + 1}`}>
+                                <button type="button" className="secondary-button" onClick={() => adjustLiveSetWeight(ex.id, setIdx, isImperial ? -5 : -2.5)} aria-label="Menos peso">−</button>
+                                <span className="lw-stepper-value">{set.weight ?? 0} <small>{weightUnit}</small></span>
+                                <button type="button" className="secondary-button" onClick={() => adjustLiveSetWeight(ex.id, setIdx, isImperial ? +5 : +2.5)} aria-label="Más peso">+</button>
                               </div>
 
-                              {/* Botón de serie completada que dispara el timer */}
-                              <button
-                                type="button"
-                                className={set.done ? 'primary-button' : 'secondary-button'}
-                                style={{
-                                  padding: '0.4rem 0.75rem',
-                                  fontSize: '0.85rem',
-                                  backgroundColor: set.done ? '#10b981' : undefined,
-                                  borderColor: set.done ? '#10b981' : undefined,
-                                  color: set.done ? '#ffffff' : undefined,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                }}
-                                onClick={() => toggleLiveSetDone(ex.id, setIdx)}
-                              >
-                                <Check size={16} />
-                                {set.done ? 'Hecha' : 'Completar'}
-                              </button>
+                              <div className="lw-set-actions">
+                                <button
+                                  type="button"
+                                  className={`${set.done ? 'primary-button' : 'secondary-button'} lw-done`}
+                                  onClick={() => toggleLiveSetDone(ex.id, setIdx)}
+                                >
+                                  <Check size={16} aria-hidden />
+                                  {set.done ? 'Hecha' : 'Completar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="secondary-button lw-icon-btn lw-danger"
+                                  onClick={() => removeLiveSet(ex.id, setIdx)}
+                                  aria-label={`Eliminar serie ${setIdx + 1}`}
+                                  title="Eliminar serie"
+                                >
+                                  <Trash2 size={15} aria-hidden />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1380,6 +1359,17 @@ export const WorkoutsSection = () => {
                 <ExerciseAdder onAdd={addExerciseToCreation} placeholder="Agregar otro ejercicio a la sesión..." maxWidth="100%" />
               </div>
             ) : null}
+
+            <ConfirmModal
+              open={discardLiveOpen}
+              title="¿Descartar la sesión?"
+              message="Se borran los ejercicios y series de esta sesión en vivo y el cronómetro vuelve a cero. No se guarda nada en tu historial."
+              confirmLabel="Descartar sesión"
+              cancelLabel="Seguir entrenando"
+              variant="danger"
+              onConfirm={discardLiveSession}
+              onClose={() => setDiscardLiveOpen(false)}
+            />
 
             {/* Modal Confirmar Finalización de Sesión */}
             <Modal
