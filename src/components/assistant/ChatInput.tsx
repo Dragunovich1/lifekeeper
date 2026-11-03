@@ -1,3 +1,4 @@
+import { isTouchPrimary } from '../../services/platform'
 import { useEffect, useRef, type FormEvent, type KeyboardEvent, type Ref } from 'react'
 import { Mic, MicOff, Send } from 'lucide-react'
 
@@ -31,7 +32,8 @@ export function ChatInput({
   }, [value])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    // En el celular Enter es salto de línea (se envía con el botón); en teclado físico Enter envía
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isTouchPrimary()) {
       e.preventDefault()
       onSubmit()
     }
@@ -49,7 +51,7 @@ export function ChatInput({
         onClick={onToggleMic}
         className={`asst-round-btn asst-mic ${isListening ? 'is-listening' : ''}`}
         aria-label={isListening ? 'Detener dictado' : 'Hablarle al asistente (voz)'}
-        title={isListening ? 'Escuchando… hacé clic para detener' : 'Hablarle al asistente (voz)'}
+        title={isListening ? 'Escuchando… tocá para detener' : 'Hablarle al asistente (voz)'}
       >
         {isListening ? <MicOff size={18} /> : <Mic size={18} />}
       </button>
@@ -79,7 +81,7 @@ export function ChatInput({
             onKeyDown={handleKeyDown}
             placeholder={
               isLlmActive
-                ? 'Escribile a tu LLM local…  (Shift+Enter para nueva línea)'
+                ? (isTouchPrimary() ? 'Escribile a tu asistente…' : 'Escribile a tu LLM local…  (Shift+Enter para nueva línea)')
                 : 'Pedime algo: ¿cómo viene mi día?, le presté 20 lucas a Juan…'
             }
             aria-label="Mensaje para el asistente"

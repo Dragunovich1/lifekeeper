@@ -175,6 +175,13 @@
 - **Dashboard compacto:** KPIs en 2 columnas (de 1300 a ~490 px). **Cabecera:** botón de volver solo con flecha, título en una línea. **Pestañas:** degradé en los bordes y snap.
 - Las pestañas de Vehículos tienen textos cortos. Todo el CSS nuevo está al final de `styles/mobile.css`.
 
+### Enfoque Android (la app es mobile-first / APK)
+- **Botón/gesto Atrás** (`hooks/useAndroidBackButton.ts`, plugin `@capacitor/app`): cierra la capa abierta (modal, menú, asistente), luego vuelve al inicio y en el inicio pide tocar dos veces para salir.
+- **Sin ideas de escritorio en el celular:** `isTouchPrimary()` (`services/platform.ts`) oculta "Ctrl+K", y en el asistente y las notas rápidas **Enter es salto de línea** (se envía con el botón). Textos "hacé clic" → "tocá".
+- **Tap targets ≥ 40 px** en pestañas y botones (final de `styles/mobile.css`).
+- **Seguridad:** bloqueo al salir de la app con tiempo de gracia (Configuración). El desbloqueo biométrico real (huella con Keystore de Android) queda pendiente: requiere decidir guardar la contraseña maestra en el Keystore y un plugin nativo.
+- **Sync:** chip de estado en el Dashboard (`SyncStatusChip`) y reintento automático (`useCloudAutoRetry`). **Carga rápida** (`utils/quickAction.ts`) abre directo gasto/medición/recordatorio. **Dashboard** personalizable (`DashboardTrends`, `preferences.dashboardLayout`).
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)

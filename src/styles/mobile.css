@@ -646,3 +646,17 @@
 }
 .mobile-back-btn span { display: none; }
 .mobile-back-btn { padding: 8px 10px; }
+
+/* ==========================================================================
+   ANDROID FIRST: objetivos táctiles cómodos (≥ 40 px) y sin hover
+   ========================================================================== */
+.mobile-app-shell .mobile-subnav-pill { min-height: 40px; padding-top: 0; padding-bottom: 0; }
+.mobile-app-shell .dashboard-share-pill,
+.mobile-app-shell .sync-chip,
+.mobile-app-shell .dashboard-hero-tip-refresh { min-height: 38px; }
+.mobile-app-shell .dashboard-hero-tip-refresh { padding-left: 0.8rem; padding-right: 0.8rem; }
+.mobile-app-shell .secondary-button,
+.mobile-app-shell .primary-button { min-height: 42px; }
+.mobile-app-shell .tag-input-field { min-height: 32px; font-size: 16px; }
+.mobile-app-shell { overscroll-behavior-y: none; }
+.mobile-app-shell button, .mobile-app-shell a, .mobile-app-shell [role='button'] { touch-action: manipulation; }

@@ -42,7 +42,7 @@ export const FloatingAssistant = ({ onClick }: FloatingAssistantProps) => {
               onClick()
             }
           }}
-          title="Hacé clic para hablar con el Asistente"
+          title="Tocá para hablar con el Asistente"
         >
           <div className="floating-assistant-bubble-header">
             <span className="floating-assistant-bubble-title">

@@ -84,3 +84,7 @@ export const triggerHapticNotification = async (type: 'success' | 'warning' | 'e
     // Ignore
   }
 }
+
+/** true en celulares/tablets (puntero principal táctil): no hay Shift+Enter ni atajos de teclado. */
+export const isTouchPrimary = (): boolean =>
+  isNativePlatform() || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true)

@@ -22,6 +22,7 @@ import { useMobileLayout } from './hooks/useMobileLayout'
 import { useSwipeGesture } from './hooks/useSwipeGesture'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useCloudAutoRetry } from './hooks/useCloudStatus'
+import { useAndroidBackButton } from './hooks/useAndroidBackButton'
 import { MobileTopBar } from './components/mobile/MobileTopBar'
 import { MobileBottomNav } from './components/mobile/MobileBottomNav'
 import { MobileMenuSheet } from './components/mobile/MobileMenuSheet'
@@ -298,6 +299,26 @@ const VaultApp = () => {
 
   const userName =
     data.profile.fullName || data.profile.nickName || data.health.emergencyProfile.fullName || 'Sin nombre'
+
+  useAndroidBackButton({
+    closeTopLayer: () => {
+      if (preferencesModal) return setPreferencesModal(null), true
+      if (shareOpen) return setShareOpen(false), true
+      if (assistantOpen) return setAssistantOpen(false), true
+      if (alertsOpen) return setAlertsOpen(false), true
+      if (mobileMenuOpen) return setMobileMenuOpen(false), true
+      return false
+    },
+    goHome: () => {
+      if (!activeSection) return false
+      navigateTo(null)
+      return true
+    },
+    onExitHint: () => {
+      setSyncToast('Tocá de nuevo para salir')
+      window.setTimeout(() => setSyncToast(null), 2000)
+    },
+  })
 
   // Mobile Smartphone Layout (APK or Touch/Small Screen)
   if (isMobile) {

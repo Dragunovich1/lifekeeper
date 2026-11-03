@@ -1,3 +1,4 @@
+import { isTouchPrimary } from '../../services/platform'
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Check, Copy, Pencil, Pin, PinOff, Plus, Search, StickyNote, Trash2, X } from 'lucide-react'
@@ -52,7 +53,7 @@ export const QuickNotesSection = () => {
   }
 
   const onComposerKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isTouchPrimary()) {
       e.preventDefault()
       addNote()
     }
@@ -106,7 +107,7 @@ export const QuickNotesSection = () => {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onComposerKey}
           rows={3}
-          placeholder="Escribí una nota…  (Enter para guardar, Shift+Enter para nueva línea)"
+          placeholder={isTouchPrimary() ? 'Escribí una nota…' : 'Escribí una nota…  (Enter para guardar, Shift+Enter para nueva línea)'}
           aria-label="Nueva nota rápida"
         />
         <div className="qn-composer-bar">
@@ -180,7 +181,7 @@ export const QuickNotesSection = () => {
                       ))}
                     </div>
                     <div className="qn-card-actions is-visible">
-                      <button type="button" aria-label="Guardar cambios" title="Guardar (Ctrl+Enter)" onClick={saveEdit}><Check size={15} /></button>
+                      <button type="button" aria-label="Guardar cambios" title="Guardar" onClick={saveEdit}><Check size={15} /></button>
                       <button type="button" aria-label="Cancelar edición" title="Cancelar (Esc)" onClick={() => setEditingId(null)}><X size={15} /></button>
                     </div>
                   </div>

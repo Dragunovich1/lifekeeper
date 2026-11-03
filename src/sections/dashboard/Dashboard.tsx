@@ -1,3 +1,4 @@
+import { isTouchPrimary } from '../../services/platform'
 import {
   useCallback,
   useEffect,
@@ -1363,7 +1364,7 @@ export const DashboardSection = () => {
                 >
                   <X size={14} aria-hidden />
                 </button>
-              ) : (
+              ) : isTouchPrimary() ? null : (
                 <kbd className="dashboard-search-kbd" aria-hidden>
                   Ctrl+K
                 </kbd>
@@ -1548,7 +1549,8 @@ export const DashboardSection = () => {
                 border: 'none',
                 cursor: 'pointer',
                 color: 'var(--color-text-muted)',
-                padding: '0.2rem',
+                padding: '0.55rem',
+                margin: '-0.4rem',
                 display: 'inline-flex',
                 alignItems: 'center',
               }}

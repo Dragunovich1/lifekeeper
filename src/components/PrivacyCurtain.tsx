@@ -118,7 +118,7 @@ export const PrivacyCurtain = ({ enabled = false }: PrivacyCurtainProps) => {
           }}
         >
           <Eye size={16} />
-          <span>Hacé clic para reanudar</span>
+          <span>Tocá para reanudar</span>
         </button>
       </div>
     </div>
