@@ -1073,3 +1073,29 @@ select.form-input {
   form div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
   form div[style*="grid-template-columns: 1fr 1fr"] > * { min-width: 0; }
 }
+
+
+/* ==========================================================================
+   Consistencia de campos
+   ========================================================================== */
+/* Sin las flechitas nativas de los campos numéricos (se ven distintas en cada navegador y rompen el diseño) */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; appearance: none; margin: 0; }
+
+/* Red de seguridad: cualquier campo suelto dentro de un modal (fuera de .field/.panel) toma el estilo del diseño.
+   Va dentro de :where() para tener especificidad cero: cualquier clase propia lo pisa sin problemas. */
+:where(.pref-modal-body :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"], [type="range"], [type="color"], .tag-input-field, [data-bare])) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.6875rem 0.875rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}

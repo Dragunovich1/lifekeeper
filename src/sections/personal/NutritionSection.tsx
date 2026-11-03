@@ -645,7 +645,7 @@ export const NutritionSection = () => {
         </div>
 
         <form onSubmit={handleSaveFood} className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <div className="field-full">
+          <div className="field field-full">
             <label htmlFor="food-name">Nombre del alimento / comida</label>
             <input
               id="food-name"
@@ -739,7 +739,7 @@ export const NutritionSection = () => {
         maxWidth="480px"
       >
         <form onSubmit={handleSaveGoals} className="form-grid two-columns">
-          <div className="field-full">
+          <div className="field field-full">
             <label htmlFor="goal-cals">Calorías diarias objetivo (kcal)</label>
             <input
               id="goal-cals"
