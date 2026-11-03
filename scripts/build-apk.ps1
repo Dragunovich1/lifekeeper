@@ -85,6 +85,8 @@ if ($SkipPull) {
   Step "Se omite git pull (-SkipPull)"
 } else {
   Step "Trayendo la última versión de '$Branch'"
+  # Estos archivos los regenera 'cap sync' en cada compilación: se restauran para no trabar el pull
+  git checkout -- android/app/capacitor.build.gradle android/capacitor.settings.gradle 2>$null
   $dirty = git status --porcelain --untracked-files=no
   if ($dirty) { git status --short; Fail "Tenés cambios locales sin guardar. Guardalos (git stash) o corré con -SkipPull." }
   Run 'git' @('fetch', 'origin', $Branch)
