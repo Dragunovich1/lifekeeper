@@ -19,9 +19,12 @@ export const usePullToRefresh = (
     const el = targetRef.current
     if (!el || !enabled) return
 
+    // En el celular el que scrollea suele ser el documento (no `el`): hay que estar arriba de todo en ambos
+    const atTop = () => (window.scrollY || document.documentElement.scrollTop || 0) <= 0 && el.scrollTop <= 0
+
     const onStart = (e: TouchEvent) => {
       const t = e.target as HTMLElement | null
-      if (busy.current || el.scrollTop > 0 || t?.closest('input, textarea, select, .no-swipe, .mobile-subnav-scroll')) {
+      if (busy.current || !atTop() || t?.closest('input, textarea, select, .no-swipe, .mobile-subnav-scroll')) {
         startY.current = null
         return
       }
@@ -30,7 +33,7 @@ export const usePullToRefresh = (
     const onMove = (e: TouchEvent) => {
       if (startY.current === null) return
       const dy = e.touches[0].clientY - startY.current
-      if (dy <= 0 || el.scrollTop > 0) {
+      if (dy <= 0 || !atTop()) {
         pullRef.current = 0
         setPull(0)
         return

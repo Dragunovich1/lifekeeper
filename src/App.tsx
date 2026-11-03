@@ -183,11 +183,11 @@ const VaultApp = () => {
       if (!syncNow) return
       try {
         const res = await syncNow()
-        setSyncToast(res.success ? 'Sincronizado' : /JSON|token|Unexpected/i.test(res.message) ? 'No se pudo conectar con el servidor' : res.message)
+        setSyncToast(res.success ? 'Sincronizado' : /JSON|Unexpected/i.test(res.message) ? 'No se pudo conectar con el servidor' : res.message)
       } catch {
         setSyncToast('No se pudo sincronizar')
       }
-      window.setTimeout(() => setSyncToast(null), 2200)
+      window.setTimeout(() => setSyncToast(null), 4200)
     },
     { enabled: isMobile && Boolean(syncNow) },
   )

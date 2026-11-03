@@ -641,8 +641,9 @@
 /* Tirar para sincronizar */
 .ptr-indicator {
   position: fixed; top: calc(var(--mobile-top-height) + var(--safe-top) + 4px); left: 50%; z-index: 45;
-  padding: 6px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; color: #fff;
-  background: #0f766e; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); pointer-events: none; white-space: nowrap;
+  padding: 8px 14px; border-radius: 16px; font-size: 0.78rem; font-weight: 600; color: #fff; text-align: center;
+  background: #0f766e; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); pointer-events: none;
+  width: max-content; max-width: calc(100vw - 32px); white-space: normal;
 }
 .mobile-back-btn span { display: none; }
 .mobile-back-btn { padding: 8px 10px; }
@@ -658,5 +659,6 @@
 .mobile-app-shell .secondary-button,
 .mobile-app-shell .primary-button { min-height: 42px; }
 .mobile-app-shell .tag-input-field { min-height: 32px; font-size: 16px; }
-.mobile-app-shell { overscroll-behavior-y: none; }
+/* Ojo: NO poner overscroll-behavior en .mobile-app-shell: es un scroller (por overflow-x) y corta el scroll táctil hacia el documento. */
+body { overscroll-behavior-y: none; }
 .mobile-app-shell button, .mobile-app-shell a, .mobile-app-shell [role='button'] { touch-action: manipulation; }

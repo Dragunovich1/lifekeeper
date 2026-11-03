@@ -69,6 +69,33 @@ export class SyncService {
   private static instance: SyncService
   private state: SyncState = 'synced'
   private listeners: Array<(state: SyncState) => void> = []
+  /** Último motivo (legible) por el que falló una sincronización. */
+  private lastError = ''
+
+  public getLastError(): string {
+    return this.lastError
+  }
+
+  private httpMessage(status: number): string {
+    if (status === 401 || status === 403) return 'Tu sesión en la nube venció. Bloqueá y volvé a abrir la bóveda con tu contraseña maestra.'
+    if (status === 404) return 'No se encontró tu bóveda en el servidor.'
+    if (status === 409) return 'Otro dispositivo guardó cambios. Volvé a intentar.'
+    if (status === 429) return 'Demasiados intentos seguidos. Esperá unos minutos.'
+    if (status >= 500) return `El servidor no está respondiendo bien (error ${status}).`
+    return `El servidor rechazó la sincronización (error ${status}).`
+  }
+
+  /**
+   * El token de la nube puede vencer o invalidarse (el servidor se reinició con otra clave JWT, cambió el secreto, etc.).
+   * Como tenemos la contraseña maestra en memoria, se vuelve a iniciar sesión solo, sin molestar a la persona.
+   */
+  private async reauth(masterPassword: string): Promise<boolean> {
+    const s = this.getSession()
+    const id = s?.email || s?.username
+    if (!id) return false
+    const res = await this.loginCloudAccount(id, masterPassword)
+    return res.success
+  }
 
   private constructor() {
     if (typeof window !== 'undefined') {
@@ -292,23 +319,26 @@ export class SyncService {
   public async pullVault(
     masterPassword: string,
   ): Promise<{ success: boolean; data?: AppData; version?: number; updatedAt?: string; error?: string }> {
-    const session = this.getSession()
+    let session = this.getSession()
     if (!session || !this.isOnline()) {
       return { success: false, error: 'Sin sesión cloud activa o sin conexión' }
     }
 
     try {
       this.setState('syncing')
-      const response = await apiFetch('/api/vault/sync', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${session.token}`,
-        },
-      })
+      const get = (token: string) =>
+        apiFetch('/api/vault/sync', { method: 'GET', headers: { Authorization: `Bearer ${token}` } })
+      let response = await get(session.token)
+
+      if ((response.status === 401 || response.status === 403) && (await this.reauth(masterPassword))) {
+        session = this.getSession() ?? session
+        response = await get(session.token)
+      }
 
       if (!response.ok) {
         this.setState('error')
-        return { success: false, error: `Error HTTP ${response.status}` }
+        this.lastError = this.httpMessage(response.status)
+        return { success: false, error: this.lastError }
       }
 
       const resData = await response.json()
@@ -341,6 +371,7 @@ export class SyncService {
       }
     } catch (err) {
       console.warn('[SYNC PULL ERROR]:', err)
+      this.lastError = 'No se pudo conectar con el servidor. Revisá tu conexión.'
       this.setState('offline')
       return { success: false, error: err instanceof Error ? err.message : 'Error al descargar bóveda' }
     }
@@ -452,8 +483,10 @@ export class SyncService {
       }
 
       // Aseguramos que los datos locales estén subidos
+      this.lastError = ''
       const pushed = await this.pushVault(localData, masterPassword)
-      return pushed ? { action: 'pushed', data: localData } : { action: 'noop', data: localData }
+      if (pushed) return { action: 'pushed', data: localData }
+      return this.lastError ? { action: 'error', error: this.lastError } : { action: 'noop', data: localData }
     } catch (err) {
       console.warn('[SYNC BIDIRECTIONAL WARN]:', err)
       return { action: 'error', error: err instanceof Error ? err.message : 'Error de sincronización' }
@@ -504,25 +537,31 @@ export class SyncService {
       const encrypted = await encryptVaultData(data, encryptionKey, nextVersion)
       const username = (data.profile?.auth?.username || data.profile?.nickName || session.username || '').trim()
 
-      const response = await apiFetch('/api/vault/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`,
-        },
-        body: JSON.stringify({
-          version: nextVersion,
-          encrypted_data: encrypted.ciphertext,
-          iv: encrypted.iv,
-          auth_tag: 'embedded',
-          checksum: encrypted.checksum,
-          username: username || undefined,
-          device_id: typeof navigator !== 'undefined' ? navigator.userAgent : 'web-client',
-        }),
+      const body = JSON.stringify({
+        version: nextVersion,
+        encrypted_data: encrypted.ciphertext,
+        iv: encrypted.iv,
+        auth_tag: 'embedded',
+        checksum: encrypted.checksum,
+        username: username || undefined,
+        device_id: typeof navigator !== 'undefined' ? navigator.userAgent : 'web-client',
       })
+      const post = (token: string) =>
+        apiFetch('/api/vault/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body,
+        })
+      let response = await post(session.token)
+
+      if ((response.status === 401 || response.status === 403) && (await this.reauth(masterPassword))) {
+        session = this.getSession() ?? session
+        response = await post(session.token)
+      }
 
       if (!response.ok) {
         this.setState('error')
+        this.lastError = this.httpMessage(response.status)
         return false
       }
 
@@ -537,6 +576,7 @@ export class SyncService {
       return true
     } catch (err) {
       console.warn('[SYNC PUSH ERROR]:', err)
+      this.lastError = 'No se pudo conectar con el servidor. Revisá tu conexión.'
       localStorage.setItem(STORAGE_KEY_PENDING_SYNC, '1')
       this.setState('offline')
       return false
