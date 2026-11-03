@@ -1,6 +1,7 @@
 import type { WorkoutSession } from '../types'
 import { savePdf } from './saveFile'
 import { formatDate } from './dates'
+import { GROUP_LABELS, buildBlocks, groupRest, groupTitle, roundCount } from './workoutGroups'
 
 interface WorkoutPdfExportOptions {
   workouts: WorkoutSession[]
@@ -205,7 +206,45 @@ export async function exportWorkoutsToPDF({
           y += 4
         }
       } else {
-        w.exercises.forEach((ex) => {
+        buildBlocks(w.exercises).forEach((block) => {
+          if (block.kind === 'group') {
+            // Biserie / triserie / circuito: un ítem con varios ejercicios, ronda por ronda
+            const members = block.indices.map((i) => w.exercises[i])
+            const rounds = roundCount(members)
+            checkPageBreak(12)
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(8.5)
+            doc.setTextColor(15, 23, 42)
+            const rest = groupRest(members)
+            doc.text(`• [${GROUP_LABELS[block.groupKind]}] ${groupTitle(members)}${rest ? `  ·  Desc. ${rest >= 60 && rest % 60 === 0 ? `${rest / 60} min` : `${rest} s`}` : ''}`, margin + 4, y, { maxWidth: pageWidth - margin * 2 - 8 })
+            y += 4
+            members.forEach((m) => {
+              if (!m.notes) return
+              checkPageBreak(5)
+              doc.setFont('helvetica', 'italic')
+              doc.setFontSize(7.5)
+              doc.setTextColor(100, 116, 139)
+              doc.text(`    ${m.name}: ${m.notes}`, margin + 6, y)
+              y += 3.8
+            })
+            for (let r = 0; r < rounds; r++) {
+              checkPageBreak(6)
+              doc.setFont('helvetica', 'normal')
+              doc.setFontSize(8)
+              doc.setTextColor(51, 65, 85)
+              const parts = members.map((m) => {
+                const set = m.sets[r]
+                if (!set) return '–'
+                const weightText = set.weight ? `${set.weight} ${weightUnit}` : 'p. corporal'
+                return `${set.reps} × ${weightText}`
+              })
+              doc.text(`    Ronda ${r + 1}: ${parts.join('  +  ')}`, margin + 6, y, { maxWidth: pageWidth - margin * 2 - 10 })
+              y += 4
+            }
+            y += 1
+            return
+          }
+          const ex = w.exercises[block.index]
           checkPageBreak(12)
 
           doc.setFont('helvetica', 'bold')

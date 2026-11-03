@@ -49,6 +49,7 @@
 - **Feedback Sensorial al Terminar el Descanso:**
   - Pitido acústico doble sintetizado con **Web Audio API** (100% offline sin archivos de audio externos).
   - Vibración háptica dual mediante **@capacitor/haptics** y fallback web.
+- **Ítems combinados (biserie / triserie / circuito):** un ítem puede tener varios ejercicios (2 = biserie, 3 = triserie, 4–6 = circuito). Modelo: `WorkoutExercise.groupId/groupKind/restSeconds`; los ejercicios del grupo son consecutivos, cada uno conserva sus series y la "ronda" n es la serie n de todos. Lógica pura y testeada en `src/utils/workoutGroups.ts` (`buildBlocks`, `createGroup`, `addRound`, `cloneExercises`…); UI en `ExerciseItemAdder.tsx` (Ejercicio | Biserie | Triserie | Circuito; usa `ExerciseAdder` en modo controlado `value/onValueChange`) y `WorkoutGroupCards.tsx` (tarjeta de armado/edición y tarjeta en vivo con "Completar ronda", que dispara el descanso propio del ítem). Se ve agrupado en historial y PDF, y las plantillas (`cloneExercises`) conservan los grupos. Regla: los datos viejos (sin `groupId`) siguen siendo ejercicios sueltos; el `setType: 'biserie'` por serie sigue existiendo para compatibilidad.
 - **Botón 🏁 Finalizar Sesión:** Modal de resumen con minutos reales entrenados, series completadas y volumen total levantado en kg/lb.
 
 ### 📌 Proyectos e Ideas: Vista Dual Kanban / Lista

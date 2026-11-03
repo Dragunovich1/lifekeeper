@@ -10,15 +10,29 @@ export interface ExerciseMeta {
 }
 
 interface Props {
-  onAdd: (name: string, meta?: ExerciseMeta) => void
+  /** Modo "agregar": al elegir o dar Enter agrega el ejercicio y limpia el campo. */
+  onAdd?: (name: string, meta?: ExerciseMeta) => void
+  /**
+   * Modo "elegir" (campo controlado, sin botón Agregar): sirve para armar ítems con varios ejercicios.
+   * `meta` viene cuando se eligió una sugerencia del catálogo y es undefined si solo se está escribiendo.
+   */
+  value?: string
+  onValueChange?: (name: string, meta?: ExerciseMeta) => void
   placeholder?: string
   maxWidth?: number | string
+  ariaLabel?: string
 }
 
 /** Campo para agregar un ejercicio con sugerencias del catálogo (base local + wger cuando hay conexión). */
-export function ExerciseAdder({ onAdd, placeholder = 'Nombre del ejercicio…', maxWidth = 420 }: Props) {
+export function ExerciseAdder({ onAdd, value, onValueChange, placeholder = 'Nombre del ejercicio…', maxWidth = 420, ariaLabel }: Props) {
   const listId = useId()
-  const [text, setText] = useState('')
+  const pickMode = typeof onValueChange === 'function'
+  const [localText, setLocalText] = useState('')
+  const text = pickMode ? (value ?? '') : localText
+  const setText = (next: string) => {
+    if (pickMode) onValueChange?.(next, undefined)
+    else setLocalText(next)
+  }
   const [items, setItems] = useState<ExerciseSuggestion[]>([])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
@@ -61,8 +75,11 @@ export function ExerciseAdder({ onAdd, placeholder = 'Nombre del ejercicio…', 
   const commit = (name: string, meta?: ExerciseMeta) => {
     const clean = name.trim()
     if (!clean) return
-    onAdd(clean, meta)
-    setText('')
+    if (pickMode) onValueChange?.(clean, meta)
+    else {
+      onAdd?.(clean, meta)
+      setLocalText('')
+    }
     setItems([])
     setOpen(false)
     setActive(-1)
@@ -107,11 +124,14 @@ export function ExerciseAdder({ onAdd, placeholder = 'Nombre del ejercicio…', 
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
+          aria-label={ariaLabel}
           autoComplete="off"
         />
-        <button type="button" className="secondary-button" onClick={() => commit(text)} disabled={!text.trim()}>
-          <Plus size={16} /> Agregar
-        </button>
+        {!pickMode && (
+          <button type="button" className="secondary-button" onClick={() => commit(text)} disabled={!text.trim()}>
+            <Plus size={16} /> Agregar
+          </button>
+        )}
       </div>
 
       {showList && (

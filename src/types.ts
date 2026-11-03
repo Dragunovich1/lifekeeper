@@ -477,7 +477,17 @@ export interface WorkoutExercise {
   /** Músculos y equipo (del catálogo de ejercicios), solo informativo. */
   muscles?: string[]
   equipment?: string[]
+  /**
+   * Ítem combinado: los ejercicios con el mismo `groupId` (consecutivos) se hacen juntos, ronda por ronda
+   * (biserie = 2, triserie = 3, circuito = 4 o más). Cada uno conserva sus propias series.
+   */
+  groupId?: string
+  groupKind?: WorkoutGroupKind
+  /** Descanso del ítem en segundos (en un grupo se guarda igual en todos sus ejercicios). */
+  restSeconds?: number
 }
+
+export type WorkoutGroupKind = 'biserie' | 'triserie' | 'circuito'
 
 export interface WorkoutSession {
   id: string

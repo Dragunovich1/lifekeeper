@@ -20,7 +20,9 @@ import {
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import '../../styles/live-workout.css'
-import { ExerciseAdder, type ExerciseMeta } from '../../components/ExerciseAdder'
+import { type ExerciseMeta } from '../../components/ExerciseAdder'
+import { ExerciseItemAdder } from '../../components/ExerciseItemAdder'
+import { ExerciseGroupCard, ExerciseGroupLive } from '../../components/WorkoutGroupCards'
 import { DatePicker } from '../../components/DatePicker'
 import { Modal } from '../../components/Modal'
 import { SectionHeader } from '../../components/SectionHeader'
@@ -39,6 +41,17 @@ import {
   toLocalDateKey,
 } from '../../utils/dates'
 import { exportWorkoutsToPDF } from '../../utils/workoutPdfExport'
+import {
+  buildBlocks,
+  cloneExercises,
+  createGroup,
+  describeBlock,
+  groupRest,
+  isRoundDone,
+  replaceGroup,
+  ungroup,
+  type ExerciseDraft,
+} from '../../utils/workoutGroups'
 import { playRestTimerSound, triggerHapticFeedback } from '../../utils/audioHaptics'
 
 const WORKOUT_SET_TYPES: Array<{
@@ -201,6 +214,8 @@ export const WorkoutsSection = () => {
   // Temporizador de descanso (Rest Timer)
   const [restTimerSeconds, setRestTimerSeconds] = useState(60)
   const [restRemaining, setRestRemaining] = useState(0)
+  // Duración total del descanso en curso (puede venir del ítem y no del valor por defecto)
+  const [restTotal, setRestTotal] = useState(60)
   const [restActive, setRestActive] = useState(false)
   const [finishModalOpen, setFinishModalOpen] = useState(false)
 
@@ -240,7 +255,7 @@ export const WorkoutsSection = () => {
 
   const startRestTimer = (seconds?: number) => {
     const s = seconds || restTimerSeconds
-    setRestTimerSeconds(s)
+    setRestTotal(s)
     setRestRemaining(s)
     setRestActive(true)
     triggerHapticFeedback('impact')
@@ -271,7 +286,7 @@ export const WorkoutsSection = () => {
           const nextDone = !s.done
           if (nextDone) {
             // Disparar timer de descanso al completar serie
-            setTimeout(() => startRestTimer(restTimerSeconds), 50)
+            setTimeout(() => startRestTimer(ex.restSeconds || restTimerSeconds), 50)
           }
           return { ...s, done: nextDone }
         })
@@ -316,6 +331,24 @@ export const WorkoutsSection = () => {
   // Eliminar en Live Mode
   const removeLiveExercise = (exerciseId: string) => {
     setFormState((prev) => ({ ...prev, exercises: prev.exercises.filter((ex) => ex.id !== exerciseId) }))
+  }
+
+  // Ítems combinados (biserie / triserie / circuito) en vivo
+  const changeLiveGroup = (groupId: string, members: WorkoutExercise[] | null) => {
+    setFormState((prev) => ({ ...prev, exercises: replaceGroup(prev.exercises, groupId, members) }))
+  }
+
+  // Completar una ronda marca de una vez todos los ejercicios del ítem y arranca el descanso del ítem
+  const toggleLiveRound = (groupId: string, round: number) => {
+    const members = formState.exercises.filter((e) => e.groupId === groupId)
+    const allDone = isRoundDone(members, round)
+    setFormState((prev) => ({
+      ...prev,
+      exercises: prev.exercises.map((e) =>
+        e.groupId === groupId ? { ...e, sets: e.sets.map((s, i) => (i === round ? { ...s, done: !allDone } : s)) } : e,
+      ),
+    }))
+    if (!allDone) startRestTimer(groupRest(members) || restTimerSeconds)
   }
 
   const removeLiveSet = (exerciseId: string, setIndex: number) => {
@@ -459,17 +492,7 @@ export const WorkoutsSection = () => {
 
   // Cargar una rutina previa como plantilla en el formulario de creación
   const loadRoutineAsTemplate = (session: WorkoutSession) => {
-    const clonedExercises = session.exercises.map((ex) => ({
-      id: uuid(),
-      name: ex.name,
-      sets: ex.sets.map((s) => ({
-        reps: s.reps,
-        weight: s.weight,
-        rpe: s.rpe,
-        setType: s.setType || 'normal',
-        notes: s.notes || '',
-      })),
-    }))
+    const clonedExercises = cloneExercises(session.exercises, uuid)
 
     setFormState({
       title: session.title,
@@ -526,6 +549,63 @@ export const WorkoutsSection = () => {
       ...prev,
       exercises: [...prev.exercises, newEx],
     }))
+  }
+
+  const addGroupToCreation = (drafts: ExerciseDraft[]) => {
+    const members = createGroup(drafts, uuid)
+    setFormState((prev) => ({ ...prev, exercises: [...prev.exercises, ...members] }))
+  }
+
+  const addGroupToEdit = (drafts: ExerciseDraft[]) => {
+    const members = createGroup(drafts, uuid)
+    setEditFormState((prev) => ({ ...prev, exercises: [...prev.exercises, ...members] }))
+  }
+
+  // Tarjeta de un ítem combinado en el armado/edición (se muestra en el lugar de su primer ejercicio)
+  const renderGroupCard = (
+    exercises: WorkoutExercise[],
+    index: number,
+    update: (fn: (list: WorkoutExercise[]) => WorkoutExercise[]) => void,
+  ) => {
+    const groupId = exercises[index].groupId
+    if (!groupId) return undefined
+    const block = buildBlocks(exercises).find((b) => b.kind === 'group' && b.groupId === groupId)
+    if (!block || block.kind !== 'group') return undefined // grupo de uno solo: se muestra como ejercicio suelto
+    if (block.indices[0] !== index) return null // los demás integrantes ya van dentro de la tarjeta
+    const members = block.indices.map((i) => exercises[i])
+    return (
+      <ExerciseGroupCard
+        key={groupId}
+        members={members}
+        weightUnit={weightUnit}
+        onChange={(next) => update((list) => replaceGroup(list, groupId, next))}
+        onUngroup={() => update((list) => replaceGroup(list, groupId, ungroup(members)))}
+        onRemove={() => update((list) => replaceGroup(list, groupId, null))}
+      />
+    )
+  }
+
+  // Ítem combinado en "Gym en vivo"
+  const renderLiveGroup = (exercises: WorkoutExercise[], index: number) => {
+    const groupId = exercises[index].groupId
+    if (!groupId) return undefined
+    const block = buildBlocks(exercises).find((b) => b.kind === 'group' && b.groupId === groupId)
+    if (!block || block.kind !== 'group') return undefined
+    if (block.indices[0] !== index) return null
+    const members = block.indices.map((i) => exercises[i])
+    return (
+      <ExerciseGroupLive
+        key={groupId}
+        members={members}
+        weightUnit={weightUnit}
+        weightStep={isImperial ? 5 : 2.5}
+        onAdjustReps={adjustLiveSetReps}
+        onAdjustWeight={adjustLiveSetWeight}
+        onToggleRound={(round) => toggleLiveRound(groupId, round)}
+        onChange={(next) => changeLiveGroup(groupId, next)}
+        onRemove={() => changeLiveGroup(groupId, null)}
+      />
+    )
   }
 
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
@@ -1150,7 +1230,10 @@ export const WorkoutsSection = () => {
                             style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
                             onClick={() => {
                               setRestTimerSeconds(sec)
-                              if (restActive) setRestRemaining(sec)
+                              if (restActive) {
+                                setRestTotal(sec)
+                                setRestRemaining(sec)
+                              }
                             }}
                           >
                             {sec}s
@@ -1196,7 +1279,7 @@ export const WorkoutsSection = () => {
                       <div
                         style={{
                           height: '100%',
-                          width: `${Math.round((restRemaining / restTimerSeconds) * 100)}%`,
+                          width: `${Math.round((restRemaining / Math.max(1, restTotal)) * 100)}%`,
                           background: restRemaining <= 10 ? 'var(--color-error)' : 'var(--color-warning)',
                           transition: 'width 1s linear',
                         }}
@@ -1274,7 +1357,10 @@ export const WorkoutsSection = () => {
                   </div>
                 ) : (
                   <div className="lw-exercises">
-                    {formState.exercises.map((ex, exIdx) => (
+                    {formState.exercises.map((ex, exIdx) => {
+                      const groupCard = renderLiveGroup(formState.exercises, exIdx)
+                      if (groupCard !== undefined) return groupCard
+                      return (
                       <div key={ex.id} className="subpanel lw-exercise">
                         <div className="lw-ex-head">
                           <h4 className="lw-ex-title">
@@ -1351,12 +1437,13 @@ export const WorkoutsSection = () => {
                           ))}
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 
-                {/* Agregar más ejercicios en vivo */}
-                <ExerciseAdder onAdd={addExerciseToCreation} placeholder="Agregar otro ejercicio a la sesión..." maxWidth="100%" />
+                {/* Agregar más ejercicios o ítems combinados en vivo */}
+                <ExerciseItemAdder onAddSingle={addExerciseToCreation} onAddGroup={addGroupToCreation} placeholder="Agregar otro ejercicio a la sesión..." />
               </div>
             ) : null}
 
@@ -1583,10 +1670,13 @@ export const WorkoutsSection = () => {
                     }}
                   >
                     <label style={{ margin: 0, fontWeight: 600 }}>
-                      Ejercicios de la sesión ({formState.exercises.length})
+                      Ejercicios de la sesión ({formState.exercises.length}
+                      {buildBlocks(formState.exercises).length !== formState.exercises.length
+                        ? ` · ${buildBlocks(formState.exercises).length} ítems`
+                        : ''})
                     </label>
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                      Podés configurar modalidad (biserie, dropset) y notas por serie
+                      Armá biseries, triseries o circuitos con varios ejercicios por ítem
                     </span>
                   </div>
 
@@ -1607,12 +1697,17 @@ export const WorkoutsSection = () => {
 
                   {/* Buscador de ejercicios (catálogo base + wger) */}
                   <div style={{ marginBottom: '1rem' }}>
-                    <ExerciseAdder onAdd={addExerciseToCreation} placeholder="Buscá un ejercicio: press, sentadilla, dominadas..." maxWidth={460} />
+                    <ExerciseItemAdder onAddSingle={addExerciseToCreation} onAddGroup={addGroupToCreation} />
                   </div>
 
                   {/* Listado de ejercicios agregados a la sesión */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                    {formState.exercises.map((exercise, exIndex) => (
+                    {formState.exercises.map((exercise, exIndex) => {
+                      const groupCard = renderGroupCard(formState.exercises, exIndex, (fn) =>
+                        setFormState((prev) => ({ ...prev, exercises: fn(prev.exercises) })),
+                      )
+                      if (groupCard !== undefined) return groupCard
+                      return (
                       <div
                         key={exercise.id}
                         className="subpanel"
@@ -1818,7 +1913,8 @@ export const WorkoutsSection = () => {
                           </button>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -2087,7 +2183,32 @@ export const WorkoutsSection = () => {
                             paddingTop: '0.625rem',
                           }}
                         >
-                          {session.exercises.map((ex) => (
+                          {buildBlocks(session.exercises).map((block) => {
+                            if (block.kind === 'group') {
+                              const members = block.indices.map((i) => session.exercises[i])
+                              const info = describeBlock(members)
+                              return (
+                                <div key={block.groupId} style={{ fontSize: '0.8125rem' }}>
+                                  <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                                    • <span className={`wg-badge wg-badge-${block.groupKind}`}>{block.groupKind}</span> {info.title}:{' '}
+                                  </span>
+                                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                                    {info.detail}
+                                    {members.some((m) => m.sets.some((s) => s.weight)) &&
+                                      ` · cargas ${members
+                                        .map((m) => {
+                                          const w = m.sets
+                                            .map((s) => (isImperial ? Math.round((s.weight || 0) * 2.20462) : s.weight || 0))
+                                            .filter((x) => x > 0)
+                                          return `${m.name}: ${w.length ? Array.from(new Set(w)).join('/') + weightUnit : 'peso corporal'}`
+                                        })
+                                        .join(', ')}`}
+                                  </span>
+                                </div>
+                              )
+                            }
+                            const ex = session.exercises[block.index]
+                            return (
                             <div key={ex.id} style={{ fontSize: '0.8125rem' }}>
                               <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
                                 • {ex.name}:{' '}
@@ -2111,7 +2232,8 @@ export const WorkoutsSection = () => {
                                   .join(' · ')}
                               </span>
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -2239,11 +2361,16 @@ export const WorkoutsSection = () => {
             </label>
 
             <div style={{ marginBottom: '0.875rem' }}>
-              <ExerciseAdder onAdd={addExerciseToEdit} placeholder="Buscá un ejercicio para agregar..." maxWidth={420} />
+              <ExerciseItemAdder onAddSingle={addExerciseToEdit} onAddGroup={addGroupToEdit} placeholder="Buscá un ejercicio para agregar..." />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {editFormState.exercises.map((exercise, exIndex) => (
+              {editFormState.exercises.map((exercise, exIndex) => {
+                const groupCard = renderGroupCard(editFormState.exercises, exIndex, (fn) =>
+                  setEditFormState((prev) => ({ ...prev, exercises: fn(prev.exercises) })),
+                )
+                if (groupCard !== undefined) return groupCard
+                return (
                 <div
                   key={exercise.id}
                   className="subpanel"
@@ -2400,7 +2527,8 @@ export const WorkoutsSection = () => {
                     + Serie
                   </button>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
