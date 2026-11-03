@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { ScrollbarOverlay } from '../scrollbar/ScrollbarOverlay'
+import { ConfirmModal } from './ConfirmModal'
 
 export interface ModalProps {
   open: boolean
@@ -15,6 +16,8 @@ export interface ModalProps {
   className?: string
   ariaLabel?: string
   headerActions?: ReactNode
+  /** Pide confirmación al cerrar (tocar fuera, X o Esc) si ya se cargó algo en un formulario. Por defecto sí. */
+  confirmDiscard?: boolean
 }
 
 export const Modal = ({
@@ -29,11 +32,41 @@ export const Modal = ({
   className = '',
   ariaLabel,
   headerActions,
+  confirmDiscard = true,
 }: ModalProps) => {
   const titleId = useId()
   const bodyRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const previousFocus = useRef<Element | null>(null)
+  // `onClose` suele ser una función nueva en cada render: se guarda en un ref para que el efecto NO se reinicie
+  // (si se reinicia, el foco vuelve al botón de cerrar en cada tecla y el espacio cierra el modal).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // ¿Se tocó algo en un formulario? Si es así, cerrar "sin querer" (tocar fuera, X, Esc) pide confirmación
+  // en lugar de perder en silencio lo que se cargó. Las búsquedas (`role=search` o `data-no-dirty`) no cuentan.
+  const dirtyRef = useRef(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const confirmOpenRef = useRef(false)
+  confirmOpenRef.current = confirmOpen
+
+  useEffect(() => {
+    if (open) {
+      dirtyRef.current = false
+      setConfirmOpen(false)
+    }
+  }, [open])
+
+  const requestClose = useCallback(() => {
+    if (confirmOpenRef.current) return
+    if (confirmDiscard && dirtyRef.current) {
+      setConfirmOpen(true)
+      return
+    }
+    onCloseRef.current()
+  }, [confirmDiscard])
+  const requestCloseRef = useRef(requestClose)
+  requestCloseRef.current = requestClose
 
   useEffect(() => {
     if (!open) return
@@ -45,7 +78,7 @@ export const Modal = ({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onClose()
+        requestCloseRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -56,7 +89,7 @@ export const Modal = ({
         previousFocus.current.focus()
       }
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || typeof document === 'undefined') return null
 
@@ -64,7 +97,7 @@ export const Modal = ({
     <div
       className="pref-overlay"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (event.target === event.currentTarget) requestClose()
       }}
     >
       <div
@@ -74,6 +107,10 @@ export const Modal = ({
         aria-labelledby={title ? titleId : undefined}
         aria-label={ariaLabel}
         style={maxWidth ? { maxWidth } : undefined}
+        onInputCapture={(event) => {
+          const t = event.target as HTMLElement
+          if (t.closest('form') && !t.closest('[role="search"], [data-no-dirty]')) dirtyRef.current = true
+        }}
       >
         <header className="pref-modal-header">
           <div className="pref-modal-heading">
@@ -87,7 +124,7 @@ export const Modal = ({
               ref={closeRef}
               type="button"
               className="pref-modal-close"
-              onClick={onClose}
+              onClick={requestClose}
               aria-label="Cerrar ventana"
             >
               <X size={18} aria-hidden />
@@ -102,6 +139,21 @@ export const Modal = ({
         <ScrollbarOverlay targetRef={bodyRef} zIndex={1051} minThumb={28} />
 
         {footer ? <footer className="pref-modal-footer">{footer}</footer> : null}
+
+        <ConfirmModal
+          open={confirmOpen}
+          title="¿Salir sin guardar?"
+          message="Lo que cargaste en este formulario se va a perder."
+          confirmLabel="Descartar"
+          cancelLabel="Seguir editando"
+          variant="danger"
+          onConfirm={() => {
+            dirtyRef.current = false
+            setConfirmOpen(false)
+            onCloseRef.current()
+          }}
+          onClose={() => setConfirmOpen(false)}
+        />
       </div>
     </div>,
     document.body,

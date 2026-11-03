@@ -29,6 +29,10 @@ export const ConfirmModal = ({
   const descId = useId()
   const cancelRef = useRef<HTMLButtonElement>(null)
   const previousFocus = useRef<Element | null>(null)
+  // `onClose` suele ser una función nueva en cada render: se guarda en un ref para que el efecto NO se reinicie
+  // (si se reinicia, el foco vuelve al botón de cerrar en cada tecla y el espacio cierra el modal).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
@@ -40,7 +44,7 @@ export const ConfirmModal = ({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onClose()
+        onCloseRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -51,7 +55,7 @@ export const ConfirmModal = ({
         previousFocus.current.focus()
       }
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open || typeof document === 'undefined') return null
 

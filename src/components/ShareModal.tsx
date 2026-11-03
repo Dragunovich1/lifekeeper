@@ -14,16 +14,20 @@ const SHARE_MESSAGE =
 export const ShareModal = ({ open, onClose }: ShareModalProps) => {
   const [copied, setCopied] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
+  // `onClose` suele ser una función nueva en cada render: se guarda en un ref para que el efecto NO se reinicie
+  // (si se reinicia, el foco vuelve al botón de cerrar en cada tecla y el espacio cierra el modal).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown)
     closeRef.current?.focus()
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, onClose])
+  }, [open])
 
   if (!open || typeof document === 'undefined') return null
 

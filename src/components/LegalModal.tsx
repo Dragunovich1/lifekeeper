@@ -13,6 +13,8 @@ export const LegalModal = ({ documentKey, onClose }: LegalModalProps) => {
   const bodyRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const previousFocus = useRef<Element | null>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!documentKey) return
@@ -23,7 +25,7 @@ export const LegalModal = ({ documentKey, onClose }: LegalModalProps) => {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -35,7 +37,7 @@ export const LegalModal = ({ documentKey, onClose }: LegalModalProps) => {
         previousFocus.current.focus()
       }
     }
-  }, [documentKey, onClose])
+  }, [documentKey])
 
   if (!documentKey || typeof document === 'undefined') {
     return null
