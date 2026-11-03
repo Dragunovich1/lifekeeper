@@ -5,6 +5,7 @@ import {
   CURRENCY_OPTIONS,
   DEFAULT_PREFERENCES,
   LOGO_PRESETS,
+  normalizeDashboardLayout,
   type BackgroundId,
   type ColorMode,
   type CurrencyCode,
@@ -64,6 +65,7 @@ const loadPreferences = (): Preferences => {
       privacyCurtain: typeof parsed.privacyCurtain === 'boolean' ? parsed.privacyCurtain : DEFAULT_PREFERENCES.privacyCurtain,
       notifications: parsed.notifications === true,
       notificationDetails: parsed.notificationDetails === true,
+      dashboardLayout: normalizeDashboardLayout(parsed.dashboardLayout),
     }
   } catch {
     return DEFAULT_PREFERENCES

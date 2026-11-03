@@ -124,3 +124,15 @@ describe('selector de modelo (Ollama)', () => {
     expect(pickModel(['raro:1b'], '')).toBe('raro:1b')
   })
 })
+
+describe('layout del Dashboard', () => {
+  it('normaliza: descarta ids inválidos y repetidos, agrega los bloques nuevos', async () => {
+    const { normalizeDashboardLayout } = await import('../preferences/types')
+    const l = normalizeDashboardLayout({ order: ['lower', 'inexistente', 'lower', 'kpis'], hidden: ['kpis', 'x'] })
+    expect(l.order.slice(0, 2)).toEqual(['lower', 'kpis'])
+    expect(new Set(l.order).size).toBe(l.order.length)
+    expect(l.order).toContain('trends')
+    expect(l.hidden).toEqual(['kpis'])
+    expect(normalizeDashboardLayout(null).hidden).toEqual([])
+  })
+})

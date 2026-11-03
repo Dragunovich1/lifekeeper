@@ -108,6 +108,40 @@ export interface Preferences {
   notifications: boolean
   /** true: la notificación muestra el nombre del medicamento o del recordatorio; false: texto genérico. */
   notificationDetails: boolean
+  /** Orden y visibilidad de los bloques del Dashboard. */
+  dashboardLayout: DashboardLayout
+}
+
+export const DASHBOARD_BLOCKS = [
+  { id: 'kpis', label: 'Resumen (tarjetas)' },
+  { id: 'trends', label: 'Tendencias' },
+  { id: 'notes', label: 'Notas fijadas' },
+  { id: 'score', label: 'Salud de la bóveda' },
+  { id: 'insights', label: 'Alertas e insights' },
+  { id: 'quick', label: 'Datos personales y diario' },
+  { id: 'lower', label: 'Próximos recordatorios' },
+] as const
+
+export type DashboardBlockId = (typeof DASHBOARD_BLOCKS)[number]['id']
+
+export interface DashboardLayout {
+  order: DashboardBlockId[]
+  hidden: DashboardBlockId[]
+}
+
+export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = {
+  order: DASHBOARD_BLOCKS.map((b) => b.id),
+  hidden: [],
+}
+
+/** Normaliza un layout guardado: ids válidos, sin repetidos, y agrega los bloques nuevos al final. */
+export function normalizeDashboardLayout(raw: unknown): DashboardLayout {
+  const valid = new Set<string>(DASHBOARD_BLOCKS.map((b) => b.id))
+  const r = (raw && typeof raw === 'object' ? raw : {}) as { order?: unknown; hidden?: unknown }
+  const pick = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is DashboardBlockId => typeof x === 'string' && valid.has(x)) : [])
+  const order = Array.from(new Set(pick(r.order)))
+  for (const b of DASHBOARD_BLOCKS) if (!order.includes(b.id)) order.push(b.id)
+  return { order, hidden: Array.from(new Set(pick(r.hidden))) }
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -125,6 +159,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   privacyCurtain: false,
   notifications: false,
   notificationDetails: false,
+  dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,
 }
 
 export const AUTO_LOCK_OPTIONS = [

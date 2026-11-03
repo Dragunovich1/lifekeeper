@@ -50,6 +50,8 @@ import { ShareModal } from '../../components/ShareModal'
 import { VaultScoreCard } from '../../components/VaultScoreCard'
 import { PinnedNotesCard } from '../../components/PinnedNotesCard'
 import { SyncStatusChip } from '../../components/SyncStatusChip'
+import { DashboardTrends } from '../../components/DashboardTrends'
+import { DASHBOARD_BLOCKS, normalizeDashboardLayout, type DashboardBlockId } from '../../preferences/types'
 import { fetchAirQuality, type AirQualityData } from '../../services/api'
 import { useAppData } from '../../hooks/useAppData'
 import { useInsights } from '../../hooks/useInsights'
@@ -400,8 +402,27 @@ const SEARCH_DROPDOWN_MAX_HEIGHT = 360
 
 export const DashboardSection = () => {
   const { data, masterPassword, updateData } = useAppData()
-  const { preferences } = usePreferences()
+  const { preferences, updatePreferences } = usePreferences()
   const currency = preferences.currency
+  const layout = normalizeDashboardLayout(preferences.dashboardLayout)
+  const [customizeOpen, setCustomizeOpen] = useState(false)
+  const blockStyle = (id: DashboardBlockId): React.CSSProperties => ({
+    order: layout.order.indexOf(id) + 1,
+    display: layout.hidden.includes(id) ? 'none' : undefined,
+    minWidth: 0,
+  })
+  const moveBlock = (id: DashboardBlockId, dir: -1 | 1) => {
+    const order = [...layout.order]
+    const i = order.indexOf(id)
+    const j = i + dir
+    if (j < 0 || j >= order.length) return
+    ;[order[i], order[j]] = [order[j], order[i]]
+    updatePreferences({ dashboardLayout: { ...layout, order } })
+  }
+  const toggleBlock = (id: DashboardBlockId) => {
+    const hidden = layout.hidden.includes(id) ? layout.hidden.filter((x) => x !== id) : [...layout.hidden, id]
+    updatePreferences({ dashboardLayout: { ...layout, hidden } })
+  }
   const {
     insights,
     criticalCount,
@@ -1439,6 +1460,7 @@ export const DashboardSection = () => {
           )
         : null}
 
+      <div style={blockStyle('kpis')}>
       <div className="kpi-grid">
         <a className="kpi-tile" href="#utilities:reminders">
           <div className="kpi-tile-head">
@@ -1684,11 +1706,21 @@ export const DashboardSection = () => {
           </span>
         </a>
       </div>
+      </div>
 
-      <PinnedNotesCard />
+      <div style={blockStyle('trends')}>
+        <DashboardTrends />
+      </div>
 
-      <VaultScoreCard />
+      <div style={blockStyle('notes')}>
+        <PinnedNotesCard />
+      </div>
 
+      <div style={blockStyle('score')}>
+        <VaultScoreCard />
+      </div>
+
+      <div style={blockStyle('insights')}>
       <section className="panel dashboard-insights" aria-label="Centro de atención e insights">
         <div className="panel-header">
           <div>
@@ -1799,7 +1831,9 @@ export const DashboardSection = () => {
           </div>
         )}
       </section>
+      </div>
 
+      <div style={blockStyle('quick')}>
       <div className="quick-grid">
         <section className="quick-card">
           <div className="quick-card-head">
@@ -1920,7 +1954,9 @@ export const DashboardSection = () => {
           </div>
         </section>
       </div>
+      </div>
 
+      <div style={blockStyle('lower')}>
       <div className="dashboard-lower">
         <section className="panel dashboard-panel">
           <div className="panel-header">
@@ -1995,6 +2031,46 @@ export const DashboardSection = () => {
           )}
         </section>
       </div>
+      </div>
+
+      <div className="dash-customize" style={{ order: 100 }}>
+        <button type="button" className="secondary-button" onClick={() => setCustomizeOpen(true)}>
+          Personalizar inicio
+        </button>
+      </div>
+
+      <Modal
+        open={customizeOpen}
+        onClose={() => setCustomizeOpen(false)}
+        title="Personalizar inicio"
+        subtitle="Elegí qué ver y en qué orden"
+        maxWidth={460}
+        footer={
+          <>
+            <button type="button" className="secondary-button" onClick={() => updatePreferences({ dashboardLayout: normalizeDashboardLayout(null) })}>
+              Restablecer
+            </button>
+            <button type="button" className="primary-button" onClick={() => setCustomizeOpen(false)}>
+              Listo
+            </button>
+          </>
+        }
+      >
+        <ul className="dash-order-list">
+          {layout.order.map((id, i) => {
+            const meta = DASHBOARD_BLOCKS.find((b) => b.id === id)
+            const hidden = layout.hidden.includes(id)
+            return (
+              <li key={id} className={hidden ? 'is-hidden' : ''}>
+                <input type="checkbox" checked={!hidden} onChange={() => toggleBlock(id)} aria-label={`Mostrar ${meta?.label}`} />
+                <span className="lbl">{meta?.label}</span>
+                <button type="button" className="secondary-button" disabled={i === 0} onClick={() => moveBlock(id, -1)} aria-label={`Subir ${meta?.label}`}>↑</button>
+                <button type="button" className="secondary-button" disabled={i === layout.order.length - 1} onClick={() => moveBlock(id, 1)} aria-label={`Bajar ${meta?.label}`}>↓</button>
+              </li>
+            )
+          })}
+        </ul>
+      </Modal>
 
       <Modal
         open={weightModalOpen}
