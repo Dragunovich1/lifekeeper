@@ -50,6 +50,7 @@ function countVaultRecords(data: AppData): number {
       (data.personal?.projects?.length || 0) +
       (data.personal?.vehicles?.length || 0) +
       (data.personal?.workouts?.length || 0) +
+      (data.personal?.workoutRoutines?.length || 0) +
       (data.utilities?.reminders?.length || 0) +
       (data.utilities?.quickNotes?.length || 0) +
       (data.health?.measurements?.length || 0) +

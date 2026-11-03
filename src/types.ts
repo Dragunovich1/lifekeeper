@@ -460,9 +460,23 @@ export type WorkoutType =
 
 export type WorkoutSetType = 'normal' | 'warmup' | 'dropset' | 'biserie' | 'failure'
 
+/** Caída de un drop set: se baja el peso sin descansar y se sigue. */
+export interface WorkoutDrop {
+  reps: number
+  weight?: number
+}
+
 export interface WorkoutExerciseSet {
   reps: number
   weight?: number
+  /** Ejercicios medidos por tiempo (plancha, cinta): duración en segundos. */
+  seconds?: number
+  /** Serie de calentamiento: no cuenta como serie efectiva ni suma al volumen. */
+  warmup?: boolean
+  /** Serie llevada al fallo. */
+  failure?: boolean
+  /** Caídas del drop set (cada una con sus reps y peso). */
+  drops?: WorkoutDrop[]
   rpe?: number
   done?: boolean
   setType?: WorkoutSetType
@@ -485,7 +499,13 @@ export interface WorkoutExercise {
   groupKind?: WorkoutGroupKind
   /** Descanso del ítem en segundos (en un grupo se guarda igual en todos sus ejercicios). */
   restSeconds?: number
+  /** Cómo se mide el ejercicio: repeticiones (por defecto) o tiempo. */
+  measure?: WorkoutMeasure
+  /** Se hace de a un lado por vez (por pierna, por brazo). */
+  perSide?: boolean
 }
+
+export type WorkoutMeasure = 'reps' | 'time'
 
 export type WorkoutGroupKind = 'biserie' | 'triserie' | 'circuito'
 
@@ -501,6 +521,43 @@ export interface WorkoutSession {
   calories?: number
   exercises: WorkoutExercise[]
   notes?: string
+  /** Si se hizo desde una rutina: cuál y qué día. */
+  routineId?: string
+  routineDayId?: string
+}
+
+/** Un día de una rutina (ej. "Día 2 · Tren superior") con sus ítems. */
+export interface WorkoutRoutineDay {
+  id: string
+  name: string
+  type?: WorkoutType
+  notes?: string
+  exercises: WorkoutExercise[]
+}
+
+/** Programa de entrenamiento con varios días (ej. "Rutina Septiembre"). */
+export interface WorkoutRoutine {
+  id: string
+  name: string
+  notes?: string
+  days: WorkoutRoutineDay[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Sesión en vivo en curso: se guarda cifrada para no perderla si se cierra la app. */
+export interface LiveWorkoutDraft {
+  title: string
+  type: WorkoutType
+  notes: string
+  exercises: WorkoutExercise[]
+  startedAt: string
+  /** Segundos acumulados antes de la última pausa. */
+  accumulatedSeconds: number
+  /** Si está corriendo: desde cuándo (ISO). null = en pausa. */
+  runningSince: string | null
+  routineId?: string
+  routineDayId?: string
 }
 
 export interface WorkoutTemplate {
@@ -597,6 +654,10 @@ export interface PersonalData {
   vehicleProfiles?: VehicleProfile[]
   workouts?: WorkoutSession[]
   workoutTemplates?: WorkoutTemplate[]
+  workoutRoutines?: WorkoutRoutine[]
+  /** Rutina activa: de ahí sale "el día que toca". */
+  activeRoutineId?: string
+  liveWorkout?: LiveWorkoutDraft | null
   nutrition?: NutritionData
   shopping?: ShoppingData
 }

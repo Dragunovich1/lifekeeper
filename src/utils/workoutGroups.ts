@@ -4,7 +4,8 @@
  * Un ítem combinado es una tanda de `WorkoutExercise` consecutivos con el mismo `groupId`. Cada ejercicio
  * conserva sus propias series (reps / peso), y la "ronda" n del ítem es la serie n de todos sus ejercicios.
  */
-import type { WorkoutExercise, WorkoutExerciseSet, WorkoutGroupKind } from '../types'
+import type { WorkoutExercise, WorkoutExerciseSet, WorkoutGroupKind, WorkoutMeasure } from '../types'
+import { defaultSetsFor, formatSeconds, measureOf, nextSetFrom } from './workoutSets'
 
 export const GROUP_MIN = 2
 export const GROUP_MAX = 6
@@ -13,6 +14,8 @@ export interface ExerciseDraft {
   name: string
   muscles?: string[]
   equipment?: string[]
+  measure?: WorkoutMeasure
+  perSide?: boolean
 }
 
 export type WorkoutBlock =
@@ -31,11 +34,9 @@ export function groupKindFor(count: number): WorkoutGroupKind {
   return 'circuito'
 }
 
-const defaultSet = (): WorkoutExerciseSet => ({ reps: 10, weight: 0, rpe: 8, setType: 'normal', notes: '' })
-
 /** Series por defecto de un ejercicio nuevo. */
-export function defaultSets(count = 3): WorkoutExerciseSet[] {
-  return Array.from({ length: count }, defaultSet)
+export function defaultSets(count = 3, measure: WorkoutMeasure = 'reps'): WorkoutExerciseSet[] {
+  return defaultSetsFor(measure, count)
 }
 
 /** Agrupa la lista plana en bloques: ejercicios sueltos o ítems combinados (solo si son consecutivos). */
@@ -69,7 +70,9 @@ export function createGroup(drafts: ExerciseDraft[], newId: () => string, rounds
     name: d.name,
     muscles: d.muscles?.length ? d.muscles : undefined,
     equipment: d.equipment?.length ? d.equipment : undefined,
-    sets: defaultSets(rounds),
+    sets: defaultSets(rounds, d.measure ?? 'reps'),
+    ...(d.measure === 'time' ? { measure: 'time' as const } : {}),
+    ...(d.perSide ? { perSide: true } : {}),
     groupId,
     groupKind,
     ...(restSeconds ? { restSeconds } : {}),
@@ -88,10 +91,7 @@ export function groupTitle(members: WorkoutExercise[]): string {
 
 /** Suma una ronda a todos los ejercicios, copiando la última de cada uno (sin marcar como hecha). */
 export function addRound(members: WorkoutExercise[]): WorkoutExercise[] {
-  return members.map((m) => {
-    const last = m.sets[m.sets.length - 1] ?? defaultSet()
-    return { ...m, sets: [...m.sets, { ...last, done: false, notes: '' }] }
-  })
+  return members.map((m) => ({ ...m, sets: [...m.sets, nextSetFrom(m.sets[m.sets.length - 1])] }))
 }
 
 /** Quita la ronda `round` de todos los ejercicios. */
@@ -154,7 +154,7 @@ export function cloneExercises(exercises: WorkoutExercise[], newId: () => string
       id: newId(),
       groupId,
       groupKind: groupId ? ex.groupKind : undefined,
-      sets: ex.sets.map((s) => ({ ...s, done: false, setType: s.setType || 'normal', notes: s.notes || '' })),
+      sets: ex.sets.map((s) => ({ ...s, done: false, setType: s.setType || 'normal', notes: s.notes || '', drops: s.drops?.map((d) => ({ ...d })) })),
     }
   })
 }
@@ -168,7 +168,7 @@ export function describeBlock(members: WorkoutExercise[]): { title: string; deta
   const rounds = roundCount(members)
   const parts: string[] = []
   for (let r = 0; r < rounds; r++) {
-    parts.push(members.map((m) => (m.sets[r] ? String(m.sets[r].reps) : '–')).join('+'))
+    parts.push(members.map((m) => (m.sets[r] ? (measureOf(m) === 'time' ? formatSeconds(m.sets[r].seconds || 0) : String(m.sets[r].reps)) : '–')).join('+'))
   }
   return { title: groupTitle(members), detail: `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}: ${parts.join(' · ')}` }
 }

@@ -72,6 +72,7 @@ export const createEmptyAppData = (): AppData => ({
     vehicleProfiles: [],
     workouts: [],
     workoutTemplates: [],
+    workoutRoutines: [],
     nutrition: {
       dailyLogs: [],
       dailyGoals: {
@@ -209,6 +210,9 @@ export const ensureAppDataShape = (data?: Partial<AppData>): AppData => {
       vehicleProfiles: Array.isArray(data.personal?.vehicleProfiles) ? [...data.personal.vehicleProfiles] : [],
       workouts: data.personal?.workouts ? [...data.personal.workouts] : [],
       workoutTemplates: data.personal?.workoutTemplates ? [...data.personal.workoutTemplates] : [],
+      workoutRoutines: Array.isArray(data.personal?.workoutRoutines) ? [...data.personal.workoutRoutines] : [],
+      activeRoutineId: data.personal?.activeRoutineId || undefined,
+      liveWorkout: data.personal?.liveWorkout ?? null,
       nutrition: data.personal?.nutrition
         ? {
             dailyLogs: Array.isArray(data.personal.nutrition.dailyLogs)
