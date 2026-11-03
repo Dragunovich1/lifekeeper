@@ -30,7 +30,9 @@ CI (GitHub Actions): tipos + tests + build del front y tests del servidor.
 
 ## Actualizar con un solo comando
 
-**Web (en el servidor Ubuntu, por SSH):**
+**Web (desde Windows, un doble clic):** `update-web.bat` — se conecta por SSH al servidor y corre el script de abajo. Opciones: `-NoCache`, `-NoBackup`, `-DryRun`.
+
+**Web (directo en el servidor Ubuntu, por SSH):**
 
 ```bash
 cd ~/lifekeeper && ./scripts/update-web.sh        # --no-cache | --no-backup | --dry-run

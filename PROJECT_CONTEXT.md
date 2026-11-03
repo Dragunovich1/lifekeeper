@@ -232,13 +232,9 @@
   - `postgres` (contenedor: `lifekeeper-postgres`): Base de datos en `127.0.0.1:5432`.
   - `ollama` (contenedor: `lifekeeper-ollama`): Modelo de IA en `127.0.0.1:11434`.
 
-### 🔄 Comando para actualizar la Web en el Server:
-```bash
-cd ~/lifekeeper
-git pull origin main
-docker compose build --no-cache web
-docker compose up -d web
-```
+### 🔄 Actualizar la Web en el Server:
+- **Desde Windows (recomendado):** doble clic en `update-web.bat` (o `.\scripts\update-web.ps1`). Revisa que todo esté subido a GitHub, entra por SSH y corre el script del servidor. Opciones: `-NoCache`, `-NoBackup`, `-DryRun`, `-Server`, `-User`.
+- **En el server (SSH):** `cd ~/lifekeeper && ./scripts/update-web.sh` (copia de la base, `git pull --ff-only`, `.env`/`JWT_SECRET`, rebuild de `api`, `web` y `tts`, verificación). Ver `--help`.
 
 ---
 
