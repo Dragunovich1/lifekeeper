@@ -3,6 +3,7 @@
  * Genera un documento formal imprimible con las 24 palabras mnemónicas de recuperación.
  */
 
+import { savePdf } from '../../utils/saveFile'
 import { generateRecoveryKit } from './zeroKnowledge'
 
 export interface EmergencyKitOptions {
@@ -159,7 +160,7 @@ export async function downloadEmergencyKitPdf(options: EmergencyKitOptions): Pro
   )
 
   const fileName = `lifekeeper-emergency-kit-${new Date().toISOString().slice(0, 10)}.pdf`
-  doc.save(fileName)
+  await savePdf(doc, fileName)
 
   return kit.phrase
 }

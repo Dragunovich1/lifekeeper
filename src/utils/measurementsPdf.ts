@@ -1,5 +1,6 @@
 import type { jsPDF } from 'jspdf'
 import type { HealthMeasurement } from '../types'
+import { savePdf } from './saveFile'
 import {
   MEASUREMENT_TYPES,
   classifyMeasurement,
@@ -81,4 +82,4 @@ export async function buildMeasurementsPdf({ measurements, userName = 'Paciente'
   return doc
 }
 
-export const downloadMeasurementsPdf = async (opts: Options, fileName: string) => (await buildMeasurementsPdf(opts)).save(fileName)
+export const downloadMeasurementsPdf = async (opts: Options, fileName: string) => savePdf(await buildMeasurementsPdf(opts), fileName)

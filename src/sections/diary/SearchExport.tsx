@@ -1,4 +1,4 @@
-import { saveAs } from 'file-saver'
+import { saveFile, savePdf } from '../../utils/saveFile'
 import {
   CheckSquare,
   FileDown,
@@ -88,7 +88,7 @@ export const DiarySearchExportSection = () => {
           }
         }
       })
-      doc.save(`diario-${Date.now()}.pdf`)
+      await savePdf(doc, `diario-${Date.now()}.pdf`)
       return
     }
 
@@ -103,7 +103,7 @@ export const DiarySearchExportSection = () => {
       .join('\n\n-----\n\n')
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-    saveAs(blob, `diario-${Date.now()}.txt`)
+    await saveFile(blob, `diario-${Date.now()}.txt`)
   }
 
   return (

@@ -1,4 +1,4 @@
-import { saveAs } from 'file-saver'
+import { saveFile } from './saveFile'
 import { safeParseDate } from './dates'
 
 export interface ICalendarEventData {
@@ -45,7 +45,7 @@ export const exportEventsToICS = (
   events: ICalendarEventData[],
   calendarName = 'LifeKeeper Eventos',
   filename = 'lifekeeper_eventos.ics',
-) => {
+): Promise<void> => {
   const now = new Date()
   const dtStamp = formatIcsDate(now.toISOString())
 
@@ -95,5 +95,5 @@ export const exportEventsToICS = (
   const icsBlob = new Blob([lines.join('\r\n')], {
     type: 'text/calendar;charset=utf-8',
   })
-  saveAs(icsBlob, filename)
+  return saveFile(icsBlob, filename)
 }

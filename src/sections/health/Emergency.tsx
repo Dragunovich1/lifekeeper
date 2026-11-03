@@ -1,3 +1,4 @@
+import { isNativePlatform } from '../../services/platform'
 import { useEffect, useMemo, useState } from 'react'
 import { X, QrCode, Printer, ShieldCheck } from 'lucide-react'
 import QRCode from 'qrcode'
@@ -694,15 +695,21 @@ export const EmergencySection = () => {
               >
                 Cerrar
               </button>
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => window.print()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                <Printer size={16} />
-                Imprimir Carnet
-              </button>
+              {isNativePlatform() ? (
+                <p className="pref-help" style={{ margin: 0 }}>
+                  Para imprimirlo o compartirlo, usá "Exportar tarjeta SOS (PDF)" en Respaldos y exportación.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => window.print()}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Printer size={16} />
+                  Imprimir Carnet
+                </button>
+              )}
             </div>
           </div>
         </div>

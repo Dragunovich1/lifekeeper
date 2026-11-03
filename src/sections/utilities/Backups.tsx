@@ -1,4 +1,4 @@
-import { saveAs } from 'file-saver'
+import { saveFile } from '../../utils/saveFile'
 import { useEffect, useState } from 'react'
 import { Cloud, RefreshCw, Smartphone } from 'lucide-react'
 import { ConfirmModal } from '../../components/ConfirmModal'
@@ -89,22 +89,34 @@ export const BackupsSection = () => {
     }))
   }
 
-  const handleEncryptedBackup = () => {
+  /** Entrega el archivo (descarga en la web; menú "Compartir" en la APK) y avisa si falla. */
+  const deliver = async (blob: Blob, filename: string): Promise<boolean> => {
+    try {
+      await saveFile(blob, filename)
+      return true
+    } catch {
+      setStatusMessage(null)
+      setErrorMessage('No se pudo guardar o compartir el archivo.')
+      return false
+    }
+  }
+
+  const handleEncryptedBackup = async () => {
     const payload = {
       exportedAt: new Date().toISOString(),
       version: 1,
       cipher: encryptObject(data, masterPassword),
     }
     const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
-    saveAs(blob, `lifekeeper-encrypted-${timestamp()}.json`)
+    if (!(await deliver(blob, `lifekeeper-encrypted-${timestamp()}.json`))) return
     stampManualBackup()
     setStatusMessage('Backup cifrado generado correctamente.')
     setErrorMessage(null)
   }
 
-  const handlePlainBackup = () => {
+  const handlePlainBackup = async () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    saveAs(blob, `lifekeeper-data-${timestamp()}.json`)
+    if (!(await deliver(blob, `lifekeeper-data-${timestamp()}.json`))) return
     stampManualBackup()
     setStatusMessage('Backup JSON generado.')
     setErrorMessage(null)
@@ -158,7 +170,7 @@ export const BackupsSection = () => {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
-    saveAs(blob, `lifekeeper-${timestamp()}.xlsx`)
+    if (!(await deliver(blob, `lifekeeper-${timestamp()}.xlsx`))) return
     setStatusMessage('Archivo Excel creado con todas las secciones.')
     setErrorMessage(null)
   }
@@ -190,7 +202,7 @@ export const BackupsSection = () => {
 
     const buffer = await workbook.csv.writeBuffer()
     const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8' })
-    saveAs(blob, `lifekeeper-${timestamp()}.csv`)
+    if (!(await deliver(blob, `lifekeeper-${timestamp()}.csv`))) return
     setStatusMessage('Archivo CSV combinado generado.')
     setErrorMessage(null)
   }
@@ -237,7 +249,7 @@ export const BackupsSection = () => {
       )
       cursorY += 14
     })
-    doc.save(`lifekeeper-sos-${timestamp()}.pdf`)
+    if (!(await deliver(doc.output('blob'), `lifekeeper-sos-${timestamp()}.pdf`))) return
     setStatusMessage('Tarjeta SOS generada.')
     setErrorMessage(null)
   }
@@ -500,7 +512,7 @@ export const BackupsSection = () => {
       pageHeight - 25,
     )
 
-    doc.save(`lifekeeper-salud-fitness-${timestamp()}.pdf`)
+    if (!(await deliver(doc.output('blob'), `lifekeeper-salud-fitness-${timestamp()}.pdf`))) return
     setStatusMessage('Reporte médico y de fitness generado con éxito.')
     setErrorMessage(null)
   }

@@ -1,4 +1,5 @@
 import type { WorkoutSession } from '../types'
+import { savePdf } from './saveFile'
 import { formatDate } from './dates'
 
 interface WorkoutPdfExportOptions {
@@ -268,5 +269,5 @@ export async function exportWorkoutsToPDF({
 
   // Descarga del archivo
   const dateStr = new Date().toISOString().slice(0, 10)
-  doc.save(`LifeKeeper-Entrenamientos-${dateStr}.pdf`)
+  await savePdf(doc, `LifeKeeper-Entrenamientos-${dateStr}.pdf`)
 }
