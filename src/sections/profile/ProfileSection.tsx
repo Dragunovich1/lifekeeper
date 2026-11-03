@@ -657,13 +657,20 @@ export const ProfileSection = () => {
                       </p>
                     </div>
                   </div>
-                  <a
-                    className="primary-button"
-                    href="#health:menstrual"
-                    style={{ fontSize: '0.8125rem', padding: '0.4rem 0.85rem' }}
-                  >
-                    🌸 Gestionar mi Ciclo ↗
-                  </a>
+                  {data.profile.gender === 'Femenino' ? (
+                    <a
+                      className="primary-button"
+                      href="#health:menstrual"
+                      style={{ fontSize: '0.8125rem', padding: '0.4rem 0.85rem' }}
+                    >
+                      🌸 Gestionar mi Ciclo ↗
+                    </a>
+                  ) : (
+                    // El menú "Ciclo menstrual" se habilita con el género GUARDADO: sin guardar, el enlace no tendría adónde ir
+                    <span className="pref-help" style={{ margin: 0, maxWidth: '16rem', textAlign: 'right' }}>
+                      Guardá los cambios del perfil para habilitar esta sección.
+                    </span>
+                  )}
                 </div>
               </div>
             )}
