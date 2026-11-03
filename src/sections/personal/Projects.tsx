@@ -300,7 +300,7 @@ export const ProjectsSection = () => {
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}
           >
             <h3 className="panel-title">Listado de proyectos ({projects.length})</h3>
-            <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo proyecto</button></div>
+            <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo proyecto</button></div>
 
             {/* Selector de Vista: Lista vs Kanban */}
             <div style={{ display: 'flex', gap: '0.35rem' }}>

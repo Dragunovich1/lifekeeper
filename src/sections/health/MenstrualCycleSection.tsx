@@ -555,7 +555,7 @@ export const MenstrualCycleSection = () => {
             <h3 className="panel-title">Historial de ciclos y registros</h3>
             <div className="section-actions">
               <span className="panel-subtitle">{entries.length} registro(s)</span>
-              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo registro</button>
+              <button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo registro</button>
             </div>
           </div>
 

@@ -261,7 +261,7 @@ export const DiaryNotesSection = () => {
           <div className="panel-header">
             <h3 className="panel-title">Notas registradas</h3>
             <div className="section-actions">
-              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button>
+              <button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

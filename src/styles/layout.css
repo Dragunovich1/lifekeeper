@@ -520,3 +520,31 @@
 @keyframes save-bar-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .save-bar, .save-bar-spin { animation: none; } }
 @media (max-width: 520px) { .save-bar-actions { width: 100%; } .save-bar-actions button { flex: 1; } }
+
+/* ==========================================================================
+   Encabezado de un listado con botón "+ Nuevo…" (patrón "agregar en un modal")
+   Fila 1: título a la izquierda y el botón compacto a la derecha.
+   Fila 2: buscador y filtros, a todo el ancho.
+   ========================================================================== */
+.add-new-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  font-size: 0.84rem;
+}
+.panel-header > .section-actions:has(> .add-new-btn) { display: contents; }
+.panel-header:has(> .section-actions > .add-new-btn) { align-items: center; row-gap: 0.9rem; }
+.panel-header:has(> .section-actions > .add-new-btn) > .section-actions > .add-new-btn { order: 1; margin-left: auto; }
+.panel-header:has(> .section-actions > .add-new-btn)::after { content: ''; order: 2; flex: 0 0 100%; height: 0; }
+.panel-header:has(> .section-actions > .add-new-btn) > .section-actions > :not(.add-new-btn) { order: 3; }
+.panel-header:has(> .section-actions > .add-new-btn) > .section-actions > .search-input-wrap { flex: 1 1 280px; max-width: 460px; }
+/* La regla móvil de `.section-actions > button` (white-space: normal) lo aplastaba */
+.mobile-app-shell .section-actions > .add-new-btn { white-space: nowrap; min-width: max-content; max-width: none; flex: 0 0 auto; }
+/* Si en esa fila 2 no hay nada más que el botón, no se reserva una fila vacía */
+.panel-header:has(> .section-actions > .add-new-btn:only-child)::after { display: none; }
+
+/* Aire entre el título de la sección y el contenido */
+.section-header { margin-bottom: 0.75rem; }
+@media (min-width: 900px) {
+  .section-header { margin-bottom: 1rem; }
+}

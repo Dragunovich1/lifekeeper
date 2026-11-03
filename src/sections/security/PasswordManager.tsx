@@ -882,7 +882,6 @@ export const PasswordManagerSection = () => {
           <div className="panel-header" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <h3 className="panel-title">Bóveda</h3>
-              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva credencial</button>
               <div className="chip-list" style={{ margin: 0 }}>
                 <button
                   type="button"
@@ -946,6 +945,7 @@ export const PasswordManagerSection = () => {
                 )}
               </div>
             </div>
+            <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva credencial</button></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 type="button"

@@ -279,7 +279,7 @@ export const ClinicalHistorySection = () => {
           <div className="panel-header">
             <h3 className="panel-title">Línea de tiempo clínica</h3>
             <div className="section-actions">
-              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva entrada</button>
+              <button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva entrada</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

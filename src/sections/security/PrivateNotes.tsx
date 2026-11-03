@@ -143,7 +143,7 @@ export const PrivateNotesSection = () => {
 
         <div className="panel">
           <h3 className="panel-title">Notas guardadas</h3>
-          <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button></div>
+          <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button></div>
           {notes.length === 0 ? (
             <div className="empty-state">Todavía no cargaste notas privadas.</div>
           ) : (

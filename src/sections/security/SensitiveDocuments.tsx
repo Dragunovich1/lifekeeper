@@ -295,7 +295,7 @@ export const SensitiveDocumentsSection = () => {
 
         <div className="panel">
           <h3 className="panel-title">Repositorio</h3>
-          <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo documento</button></div>
+          <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo documento</button></div>
           {documents.length === 0 ? (
             <div className="empty-state">Todavía no cargaste documentos.</div>
           ) : (
