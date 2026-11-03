@@ -681,19 +681,19 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx-drop-runner,
-  .fx-fogged-glass,
-  .fx-lightning-flash,
-  .fx-sun-rays,
-  .fx-cirrus,
-  .fx-milky-way,
-  .fx-sun-orb,
-  .fx-bokeh-dot,
-  .fx-star,
-  .fx-shooting-star,
-  .fx-cloud-bank,
-  .fx-fog-band,
-  .fx-snowflake {
+  :root:not([data-motion='on']) .fx-drop-runner,
+  :root:not([data-motion='on']) .fx-fogged-glass,
+  :root:not([data-motion='on']) .fx-lightning-flash,
+  :root:not([data-motion='on']) .fx-sun-rays,
+  :root:not([data-motion='on']) .fx-cirrus,
+  :root:not([data-motion='on']) .fx-milky-way,
+  :root:not([data-motion='on']) .fx-sun-orb,
+  :root:not([data-motion='on']) .fx-bokeh-dot,
+  :root:not([data-motion='on']) .fx-star,
+  :root:not([data-motion='on']) .fx-shooting-star,
+  :root:not([data-motion='on']) .fx-cloud-bank,
+  :root:not([data-motion='on']) .fx-fog-band,
+  :root:not([data-motion='on']) .fx-snowflake {
     animation: none !important;
   }
 }

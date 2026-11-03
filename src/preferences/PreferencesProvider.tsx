@@ -65,6 +65,7 @@ const loadPreferences = (): Preferences => {
       privacyCurtain: typeof parsed.privacyCurtain === 'boolean' ? parsed.privacyCurtain : DEFAULT_PREFERENCES.privacyCurtain,
       notifications: parsed.notifications === true,
       notificationDetails: parsed.notificationDetails === true,
+      forceAnimations: typeof parsed.forceAnimations === 'boolean' ? parsed.forceAnimations : DEFAULT_PREFERENCES.forceAnimations,
       lockOnBackgroundSec:
         typeof parsed.lockOnBackgroundSec === 'number' && parsed.lockOnBackgroundSec >= -1
           ? parsed.lockOnBackgroundSec
@@ -85,6 +86,7 @@ export const PreferencesProvider = ({ children }: { children: ReactNode }) => {
     root.classList.toggle('light-theme', preferences.mode === 'light')
     root.classList.toggle('dark-theme', preferences.mode === 'dark')
     root.classList.toggle('has-fx', preferences.background !== 'none')
+    root.dataset.motion = preferences.forceAnimations ? 'on' : 'system'
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences))
     } catch {

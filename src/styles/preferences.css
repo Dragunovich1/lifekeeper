@@ -39,6 +39,12 @@ html.has-fx .app-content {
   background: transparent;
 }
 
+/* Celular / APK: el contenedor móvil tiene fondo sólido y tapaba el fondo animado */
+html.has-fx .mobile-app-shell,
+html.has-fx .mobile-main-content {
+  background: transparent;
+}
+
 html.has-fx .auth-layout {
   background: radial-gradient(circle at 18% 18%, rgba(5, 7, 11, 0.35), rgba(5, 7, 11, 0.8) 70%);
 }
