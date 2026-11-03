@@ -65,6 +65,7 @@ const loadPreferences = (): Preferences => {
       privacyCurtain: typeof parsed.privacyCurtain === 'boolean' ? parsed.privacyCurtain : DEFAULT_PREFERENCES.privacyCurtain,
       notifications: parsed.notifications === true,
       notificationDetails: parsed.notificationDetails === true,
+      quickAddFab: typeof parsed.quickAddFab === 'boolean' ? parsed.quickAddFab : DEFAULT_PREFERENCES.quickAddFab,
       forceAnimations: typeof parsed.forceAnimations === 'boolean' ? parsed.forceAnimations : DEFAULT_PREFERENCES.forceAnimations,
       lockOnBackgroundSec:
         typeof parsed.lockOnBackgroundSec === 'number' && parsed.lockOnBackgroundSec >= -1

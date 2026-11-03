@@ -124,6 +124,19 @@ export const SettingsModal = ({ open, onClose, userName, userEmail, avatarSrc }:
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', fontWeight: 500, color: 'var(--color-text-primary)' }}>
                   <input
                     type="checkbox"
+                    checked={preferences.quickAddFab}
+                    onChange={(event) => updatePreferences({ quickAddFab: event.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-accent-blue)' }}
+                  />
+                  <span>Botón flotante "+" de carga rápida</span>
+                </label>
+                <p className="pref-help">En el celular. Podés arrastrarlo para moverlo a donde no moleste.</p>
+              </div>
+
+              <div className="pref-field">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                  <input
+                    type="checkbox"
                     checked={preferences.forceAnimations}
                     onChange={(event) => updatePreferences({ forceAnimations: event.target.checked })}
                     style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-accent-blue)' }}

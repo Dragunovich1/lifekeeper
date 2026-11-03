@@ -390,3 +390,5 @@
   background: var(--color-surface-active);
 }
 .meas-ctx-inline { font-weight: 600; color: var(--color-text-secondary); }
+
+.mobile-app-shell .meas-long { display: none; }

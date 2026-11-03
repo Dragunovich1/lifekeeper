@@ -108,6 +108,8 @@ export interface Preferences {
   notifications: boolean
   /** true: la notificación muestra el nombre del medicamento o del recordatorio; false: texto genérico. */
   notificationDetails: boolean
+  /** Mostrar el botón flotante "+" de carga rápida en el celular. */
+  quickAddFab: boolean
   /** true: fondos y clima animados aunque el sistema pida "reducir movimiento" (Android lo activa con el ahorro de batería). */
   forceAnimations: boolean
   /** Segundos fuera de la app tras los cuales se bloquea la bóveda (-1 = no bloquear, 0 = al salir). */
@@ -171,6 +173,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   privacyCurtain: false,
   notifications: false,
   notificationDetails: false,
+  quickAddFab: true,
   forceAnimations: true,
   lockOnBackgroundSec: -1,
   dashboardLayout: DEFAULT_DASHBOARD_LAYOUT,

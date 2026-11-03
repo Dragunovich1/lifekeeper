@@ -665,3 +665,74 @@ body { overscroll-behavior-y: none; }
 
 /* En una sesión de gym en vivo el botón flotante tapa los controles de las series */
 .mobile-app-shell:has(.lw-title-row) .mqa-fab { display: none; }
+
+/* ==========================================================================
+   Tablas → tarjetas apiladas en el celular (las celdas traen data-label desde useStackedTables)
+   ========================================================================== */
+.mobile-app-shell .panel:has(> .table) { overflow-x: visible; }
+.mobile-app-shell .table { min-width: 0 !important; width: 100%; display: block; }
+.mobile-app-shell .table thead { display: none; }
+.mobile-app-shell .table tbody { display: grid; gap: 0.6rem; }
+.mobile-app-shell .table tbody tr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.06);
+}
+.mobile-app-shell .table tbody td {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.18rem 0;
+  border: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.mobile-app-shell .table tbody td::before {
+  content: attr(data-label);
+  flex: 0 0 36%;
+  max-width: 36%;
+  text-align: left;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.mobile-app-shell .table tbody td[data-label=""]::before,
+.mobile-app-shell .table tbody td:not([data-label])::before { display: none; }
+.mobile-app-shell .table tbody td:first-child { font-weight: 700; color: var(--color-text-primary); }
+.mobile-app-shell .table tbody td[data-label=""] { justify-content: flex-end; flex-wrap: wrap; padding-top: 0.45rem; }
+.mobile-app-shell .table tbody td[colspan] { display: block; text-align: center; }
+.mobile-app-shell .table tbody td[colspan]::before { display: none; }
+
+/* Botones de acción que no deben pasarse del borde, y pestañas de Finanzas con indicio de scroll */
+.mobile-app-shell .section-actions > button { white-space: normal; min-width: 0; max-width: 100%; }
+.mobile-app-shell .tool-page .section-header { flex-wrap: wrap; }
+.mobile-app-shell .fin-section-tabs {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent 100%);
+  padding-right: 18px;
+}
+.mobile-app-shell .fin-section-tabs button { flex: 0 0 auto; white-space: nowrap; }
+
+/* Tablas-tarjeta: botones de acción en una fila que reparte el ancho (sin partir palabras) */
+.mobile-app-shell .table tbody td[data-label=""] { gap: 0.4rem; }
+.mobile-app-shell .table tbody td[data-label=""] button,
+.mobile-app-shell .table tbody td[data-label=""] a { flex: 1 1 auto; white-space: nowrap; min-width: 4.4rem; text-align: center; }
+.mobile-app-shell .table tbody td[data-label=""] > div { display: flex; flex-wrap: wrap; gap: 0.4rem; width: 100%; }
+.mobile-app-shell .table tbody td[data-label=""] > div > * { flex: 1 1 auto; white-space: nowrap; min-width: 4.4rem; }
+
+/* En el celular lo que más se consulta es la lista: va antes que el formulario de alta */
+.mobile-app-shell .section-body > .panel:has(> .table) { order: -1; }
+
+/* Botón flotante: se puede arrastrar (no debe scrollear la página mientras se mueve) y se pega a un borde */
+.mobile-app-shell .mqa-fab { touch-action: none; user-select: none; -webkit-user-select: none; transition: transform 0.2s ease, bottom 0.2s ease, left 0.2s ease, right 0.2s ease; }
+.mobile-app-shell .mqa-fab.is-dragging { transform: scale(1.12); box-shadow: 0 10px 26px rgba(20, 184, 166, 0.55); cursor: grabbing; }
+.mqa-hint { margin: 0.7rem 0 0; font-size: 0.72rem; opacity: 0.65; text-align: center; }
+.mqa-hide { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin-top: 0.5rem; padding: 0.55rem; border-radius: 10px; font-size: 0.8rem; background: transparent; color: inherit; border: 1px dashed rgba(148, 163, 184, 0.4); opacity: 0.85; }

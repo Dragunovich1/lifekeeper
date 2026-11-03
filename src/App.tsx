@@ -23,6 +23,7 @@ import { useSwipeGesture } from './hooks/useSwipeGesture'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useCloudAutoRetry } from './hooks/useCloudStatus'
 import { useAndroidBackButton } from './hooks/useAndroidBackButton'
+import { useStackedTables } from './hooks/useStackedTables'
 import { MobileTopBar } from './components/mobile/MobileTopBar'
 import { MobileBottomNav } from './components/mobile/MobileBottomNav'
 import { MobileMenuSheet } from './components/mobile/MobileMenuSheet'
@@ -175,6 +176,7 @@ const VaultApp = () => {
   )
 
   useCloudAutoRetry(syncNow, true)
+  useStackedTables(contentRef, isMobile)
 
   const [syncToast, setSyncToast] = useState<string | null>(null)
   const { pull, refreshing } = usePullToRefresh(

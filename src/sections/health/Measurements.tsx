@@ -314,7 +314,7 @@ export const MeasurementsSection = () => {
               </button>
             )}
             <button type="button" className="primary-button" onClick={() => openNew()}>
-              <Plus size={16} /> <span>Nueva medición</span>
+              <Plus size={16} /> <span>Nueva<span className="meas-long"> medición</span></span>
             </button>
           </>
         }
