@@ -98,6 +98,16 @@ const WORKOUT_SET_TYPES: Array<{
   },
 ]
 
+/**
+ * Opciones del selector "Tipo de serie". La biserie ya no es un tipo de serie sino un ítem con varios
+ * ejercicios (Biserie / Triserie / Circuito al agregar), así que solo se ofrece si la serie ya la tenía
+ * (datos viejos), para no perderla.
+ */
+const setTypeOptions = (current?: WorkoutSetType) =>
+  WORKOUT_SET_TYPES.filter((t) => t.value !== 'biserie' || current === 'biserie').map((t) =>
+    t.value === 'biserie' ? { ...t, label: '🔗 Biserie (antigua)' } : t,
+  )
+
 const WORKOUT_TYPES: Array<{ value: WorkoutType; label: string; isDistance?: boolean }> = [
   { value: 'fuerza', label: '🏋️ Fuerza / Hipertrofia' },
   { value: 'running', label: '🏃 Running / Carrera', isDistance: true },
@@ -1676,7 +1686,7 @@ export const WorkoutsSection = () => {
                         : ''})
                     </label>
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                      Armá biseries, triseries o circuitos con varios ejercicios por ítem
+                      Armá biseries, triseries o circuitos con varios ejercicios por ítem; en cada serie podés marcar drop set, calentamiento o fallo
                     </span>
                   </div>
 
@@ -1779,7 +1789,7 @@ export const WorkoutsSection = () => {
                                       }}
                                       style={{ padding: '0.25rem 0.4rem', fontSize: '0.75rem' }}
                                     >
-                                      {WORKOUT_SET_TYPES.map((t) => (
+                                      {setTypeOptions(set.setType).map((t) => (
                                         <option key={t.value} value={t.value}>
                                           {t.label}
                                         </option>
@@ -2430,7 +2440,7 @@ export const WorkoutsSection = () => {
                           }}
                           style={{ padding: '0.2rem 0.35rem', fontSize: '0.75rem' }}
                         >
-                          {WORKOUT_SET_TYPES.map((t) => (
+                          {setTypeOptions(set.setType).map((t) => (
                             <option key={t.value} value={t.value}>
                               {t.label}
                             </option>
