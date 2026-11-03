@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { DatePicker } from '../../components/DatePicker'
@@ -44,6 +44,11 @@ const createInitialFormState = (): DiaryEntryForm => ({
 export const DiaryNotesSection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState<DiaryEntryForm>(createInitialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(createInitialFormState())
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<DiaryEntryForm>(createInitialFormState)
   const [deletingEntry, setDeletingEntry] = useState<DiaryEntry | null>(null)
@@ -119,7 +124,7 @@ export const DiaryNotesSection = () => {
       },
     }))
 
-    setFormState(createInitialFormState())
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -183,14 +188,20 @@ export const DiaryNotesSection = () => {
       />
 
       <div className="section-body">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Nueva nota</h3>
-            <p className="panel-subtitle">
-              La fecha se completa automáticamente, podés modificarla
-            </p>
-          </div>
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nueva nota"
+          subtitle="Escribí lo que quieras recordar"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="diary-add-form" className="primary-button">Guardar nota</button>
+            </>
+          }
+        >
+          <form id="diary-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="diary-date">Fecha</label>
               <DatePicker
@@ -243,18 +254,14 @@ export const DiaryNotesSection = () => {
                 placeholder="Enter para agregar etiquetas"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar nota
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Notas registradas</h3>
             <div className="section-actions">
+              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

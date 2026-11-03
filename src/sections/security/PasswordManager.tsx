@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { differenceInCalendarDays } from 'date-fns'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
@@ -129,6 +129,11 @@ export type HealthFilter = 'all' | 'strong' | 'needsAction' | 'weak' | 'repeated
 export const PasswordManagerSection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState<PasswordFormState>(initialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(initialFormState)
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<PasswordFormState>(initialFormState)
   const [deletingEntry, setDeletingEntry] = useState<PasswordEntry | null>(null)
@@ -349,7 +354,7 @@ export const PasswordManagerSection = () => {
       },
     }))
 
-    setFormState(initialFormState)
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -560,14 +565,20 @@ export const PasswordManagerSection = () => {
           </div>
         )}
 
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <h3 className="panel-title">Nueva credencial</h3>
-              <p className="panel-subtitle">
-                El temporizador limpia el portapapeles en 30s y oculta las claves visibles en 20s
-              </p>
-            </div>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nueva credencial"
+          subtitle="El temporizador limpia el portapapeles en 30s y oculta las claves visibles en 20s"
+          maxWidth={760}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="password-add-form" className="primary-button">Guardar credencial</button>
+            </>
+          }
+        >
+          <div className="panel-header" data-no-dirty>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 className="secondary-button"
@@ -782,7 +793,7 @@ export const PasswordManagerSection = () => {
               </div>
             </div>
           )}
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+          <form id="password-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="pwd-service">Servicio / sitio</label>
               <input
@@ -864,18 +875,14 @@ export const PasswordManagerSection = () => {
                 placeholder="Enter para agregar etiquetas"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar credencial
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <div className="panel-header" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <h3 className="panel-title">Bóveda</h3>
+              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva credencial</button>
               <div className="chip-list" style={{ margin: 0 }}>
                 <button
                   type="button"

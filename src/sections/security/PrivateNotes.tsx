@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -16,6 +17,11 @@ const initialFormState: Omit<PrivateNote, 'id' | 'createdAt' | 'updatedAt'> = {
 export const PrivateNotesSection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState(initialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(initialFormState)
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState(initialFormState)
   const [deletingNote, setDeletingNote] = useState<PrivateNote | null>(null)
@@ -43,7 +49,7 @@ export const PrivateNotesSection = () => {
       },
     }))
 
-    setFormState(initialFormState)
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -99,11 +105,20 @@ export const PrivateNotesSection = () => {
         subtitle="Texto cifrado para información delicada, visible solo tras desbloquear la app"
       />
       <div className="section-body compact">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Crear nota</h3>
-          </div>
-          <form className="form-grid" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nueva nota privada"
+          subtitle="Se guarda cifrada"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="private-note-add-form" className="primary-button">Guardar nota</button>
+            </>
+          }
+        >
+          <form id="private-note-add-form" className="form-grid" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="private-title">Título</label>
               <input
@@ -123,16 +138,12 @@ export const PrivateNotesSection = () => {
                 required
               />
             </div>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                Guardar nota
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <h3 className="panel-title">Notas guardadas</h3>
+          <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button></div>
           {notes.length === 0 ? (
             <div className="empty-state">Todavía no cargaste notas privadas.</div>
           ) : (

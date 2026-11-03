@@ -68,6 +68,11 @@ export const ProjectsSection = () => {
 
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban')
   const [formState, setFormState] = useState(initialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(initialFormState)
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState(initialFormState)
   const [deletingProject, setDeletingProject] = useState<Project | null>(null)
@@ -94,7 +99,7 @@ export const ProjectsSection = () => {
       },
     }))
 
-    setFormState(initialFormState)
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -250,11 +255,20 @@ export const ProjectsSection = () => {
 
       <div className="section-body">
         {/* Panel Crear Proyecto */}
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Crear proyecto</h3>
-          </div>
-          <form className="form-grid" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nuevo proyecto"
+          subtitle="Nombre, descripción y estado"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="project-add-form" className="primary-button">Guardar proyecto</button>
+            </>
+          }
+        >
+          <form id="project-add-form" className="form-grid" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="project-name">Nombre</label>
               <input
@@ -276,13 +290,8 @@ export const ProjectsSection = () => {
                 placeholder="Alcance, notas"
               />
             </div>
-            <div className="form-actions">
-              <button className="primary-button" type="submit">
-                Guardar proyecto
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         {/* Panel Listado de Proyectos */}
         <div className="panel">
@@ -291,6 +300,7 @@ export const ProjectsSection = () => {
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}
           >
             <h3 className="panel-title">Listado de proyectos ({projects.length})</h3>
+            <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo proyecto</button></div>
 
             {/* Selector de Vista: Lista vs Kanban */}
             <div style={{ display: 'flex', gap: '0.35rem' }}>

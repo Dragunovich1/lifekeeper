@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { DatePicker } from '../../components/DatePicker'
@@ -31,6 +31,11 @@ const createInitialFormState = (): ConsultationFormState => ({
 export const ConsultationsSection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState<ConsultationFormState>(createInitialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(createInitialFormState())
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<ConsultationFormState>(createInitialFormState)
   const [pendingDelete, setPendingDelete] = useState<MedicalConsultation | null>(null)
@@ -113,7 +118,7 @@ export const ConsultationsSection = () => {
       }
     })
 
-    setFormState(createInitialFormState())
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -245,14 +250,20 @@ export const ConsultationsSection = () => {
       />
 
       <div className="section-body">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Registrar consulta</h3>
-            <p className="panel-subtitle">
-              Anotá cada visita para tener una línea de tiempo clara
-            </p>
-          </div>
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nueva consulta"
+          subtitle="Registrá la visita médica y sus indicaciones"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="consultation-add-form" className="primary-button">Guardar consulta</button>
+            </>
+          }
+        >
+          <form id="consultation-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="consult-date">Fecha</label>
               <DatePicker
@@ -330,17 +341,13 @@ export const ConsultationsSection = () => {
                 placeholder="Complementos, estudios pendientes"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar consulta
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Historial de consultas</h3>
+            <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva consulta</button></div>
             <div className="search-input-wrap">
               <Search size={15} className="search-input-icon" aria-hidden />
               <input

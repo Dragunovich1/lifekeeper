@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useState } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -31,6 +32,11 @@ export const SensitiveDocumentsSection = () => {
   const { data, updateData } = useAppData()
   const documents = data.security.documents
   const [formState, setFormState] = useState(initialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(initialFormState)
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState(initialFormState)
   const [deletingDoc, setDeletingDoc] = useState<SensitiveDocument | null>(null)
@@ -106,7 +112,7 @@ export const SensitiveDocumentsSection = () => {
         },
       }))
 
-      setFormState(initialFormState)
+      closeAdd()
     } finally {
       setUploading(false)
     }
@@ -218,14 +224,20 @@ export const SensitiveDocumentsSection = () => {
       />
 
       <div className="section-body compact">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Subir documento</h3>
-            <p className="panel-subtitle">
-              Acepta imágenes y PDF, quedan cifrados con tu clave maestra
-            </p>
-          </div>
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nuevo documento"
+          subtitle="Se guarda cifrado en tu bóveda"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="document-add-form" className="primary-button" disabled={uploading}>{uploading ? 'Procesando...' : 'Guardar documento'}</button>
+            </>
+          }
+        >
+          <form id="document-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="doc-name">Nombre</label>
               <input
@@ -278,16 +290,12 @@ export const SensitiveDocumentsSection = () => {
                 placeholder="Observaciones o ubicación física original"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit" disabled={uploading}>
-                {uploading ? 'Procesando...' : 'Guardar documento'}
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <h3 className="panel-title">Repositorio</h3>
+          <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo documento</button></div>
           {documents.length === 0 ? (
             <div className="empty-state">Todavía no cargaste documentos.</div>
           ) : (

@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { HealthInfoModal } from '../../components/HealthInfoModal'
@@ -31,6 +31,11 @@ const createInitialFormState = (): MedicationFormState => ({
 export const MedicationsSection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState<MedicationFormState>(createInitialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(createInitialFormState())
+  }
   const [scheduleDraft, setScheduleDraft] = useState<{ time: string; note: string }>({
     time: '',
     note: '',
@@ -180,7 +185,7 @@ export const MedicationsSection = () => {
       },
     }))
 
-    setFormState(createInitialFormState())
+    closeAdd()
     setScheduleDraft({ time: '', note: '' })
   }
 
@@ -327,12 +332,20 @@ export const MedicationsSection = () => {
       />
 
       <div className="section-body">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Agregar tratamiento</h3>
-            <p className="panel-subtitle">Definí la posología y los horarios diarios</p>
-          </div>
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nuevo tratamiento"
+          subtitle="Medicamento, dosis y horarios"
+          maxWidth={820}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="medication-add-form" className="primary-button">Guardar tratamiento</button>
+            </>
+          }
+        >
+          <form id="medication-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             {allergyConflict ? (
               <div className="alert alert-error field-full" role="alert">
                 Atención: este medicamento coincide con una alergia registrada en tu ficha de
@@ -538,13 +551,8 @@ export const MedicationsSection = () => {
                 <p className="panel-subtitle">Todavía no agregaste horarios.</p>
               )}
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar tratamiento
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         {todayDoses.length > 0 ? (
           <div className="panel">
@@ -595,6 +603,7 @@ export const MedicationsSection = () => {
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Medicaciones activas</h3>
+            <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo tratamiento</button></div>
             <div className="search-input-wrap">
               <Search size={15} className="search-input-icon" aria-hidden />
               <input

@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { DatePicker } from '../../components/DatePicker'
@@ -34,6 +34,11 @@ const createInitialFormState = (): VaccineFormState => ({
 export const VaccinesSection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState<VaccineFormState>(createInitialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(createInitialFormState())
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<VaccineFormState>(createInitialFormState)
   const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([])
@@ -129,7 +134,7 @@ export const VaccinesSection = () => {
       }
     })
 
-    setFormState(createInitialFormState())
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -231,12 +236,20 @@ export const VaccinesSection = () => {
       />
 
       <div className="section-body">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Agregar vacuna</h3>
-            <p className="panel-subtitle">Completá los datos clave de la aplicación</p>
-          </div>
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nueva vacuna"
+          subtitle="Completá los datos clave de la aplicación"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="vaccine-add-form" className="primary-button">Guardar vacuna</button>
+            </>
+          }
+        >
+          <form id="vaccine-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="vaccine-name">Vacuna</label>
               <input
@@ -392,18 +405,14 @@ export const VaccinesSection = () => {
                 ariaLabel="Recordatorio de refuerzo"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar vacuna
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Historial de vacunas</h3>
             <div className="section-actions">
+              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva vacuna</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

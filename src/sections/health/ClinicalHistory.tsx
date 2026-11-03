@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { HealthInfoModal } from '../../components/HealthInfoModal'
@@ -44,6 +44,11 @@ const createInitialFormState = (): ClinicalNoteForm => ({
 export const ClinicalHistorySection = () => {
   const { data, updateData } = useAppData()
   const [formState, setFormState] = useState<ClinicalNoteForm>(createInitialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(createInitialFormState())
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<ClinicalNoteForm>(createInitialFormState)
   const [pendingDelete, setPendingDelete] = useState<ClinicalNote | null>(null)
@@ -136,7 +141,7 @@ export const ClinicalHistorySection = () => {
       },
     }))
 
-    setFormState(createInitialFormState())
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -194,14 +199,20 @@ export const ClinicalHistorySection = () => {
       />
 
       <div className="section-body">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Nueva entrada</h3>
-            <p className="panel-subtitle">
-              Registrá hechos importantes para tener contexto rápido
-            </p>
-          </div>
-          <form className="form-grid two-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nueva entrada clínica"
+          subtitle="Diagnósticos, estudios, cirugías o antecedentes"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="clinical-add-form" className="primary-button">Guardar entrada</button>
+            </>
+          }
+        >
+          <form id="clinical-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="history-title">Título</label>
               <input
@@ -241,13 +252,8 @@ export const ClinicalHistorySection = () => {
                 placeholder="Presioná Enter para agregar cada etiqueta"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar entrada
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <div className="panel-header">
@@ -273,6 +279,7 @@ export const ClinicalHistorySection = () => {
           <div className="panel-header">
             <h3 className="panel-title">Línea de tiempo clínica</h3>
             <div className="section-actions">
+              <button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva entrada</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

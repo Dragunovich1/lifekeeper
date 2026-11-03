@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useQuickAction } from '../../utils/quickAction'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
@@ -36,15 +37,17 @@ export const RemindersSection = () => {
   const { data, updateData } = useAppData()
   const reminders = data.utilities.reminders
   const [formState, setFormState] = useState<Omit<Reminder, 'id' | 'done'>>(createInitialFormState)
+  const [adding, setAdding] = useState(false)
+  const closeAdd = () => {
+    setAdding(false)
+    setFormState(createInitialFormState())
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<Omit<Reminder, 'id' | 'done'>>(createInitialFormState)
   const [deletingReminder, setDeletingReminder] = useState<Reminder | null>(null)
   const [dueSoon, setDueSoon] = useState<string[]>([])
-  useQuickAction(['reminder'], () => {
-    const el = document.getElementById('rem-title') as HTMLInputElement | null
-    el?.scrollIntoView({ block: 'center' })
-    el?.focus()
-  })
+  // El "+" rápido abre directo el formulario en su modal
+  useQuickAction(['reminder'], () => setAdding(true))
 
   useEffect(() => {
     const evaluate = () => {
@@ -85,7 +88,7 @@ export const RemindersSection = () => {
       },
     }))
 
-    setFormState(createInitialFormState())
+    closeAdd()
   }
 
   const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -172,11 +175,20 @@ export const RemindersSection = () => {
       />
 
       <div className="section-body">
-        <div className="panel">
-          <div className="panel-header">
-            <h3 className="panel-title">Nuevo recordatorio</h3>
-          </div>
-          <form className="form-grid three-columns" onSubmit={handleCreate}>
+        <Modal
+          open={adding}
+          onClose={closeAdd}
+          title="Nuevo recordatorio"
+          subtitle="Título, fecha y repetición"
+          maxWidth={720}
+          footer={
+            <>
+              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
+              <button type="submit" form="reminder-add-form" className="primary-button">Guardar recordatorio</button>
+            </>
+          }
+        >
+          <form id="reminder-add-form" className="form-grid three-columns" onSubmit={handleCreate}>
             <div className="field">
               <label htmlFor="rem-title">Título</label>
               <input
@@ -229,16 +241,12 @@ export const RemindersSection = () => {
                 placeholder="Descripción opcional"
               />
             </div>
-            <div className="form-actions field-full">
-              <button className="primary-button" type="submit">
-                Guardar recordatorio
-              </button>
-            </div>
           </form>
-        </div>
+        </Modal>
 
         <div className="panel">
           <h3 className="panel-title">Listado</h3>
+          <div className="section-actions"><button type="button" className="primary-button" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo recordatorio</button></div>
           {sortedReminders.length === 0 ? (
             <div className="empty-state">Todavía no hay recordatorios configurados.</div>
           ) : (
