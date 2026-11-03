@@ -20,9 +20,11 @@ import { usePreferences } from './preferences/context'
 import { PreferencesProvider } from './preferences/PreferencesProvider'
 import { useMobileLayout } from './hooks/useMobileLayout'
 import { useSwipeGesture } from './hooks/useSwipeGesture'
+import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { MobileTopBar } from './components/mobile/MobileTopBar'
 import { MobileBottomNav } from './components/mobile/MobileBottomNav'
 import { MobileMenuSheet } from './components/mobile/MobileMenuSheet'
+import { MobileQuickAdd } from './components/mobile/MobileQuickAdd'
 import { configureNativeStatusBar } from './services/platform'
 import { ShareModal } from './components/ShareModal'
 import { SettingsModal } from './components/SettingsModal'
@@ -98,7 +100,7 @@ import { DashboardSection } from './sections'
 const DefaultSection = () => <DashboardSection />
 
 const VaultApp = () => {
-  const { data, lock } = useAppData()
+  const { data, lock, syncNow } = useAppData()
   const { preferences } = usePreferences()
   const { isMobile } = useMobileLayout()
   const { insights, criticalCount, warningCount, infoCount } = useInsights()
@@ -168,6 +170,22 @@ const VaultApp = () => {
       onSwipeRight: handleSwipeRight,
     },
     { enabled: isMobile && Boolean(activeSection) },
+  )
+
+  const [syncToast, setSyncToast] = useState<string | null>(null)
+  const { pull, refreshing } = usePullToRefresh(
+    contentRef,
+    async () => {
+      if (!syncNow) return
+      try {
+        const res = await syncNow()
+        setSyncToast(res.success ? 'Sincronizado' : /JSON|token|Unexpected/i.test(res.message) ? 'No se pudo conectar con el servidor' : res.message)
+      } catch {
+        setSyncToast('No se pudo sincronizar')
+      }
+      window.setTimeout(() => setSyncToast(null), 2200)
+    },
+    { enabled: isMobile && Boolean(syncNow) },
   )
 
   // Deep-link via hash: #section:sub
@@ -281,6 +299,11 @@ const VaultApp = () => {
           avatarSrc={data.profile.avatar}
         />
 
+        {(pull > 0 || refreshing || syncToast) && (
+          <div className="ptr-indicator" style={{ transform: `translate(-50%, ${refreshing || syncToast ? 8 : Math.min(pull, 70) - 30}px)` }} role="status">
+            {refreshing ? 'Sincronizando…' : syncToast ? syncToast : pull >= 80 ? 'Soltá para sincronizar' : 'Tirá para sincronizar'}
+          </div>
+        )}
         <main className="mobile-main-content" ref={contentRef}>
           <div className="page-container">
             <Suspense fallback={<Loading message="Cargando sección..." />}>
@@ -288,6 +311,13 @@ const VaultApp = () => {
             </Suspense>
           </div>
         </main>
+
+        <MobileQuickAdd
+          hidden={mobileMenuOpen || assistantOpen}
+          onNavigate={(section, subSection) =>
+            navigateTo(section as MainSectionKey, subSection as SubSectionKey)
+          }
+        />
 
         <MobileBottomNav
           activeSection={activeSection}

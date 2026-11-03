@@ -443,7 +443,7 @@ export const VehiclesSection = () => {
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}
         >
           <Car size={15} />
-          <span>Ficha & Vencimientos</span>
+          <span>Ficha</span>
         </button>
 
         <button
@@ -453,7 +453,7 @@ export const VehiclesSection = () => {
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}
         >
           <Fuel size={15} />
-          <span>Combustible & Rendimiento</span>
+          <span>Combustible</span>
         </button>
 
         <button
@@ -463,7 +463,7 @@ export const VehiclesSection = () => {
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}
         >
           <Wrench size={15} />
-          <span>Historial de Services ({vehicleServices.length})</span>
+          <span>Services ({vehicleServices.length})</span>
         </button>
       </div>
 

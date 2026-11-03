@@ -169,6 +169,12 @@
 - **Modelo de IA:** `AssistantModelSetting` en Configuración; se guarda en `lifekeeper:ollama-model` (vacío = automático).
 - **Móvil:** `.mobile-app-shell .stats-grid` en 2 columnas. Auditoría a 390 px de las 26 secciones: sin desbordes horizontales.
 
+### Overhaul de la UI móvil/APK
+- **Botón flotante "+"** (`components/mobile/MobileQuickAdd.tsx`): +1 vaso de agua, nota rápida inline y accesos a gasto, medición, recordatorio, compras y notas.
+- **Tirar para sincronizar** (`hooks/usePullToRefresh.ts`, conectado a `syncNow` en `App.tsx`).
+- **Dashboard compacto:** KPIs en 2 columnas (de 1300 a ~490 px). **Cabecera:** botón de volver solo con flecha, título en una línea. **Pestañas:** degradé en los bordes y snap.
+- Las pestañas de Vehículos tienen textos cortos. Todo el CSS nuevo está al final de `styles/mobile.css`.
+
 ---
 
 ## 🖥️ 4. Infraestructura del Servidor Local (Dell Latitude)
