@@ -1,20 +1,40 @@
-import type { WorkoutSession } from '../types'
+import type { WorkoutRoutine, WorkoutSession } from '../types'
 import { savePdf } from './saveFile'
 import { formatDate } from './dates'
-import { GROUP_LABELS, buildBlocks, groupRest, groupTitle, roundCount } from './workoutGroups'
+import { GROUP_LABELS, buildBlocks, groupRest, roundCount } from './workoutGroups'
+import { describeSet, exerciseRecords, formatSeconds, kgToDisplay, measureOf, summarizeSession } from './workoutSets'
+import { summarizePeriod, type ResolvedPeriod } from './workoutExport'
 
-interface WorkoutPdfExportOptions {
+export interface WorkoutPdfExportOptions {
   workouts: WorkoutSession[]
   userName?: string
+  /** Texto del período (ej. "septiembre 2026"). Se ignora si se pasa `period`. */
   filterPeriodLabel?: string
+  period?: ResolvedPeriod
   unitSystem?: 'metric' | 'imperial'
+  routines?: WorkoutRoutine[]
+  /** Cuadro de resumen del período (por defecto sí). */
+  includeSummary?: boolean
+  /** Tabla de récords por ejercicio al final (por defecto sí). */
+  includeProgress?: boolean
+  /** Detalle de series de cada sesión (por defecto sí). Sin esto queda solo el resumen por sesión. */
+  includeSets?: boolean
+  fileName?: string
 }
+
+const restText = (s: number) => (s >= 60 && s % 60 === 0 ? `${s / 60} min` : `${s} s`)
 
 export async function exportWorkoutsToPDF({
   workouts,
   userName = 'Usuario',
-  filterPeriodLabel = 'Historial Completo',
+  filterPeriodLabel = 'Historial completo',
+  period,
   unitSystem = 'metric',
+  routines = [],
+  includeSummary = true,
+  includeProgress = true,
+  includeSets = true,
+  fileName,
 }: WorkoutPdfExportOptions): Promise<void> {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -23,290 +43,187 @@ export async function exportWorkoutsToPDF({
   const margin = 15
   const contentWidth = pageWidth - margin * 2
 
-  const weightUnit = unitSystem === 'imperial' ? 'lb' : 'kg'
-  const distUnit = unitSystem === 'imperial' ? 'mi' : 'km'
+  const imperial = unitSystem === 'imperial'
+  const weightUnit = imperial ? 'lb' : 'kg'
+  const distUnit = imperial ? 'mi' : 'km'
+  const toDisp = (kg: number) => kgToDisplay(kg, imperial)
+  const label = period?.label ?? filterPeriodLabel
+  const ordered = [...workouts].sort((a, b) => a.date.localeCompare(b.date))
 
   let y = 18
 
-  // Helper para nueva página
-  const checkPageBreak = (neededHeight: number) => {
-    if (y + neededHeight > pageHeight - 20) {
+  const drawHeader = () => {
+    doc.setFillColor(30, 58, 138)
+    doc.rect(margin, y - 5, contentWidth, 2, 'F')
+  }
+  const checkPageBreak = (needed: number) => {
+    if (y + needed > pageHeight - 20) {
       doc.addPage()
       y = 20
       drawHeader()
     }
   }
-
-  // Encabezado decorativo superior
-  const drawHeader = () => {
-    doc.setFillColor(30, 58, 138) // Navy blue
-    doc.rect(margin, y - 5, contentWidth, 2, 'F')
+  const text = (t: string, x: number, opts: { size?: number; bold?: boolean; italic?: boolean; color?: [number, number, number]; maxWidth?: number } = {}) => {
+    doc.setFont('helvetica', opts.bold ? 'bold' : opts.italic ? 'italic' : 'normal')
+    doc.setFontSize(opts.size ?? 8.5)
+    const c = opts.color ?? [51, 65, 85]
+    doc.setTextColor(c[0], c[1], c[2])
+    const lines = opts.maxWidth ? (doc.splitTextToSize(t, opts.maxWidth) as string[]) : [t]
+    lines.forEach((ln, i) => {
+      if (i > 0) checkPageBreak(4.2)
+      doc.text(ln, x, y)
+      if (i < lines.length - 1) y += 4
+    })
   }
 
   drawHeader()
 
-  // 1. TÍTULO Y METADATOS
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.setTextColor(15, 23, 42) // Slate 900
-  doc.text('LIFEKEEPER', margin, y)
-
-  doc.setFontSize(12)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(100, 116, 139) // Slate 500
-  doc.text('INFORME TÉCNICO DE ENTRENAMIENTO', margin + 45, y)
-
+  // 1. Título
+  text('LIFEKEEPER', margin, { size: 18, bold: true, color: [15, 23, 42] })
+  text('INFORME DE ENTRENAMIENTO', margin + 45, { size: 12, color: [100, 116, 139] })
   y += 7
-  doc.setFontSize(9)
-  doc.setTextColor(71, 85, 105)
-  const nowStr = new Date().toLocaleDateString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-  doc.text(`Atleta: ${userName}  |  Período: ${filterPeriodLabel}  |  Fecha de emisión: ${nowStr}`, margin, y)
+  text(`Atleta: ${userName}   ·   Período: ${label}   ·   Generado: ${formatDate(new Date().toISOString())}`, margin, { size: 9, color: [71, 85, 105] })
+  y += 8
 
-  y += 6
-
-  // 2. MÉTRICAS CONSOLIDADAS
-  const totalSessions = workouts.length
-  let totalMinutes = 0
-  let totalDistanceKm = 0
-  let totalVolumeKg = 0
-  let totalSets = 0
-
-  workouts.forEach((w) => {
-    totalMinutes += w.durationMinutes || 0
-    totalDistanceKm += w.distanceKm || 0
-    w.exercises.forEach((ex) => {
-      ex.sets.forEach((s) => {
-        totalSets += 1
-        totalVolumeKg += (s.weight || 0) * (s.reps || 0)
-      })
+  // 2. Resumen del período
+  if (includeSummary && ordered.length > 0) {
+    const s = summarizePeriod(ordered, period ?? { from: null, to: null, label })
+    const cards: [string, string][] = [
+      ['Sesiones', String(s.sessions)],
+      ['Por semana', String(s.perWeek)],
+      ['Tiempo', `${(s.minutes / 60).toFixed(1)} h`],
+      ['Volumen', `${Math.round(toDisp(s.volumeKg)).toLocaleString('es-AR')} ${weightUnit}`],
+      ['Series efectivas', String(s.effectiveSets)],
+      ...(s.distanceKm > 0 ? [['Distancia', `${(imperial ? s.distanceKm / 1.60934 : s.distanceKm).toFixed(1)} ${distUnit}`] as [string, string]] : []),
+    ]
+    const cw = contentWidth / cards.length
+    checkPageBreak(20)
+    doc.setFillColor(241, 245, 249)
+    doc.roundedRect(margin, y - 4, contentWidth, 16, 2, 2, 'F')
+    cards.forEach(([k, v], i) => {
+      const x = margin + i * cw + 4
+      const save = y
+      text(v, x, { size: 11, bold: true, color: [15, 23, 42] })
+      y += 5
+      text(k, x, { size: 7.5, color: [100, 116, 139] })
+      y = save
     })
+    y += 16
+    if (s.dropSets > 0 || s.warmupSets > 0) {
+      text(`Incluye ${s.dropSets} serie(s) con drop set. Los ${s.warmupSets} calentamiento(s) no suman al volumen ni a las series efectivas.`, margin, { size: 7.5, italic: true, color: [100, 116, 139] })
+      y += 5
+    }
+    y += 2
+  }
+
+  // 3. Sesiones
+  if (ordered.length === 0) {
+    text('No hay entrenamientos en este período.', margin, { size: 10, color: [148, 163, 184] })
+    y += 8
+  }
+
+  ordered.forEach((w) => {
+    checkPageBreak(24)
+    const sum = summarizeSession(w)
+    const routine = w.routineId ? routines.find((r) => r.id === w.routineId) : undefined
+    const day = routine?.days.find((d) => d.id === w.routineDayId)
+
+    doc.setFillColor(248, 250, 252)
+    doc.setDrawColor(226, 232, 240)
+    doc.roundedRect(margin, y - 4.5, contentWidth, 11, 1.5, 1.5, 'FD')
+    text(w.title, margin + 3, { size: 10.5, bold: true, color: [15, 23, 42], maxWidth: contentWidth - 60 })
+    text(`${formatDate(w.date)}  ·  ${w.type}`, pageWidth - margin - 3 - doc.getTextWidth(`${formatDate(w.date)}  ·  ${w.type}`), { size: 8.5, color: [71, 85, 105] })
+    y += 6.5
+
+    const meta: string[] = []
+    if (routine) meta.push(`Rutina: ${routine.name}${day ? ` · ${day.name}` : ''}`)
+    if (w.durationMinutes) meta.push(`${w.durationMinutes} min`)
+    if (w.distanceKm) meta.push(`${(imperial ? w.distanceKm / 1.60934 : w.distanceKm).toFixed(2)} ${distUnit}`)
+    if (w.pace) meta.push(w.pace)
+    if (w.calories) meta.push(`${w.calories} kcal`)
+    if (sum.volumeKg > 0) meta.push(`Volumen ${Math.round(toDisp(sum.volumeKg)).toLocaleString('es-AR')} ${weightUnit}`)
+    if (sum.effectiveSets > 0) meta.push(`${sum.effectiveSets} series`)
+    if (meta.length) {
+      text(meta.join('   ·   '), margin + 3, { size: 8, color: [71, 85, 105], maxWidth: contentWidth - 6 })
+      y += 4.5
+    }
+    if (w.notes) {
+      text(`“${w.notes}”`, margin + 3, { size: 8, italic: true, color: [100, 116, 139], maxWidth: contentWidth - 6 })
+      y += 4.5
+    }
+
+    if (includeSets && w.exercises.length > 0) {
+      buildBlocks(w.exercises).forEach((block) => {
+        if (block.kind === 'group') {
+          const members = block.indices.map((i) => w.exercises[i])
+          const rounds = roundCount(members)
+          const rest = groupRest(members)
+          checkPageBreak(10)
+          text(`• [${GROUP_LABELS[block.groupKind]}] ${members.map((m) => m.name).join(' + ')}${rest ? `   ·   Desc. ${restText(rest)}` : ''}`, margin + 3, { size: 8.5, bold: true, color: [15, 23, 42], maxWidth: contentWidth - 6 })
+          y += 4
+          members.forEach((m) => {
+            if (!m.notes) return
+            text(`    ${m.name}: ${m.notes}`, margin + 5, { size: 7.5, italic: true, color: [100, 116, 139], maxWidth: contentWidth - 10 })
+            y += 3.8
+          })
+          for (let r = 0; r < rounds; r++) {
+            checkPageBreak(5)
+            const parts = members.map((m) => (m.sets[r] ? `${m.name.split(' ')[0]} ${describeSet(m.sets[r], m, weightUnit, toDisp)}` : '–'))
+            text(`    Ronda ${r + 1}:  ${parts.join('   +   ')}`, margin + 5, { size: 8, maxWidth: contentWidth - 10 })
+            y += 4
+          }
+          y += 1
+          return
+        }
+        const ex = w.exercises[block.index]
+        checkPageBreak(10)
+        const tags = [ex.perSide ? 'por lado' : '', measureOf(ex) === 'time' ? 'tiempo' : '', ex.restSeconds ? `desc. ${restText(ex.restSeconds)}` : ''].filter(Boolean)
+        text(`• ${ex.name}${tags.length ? `  (${tags.join(' · ')})` : ''}`, margin + 3, { size: 8.5, bold: true, color: [15, 23, 42], maxWidth: contentWidth - 6 })
+        y += 4
+        if (ex.notes) {
+          text(`    ${ex.notes}`, margin + 5, { size: 7.5, italic: true, color: [100, 116, 139], maxWidth: contentWidth - 10 })
+          y += 3.8
+        }
+        ex.sets.forEach((set, si) => {
+          checkPageBreak(5)
+          text(`    Serie ${si + 1}:  ${describeSet(set, ex, weightUnit, toDisp)}${set.rpe ? `   (RPE ${set.rpe})` : ''}${set.notes ? `   — “${set.notes}”` : ''}`, margin + 5, { size: 8, maxWidth: contentWidth - 10 })
+          y += 4
+        })
+        y += 1
+      })
+    }
+    y += 4
   })
 
-  const hours = Math.floor(totalMinutes / 60)
-  const mins = totalMinutes % 60
-  const timeFormatted = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
-
-  doc.setFillColor(248, 250, 252) // Slate 50
-  doc.setDrawColor(226, 232, 240) // Slate 200
-  doc.roundedRect(margin, y, contentWidth, 18, 2, 2, 'FD')
-
-  const colW = contentWidth / 4
-  const metricY = y + 7
-
-  // Columna 1
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(100, 116, 139)
-  doc.text('SESIONES REGISTRADAS', margin + 4, metricY)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(15, 23, 42)
-  doc.text(String(totalSessions), margin + 4, metricY + 6)
-
-  // Columna 2
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(100, 116, 139)
-  doc.text('TIEMPO TOTAL', margin + colW + 4, metricY)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(15, 23, 42)
-  doc.text(timeFormatted, margin + colW + 4, metricY + 6)
-
-  // Columna 3
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(100, 116, 139)
-  doc.text(`DISTANCIA (${distUnit.toUpperCase()})`, margin + colW * 2 + 4, metricY)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(15, 23, 42)
-  doc.text(`${totalDistanceKm.toFixed(1)} ${distUnit}`, margin + colW * 2 + 4, metricY + 6)
-
-  // Columna 4
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(100, 116, 139)
-  doc.text(`VOLUMEN CARGA (${weightUnit.toUpperCase()})`, margin + colW * 3 + 4, metricY)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(15, 23, 42)
-  doc.text(
-    totalVolumeKg > 0 ? `${Math.round(totalVolumeKg).toLocaleString('es-AR')} ${weightUnit}` : '—',
-    margin + colW * 3 + 4,
-    metricY + 6,
-  )
-
-  y += 24
-
-  // 3. DETALLE DE SESIONES
-  if (workouts.length === 0) {
-    doc.setFont('helvetica', 'italic')
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
-    doc.text('No hay entrenamientos registrados para el período seleccionado.', margin, y + 10)
-  } else {
-    // Ordenar de más reciente a más antiguo
-    const sortedWorkouts = [...workouts].sort((a, b) => b.date.localeCompare(a.date))
-
-    sortedWorkouts.forEach((w) => {
-      // Calcular altura requerida para la sesión
-      let estimatedH = 14
-      if (w.notes) estimatedH += 6
-      w.exercises.forEach((ex) => {
-        estimatedH += 6 + ex.sets.length * 4.5
-      })
-
-      checkPageBreak(Math.min(estimatedH, 60))
-
-      // Barra de título de la sesión
-      doc.setFillColor(241, 245, 249) // Slate 100
-      doc.setDrawColor(203, 213, 225) // Slate 300
-      doc.rect(margin, y, contentWidth, 7, 'FD')
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(9)
-      doc.setTextColor(30, 41, 59) // Slate 800
-      doc.text(`${formatDate(w.date)} — ${w.title}`, margin + 3, y + 4.8)
-
-      // Detalles a la derecha: Tipo, Duración, Distancia
-      const typeStr = w.type.toUpperCase()
-      const durStr = w.durationMinutes ? `${w.durationMinutes} min` : ''
-      const distStr = w.distanceKm ? `${w.distanceKm} ${distUnit}` : ''
-      const paceStr = w.pace ? `(${w.pace})` : ''
-      const rightMeta = [typeStr, durStr, distStr, paceStr].filter(Boolean).join(' · ')
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(100, 116, 139)
-      doc.text(rightMeta, margin + contentWidth - 3, y + 4.8, { align: 'right' })
-
-      y += 9
-
-      // Notas generales de la sesión si existen
-      if (w.notes) {
-        doc.setFont('helvetica', 'italic')
-        doc.setFontSize(8)
-        doc.setTextColor(100, 116, 139)
-        doc.text(`Observaciones generales: "${w.notes}"`, margin + 3, y)
-        y += 4.5
-      }
-
-      // Ejercicios y series
-      if (w.exercises.length === 0) {
-        if (!w.distanceKm) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8)
-          doc.setTextColor(148, 163, 184)
-          doc.text('Sin desglose de ejercicios cargado.', margin + 4, y)
-          y += 4
-        }
-      } else {
-        buildBlocks(w.exercises).forEach((block) => {
-          if (block.kind === 'group') {
-            // Biserie / triserie / circuito: un ítem con varios ejercicios, ronda por ronda
-            const members = block.indices.map((i) => w.exercises[i])
-            const rounds = roundCount(members)
-            checkPageBreak(12)
-            doc.setFont('helvetica', 'bold')
-            doc.setFontSize(8.5)
-            doc.setTextColor(15, 23, 42)
-            const rest = groupRest(members)
-            doc.text(`• [${GROUP_LABELS[block.groupKind]}] ${groupTitle(members)}${rest ? `  ·  Desc. ${rest >= 60 && rest % 60 === 0 ? `${rest / 60} min` : `${rest} s`}` : ''}`, margin + 4, y, { maxWidth: pageWidth - margin * 2 - 8 })
-            y += 4
-            members.forEach((m) => {
-              if (!m.notes) return
-              checkPageBreak(5)
-              doc.setFont('helvetica', 'italic')
-              doc.setFontSize(7.5)
-              doc.setTextColor(100, 116, 139)
-              doc.text(`    ${m.name}: ${m.notes}`, margin + 6, y)
-              y += 3.8
-            })
-            for (let r = 0; r < rounds; r++) {
-              checkPageBreak(6)
-              doc.setFont('helvetica', 'normal')
-              doc.setFontSize(8)
-              doc.setTextColor(51, 65, 85)
-              const parts = members.map((m) => {
-                const set = m.sets[r]
-                if (!set) return '–'
-                const weightText = set.weight ? `${set.weight} ${weightUnit}` : 'p. corporal'
-                return `${set.reps} × ${weightText}`
-              })
-              doc.text(`    Ronda ${r + 1}: ${parts.join('  +  ')}`, margin + 6, y, { maxWidth: pageWidth - margin * 2 - 10 })
-              y += 4
-            }
-            y += 1
-            return
-          }
-          const ex = w.exercises[block.index]
-          checkPageBreak(12)
-
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(8.5)
-          doc.setTextColor(15, 23, 42)
-          doc.text(`• ${ex.name}`, margin + 4, y)
-          y += 4
-
-          ex.sets.forEach((set, sIdx) => {
-            checkPageBreak(6)
-
-            doc.setFont('helvetica', 'normal')
-            doc.setFontSize(8)
-            doc.setTextColor(51, 65, 85)
-
-            let badgeText = ''
-            if (set.setType && set.setType !== 'normal') {
-              badgeText =
-                set.setType === 'dropset'
-                  ? '[Drop Set]'
-                  : set.setType === 'biserie'
-                  ? '[Biserie]'
-                  : set.setType === 'warmup'
-                  ? '[Calentamiento]'
-                  : set.setType === 'failure'
-                  ? '[Al Fallo]'
-                  : `[${set.setType}]`
-            }
-
-            const weightText = set.weight ? `${set.weight} ${weightUnit}` : 'Peso corporal'
-            const repsText = `${set.reps} reps`
-            const rpeText = set.rpe ? `(RPE ${set.rpe})` : ''
-            const noteText = set.notes ? `— "${set.notes}"` : ''
-
-            const setLine = `    Serie ${sIdx + 1}: ${weightText} × ${repsText} ${badgeText} ${rpeText} ${noteText}`.trim()
-            doc.text(setLine, margin + 6, y)
-            y += 4
-          })
-          y += 1
-        })
-      }
-
-      y += 4 // Espacio entre sesiones
+  // 4. Récords por ejercicio
+  const records = includeProgress ? exerciseRecords(ordered).slice(0, 18) : []
+  if (records.length > 0) {
+    checkPageBreak(30)
+    text('PROGRESO POR EJERCICIO', margin, { size: 11, bold: true, color: [15, 23, 42] })
+    y += 6
+    const cols = [margin, margin + 70, margin + 90, margin + 125, margin + 152]
+    ;['Ejercicio', 'Veces', `Mejor peso (${weightUnit})`, `1RM est. (${weightUnit})`, 'Última vez'].forEach((h, i) => text(h, cols[i], { size: 8, bold: true, color: [100, 116, 139] }))
+    y += 5
+    records.forEach((r) => {
+      checkPageBreak(6)
+      text(r.name, cols[0], { size: 8.5, maxWidth: 66 })
+      text(String(r.sessions), cols[1], { size: 8.5 })
+      text(r.measure === 'time' ? (r.bestSeconds ? formatSeconds(r.bestSeconds) : '–') : r.maxWeightKg ? `${toDisp(r.maxWeightKg)} × ${r.maxWeightReps}` : 'p. corporal', cols[2], { size: 8.5 })
+      text(r.bestE1rm ? String(toDisp(r.bestE1rm)) : '–', cols[3], { size: 8.5 })
+      text(formatDate(r.lastDate), cols[4], { size: 8.5 })
+      y += 4.6
     })
   }
 
-  // 4. PIE DE PÁGINA EN TODAS LAS HOJAS
+  // 5. Pie de página
   const totalPages = doc.getNumberOfPages()
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7.5)
-    doc.setTextColor(148, 163, 184) // Slate 400
-    doc.text(
-      `LifeKeeper · Registro personal cifrado Zero-Knowledge · Página ${i} de ${totalPages}`,
-      pageWidth / 2,
-      pageHeight - 8,
-      { align: 'center' },
-    )
+    doc.setTextColor(148, 163, 184)
+    doc.text(`LifeKeeper · Registro personal cifrado Zero-Knowledge · Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' })
   }
 
-  // Descarga del archivo
-  const dateStr = new Date().toISOString().slice(0, 10)
-  await savePdf(doc, `LifeKeeper-Entrenamientos-${dateStr}.pdf`)
+  await savePdf(doc, fileName ?? `LifeKeeper-Entrenamientos-${new Date().toISOString().slice(0, 10)}.pdf`)
 }

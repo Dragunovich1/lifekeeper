@@ -20,6 +20,9 @@ export interface ModalProps {
   confirmDiscard?: boolean
 }
 
+// Modales abiertos (el último es el de arriba): Esc solo cierra el de arriba, no todos los anidados
+const modalStack: symbol[] = []
+
 export const Modal = ({
   open,
   onClose,
@@ -75,14 +78,18 @@ export const Modal = ({
     document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
 
+    const id = Symbol('modal')
+    modalStack.push(id)
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && modalStack[modalStack.length - 1] === id) {
         event.stopPropagation()
         requestCloseRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => {
+      const at = modalStack.indexOf(id)
+      if (at >= 0) modalStack.splice(at, 1)
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', onKeyDown)
       if (previousFocus.current instanceof HTMLElement) {

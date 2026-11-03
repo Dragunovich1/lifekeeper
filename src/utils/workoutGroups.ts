@@ -79,6 +79,21 @@ export function createGroup(drafts: ExerciseDraft[], newId: () => string, rounds
   }))
 }
 
+/** Un ejercicio suelto nuevo (por tiempo si el nombre lo sugiere o si el borrador lo pide). */
+export function createSingle(draft: ExerciseDraft, newId: () => string, sets = 3, restSeconds?: number): WorkoutExercise {
+  const measure = draft.measure ?? 'reps'
+  return {
+    id: newId(),
+    name: draft.name.trim(),
+    muscles: draft.muscles?.length ? draft.muscles : undefined,
+    equipment: draft.equipment?.length ? draft.equipment : undefined,
+    sets: defaultSets(sets, measure),
+    ...(measure === 'time' ? { measure: 'time' as const } : {}),
+    ...(draft.perSide ? { perSide: true } : {}),
+    ...(restSeconds ? { restSeconds } : {}),
+  }
+}
+
 /** Cantidad de rondas del ítem (la mayor cantidad de series entre sus ejercicios). */
 export function roundCount(members: WorkoutExercise[]): number {
   return members.reduce((max, m) => Math.max(max, m.sets.length), 0)
@@ -171,4 +186,14 @@ export function describeBlock(members: WorkoutExercise[]): { title: string; deta
     parts.push(members.map((m) => (m.sets[r] ? (measureOf(m) === 'time' ? formatSeconds(m.sets[r].seconds || 0) : String(m.sets[r].reps)) : '–')).join('+'))
   }
   return { title: groupTitle(members), detail: `${rounds} ${rounds === 1 ? 'ronda' : 'rondas'}: ${parts.join(' · ')}` }
+}
+
+/** Sube o baja un ítem (ejercicio suelto o grupo entero) dentro de la lista plana. */
+export function moveBlock(exercises: WorkoutExercise[], blockIndex: number, direction: -1 | 1): WorkoutExercise[] {
+  const blocks = buildBlocks(exercises).map((b) => (b.kind === 'group' ? b.indices : [b.index]))
+  const target = blockIndex + direction
+  if (blockIndex < 0 || target < 0 || target >= blocks.length) return exercises
+  const reordered = [...blocks]
+  ;[reordered[blockIndex], reordered[target]] = [reordered[target], reordered[blockIndex]]
+  return reordered.flatMap((idxs) => idxs.map((i) => exercises[i]))
 }

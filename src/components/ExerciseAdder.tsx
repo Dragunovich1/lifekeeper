@@ -96,6 +96,8 @@ export function ExerciseAdder({ onAdd, value, onValueChange, placeholder = 'Nomb
       e.preventDefault()
       setActive((i) => (i <= 0 ? items.length - 1 : i - 1))
     } else if (e.key === 'Escape') {
+      // Con la lista abierta, Esc solo la cierra (no debe cerrar también el modal que la contiene)
+      if (open && items.length > 0) e.stopPropagation()
       setOpen(false)
     } else if (e.key === 'Enter') {
       e.preventDefault()

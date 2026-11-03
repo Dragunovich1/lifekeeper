@@ -9,6 +9,7 @@ import {
   groupKindFor,
   groupRest,
   isRoundDone,
+  moveBlock,
   removeRound,
   replaceGroup,
   setGroupRest,
@@ -113,5 +114,16 @@ describe('workoutGroups', () => {
     g[1].sets[0].reps = 12
     expect(describeBlock(g)).toEqual({ title: 'Press + Aperturas', detail: '2 rondas: 15+12 · 10+10' })
     expect(describeBlock([single('Solo')])).toEqual({ title: 'Solo', detail: '' })
+  })
+})
+
+describe('moveBlock', () => {
+  it('mueve ítems enteros (los grupos no se parten)', () => {
+    const a = createGroup([{ name: 'A' }, { name: 'B' }], id)
+    const list = [single('X'), ...a, single('Y')]
+    expect(moveBlock(list, 1, -1).map((e) => e.name)).toEqual(['A', 'B', 'X', 'Y'])
+    expect(moveBlock(list, 1, 1).map((e) => e.name)).toEqual(['X', 'Y', 'A', 'B'])
+    expect(moveBlock(list, 0, -1)).toBe(list)
+    expect(moveBlock(list, 2, 1)).toBe(list)
   })
 })
