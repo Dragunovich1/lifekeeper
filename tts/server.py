@@ -3,6 +3,7 @@
 Corre en la red privada de Docker: el texto nunca sale del servidor.
 """
 import io
+import os
 import re
 import wave
 
@@ -16,6 +17,29 @@ VOICES = {
 MAX_CHARS = 1500
 
 app = Flask(__name__)
+
+# La APK de Android corre en https://localhost (Capacitor) y habla con el servidor por su dominio:
+# es otro origen, así que el navegador exige CORS (y manda un preflight OPTIONS por el POST con JSON).
+ALLOWED_ORIGINS = {
+    'https://localhost',
+    'http://localhost',
+    'capacitor://localhost',
+    'https://app.lifekeeper.lat',
+    'http://192.168.0.52',
+    *[o.strip().rstrip('/') for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()],
+}
+
+
+@app.after_request
+def add_cors(resp):
+    origin = request.headers.get('Origin', '').rstrip('/')
+    if origin and (origin in ALLOWED_ORIGINS or re.match(r'^https?://(localhost|127\.0\.0\.1)(:\d+)?$', origin)):
+        resp.headers['Access-Control-Allow-Origin'] = origin
+        resp.headers['Vary'] = 'Origin'
+        resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        resp.headers['Access-Control-Max-Age'] = '600'
+    return resp
 _loaded: dict[str, PiperVoice] = {}
 
 

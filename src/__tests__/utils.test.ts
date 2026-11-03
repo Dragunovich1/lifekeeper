@@ -157,3 +157,20 @@ describe('asistente: honestidad y detección de medicación', () => {
     ]) expect(med.hints.test(normalizeText(t))).toBe(true)
   })
 })
+
+describe('timeoutSignal', () => {
+  it('funciona aunque el WebView no tenga AbortSignal.timeout', async () => {
+    const { timeoutSignal } = await import('../utils/abort')
+    const original = AbortSignal.timeout
+    // @ts-expect-error simulamos un WebView viejo
+    AbortSignal.timeout = undefined
+    try {
+      const s = timeoutSignal(20)
+      expect(s.aborted).toBe(false)
+      await new Promise((r) => setTimeout(r, 60))
+      expect(s.aborted).toBe(true)
+    } finally {
+      AbortSignal.timeout = original
+    }
+  })
+})

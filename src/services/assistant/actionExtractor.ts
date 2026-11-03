@@ -17,6 +17,7 @@ import type { ChatHistoryItem } from './ollamaClient'
 import { ALL_ACTIONS, isClarify, type ActionContext, type ActionOutcome, type RawAction } from './actions'
 import { apiFetch } from '../api/apiConfig'
 import { normalizeText } from './actions/helpers'
+import { timeoutSignal } from '../../utils/abort'
 
 const MAX_ACTIONS = 4
 
@@ -132,7 +133,7 @@ async function askJson(system: string, history: ChatHistoryItem[], userText: str
       messages: [{ role: 'system', content: system }, ...recentContext(history), { role: 'user', content: userText }],
       options: { temperature: 0, num_predict: maxTokens },
     }),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: timeoutSignal(timeoutMs),
   })
   if (!res.ok) throw new Error(`Ollama ${res.status}`)
   const body = (await res.json()) as { message?: { content?: string } }

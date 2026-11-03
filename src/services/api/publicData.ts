@@ -4,6 +4,7 @@
  * Todo tiene copia local para seguir funcionando sin conexión.
  */
 
+import { timeoutSignal } from '../../utils/abort'
 import { fixedHolidays, type Holiday } from '../../utils/holidaysFallback'
 import { LOCAL_EXERCISES, searchLocalExercises, translateCategory, translateEquipment, translateMuscle, type ExerciseSuggestion } from '../../utils/exerciseCatalog'
 import { apiFetch } from './apiConfig'
@@ -39,7 +40,7 @@ function writeStore<T>(key: string, value: T) {
 }
 
 async function publicJson<T>(path: string, timeoutMs = 9000): Promise<T> {
-  const res = await apiFetch(`/api/public${path}`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) })
+  const res = await apiFetch(`/api/public${path}`, { headers: { Accept: 'application/json' }, signal: timeoutSignal(timeoutMs) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const type = res.headers.get('content-type') ?? ''
   if (!type.includes('json')) throw new Error('Respuesta inesperada del servidor')

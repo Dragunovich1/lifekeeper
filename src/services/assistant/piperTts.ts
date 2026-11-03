@@ -1,4 +1,5 @@
 import { apiFetch } from '../api/apiConfig'
+import { timeoutSignal } from '../../utils/abort'
 
 /**
  * Cliente de voz neural local (Piper TTS) para el asistente.
@@ -19,7 +20,7 @@ export async function isPiperAvailable(): Promise<boolean> {
   const now = Date.now()
   if (availability && now - availability.checkedAt < AVAILABILITY_TTL_MS) return availability.value
   try {
-    const res = await apiFetch('/api/tts/health', { signal: AbortSignal.timeout(3000) })
+    const res = await apiFetch('/api/tts/health', { signal: timeoutSignal(5000) })
     // Se valida el JSON: un servidor de desarrollo puede responder 200 con el index.html
     const body = res.ok ? await res.json() : null
     availability = { value: body?.ok === true, checkedAt: now }

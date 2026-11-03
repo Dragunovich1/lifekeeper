@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isPiperAvailable, speakWithPiper, stopPiper } from '../../services/assistant/piperTts'
+import { isNativeTtsAvailable, speakNative, stopNative } from '../../services/assistant/nativeTts'
 
 export type VoiceChoice = 'piper-female' | 'piper-male' | 'female' | 'male' | 'system'
 
@@ -57,6 +58,7 @@ export function useAssistantVoice({ open, showVoiceMenu, onTranscript }: Options
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis?.cancel()
     stopPiper()
+    stopNative()
     setSpeakingMessageId(null)
   }, [])
 
@@ -110,6 +112,7 @@ export function useAssistantVoice({ open, showVoiceMenu, onTranscript }: Options
 
     window.speechSynthesis?.cancel()
     stopPiper()
+    stopNative()
 
     if (usePiper && (await isPiperAvailable())) {
       if (msgId) setSpeakingMessageId(msgId)
@@ -118,6 +121,14 @@ export function useAssistantVoice({ open, showVoiceMenu, onTranscript }: Options
       })
       if (ok) return
       if (msgId) setSpeakingMessageId(null)
+    }
+
+    // En la APK, la voz de respaldo es el motor de texto a voz del teléfono (speechSynthesis del WebView no es confiable)
+    if (isNativeTtsAvailable()) {
+      if (msgId) setSpeakingMessageId(msgId)
+      await speakNative(textToSpeak, { gender: voiceGender })
+      setSpeakingMessageId((current) => (current === msgId ? null : current))
+      return
     }
 
     if (!window.speechSynthesis) return
