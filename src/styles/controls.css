@@ -403,10 +403,12 @@
 }
 
 .app-datepicker-apply {
-  margin-left: auto;
   padding: 0.4375rem 0.875rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
+.app-datepicker-apply:disabled { opacity: 0.45; cursor: not-allowed; }
+.app-datepicker-cancel { padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
+.app-datepicker-spacer { flex: 1; }
 
 /* TagInput: un solo contenedor y un solo foco */
 .field .tag-input-field,
@@ -433,4 +435,57 @@ input.tag-input-field:focus {
   background: transparent !important;
   box-shadow: none !important;
   outline: none !important;
+}
+
+
+/* ==========================================================================
+   Selector de fechas: título tocable (mes / año), vistas de año y mes, resumen y confirmación
+   ========================================================================== */
+.app-datepicker { width: 308px; }
+.app-datepicker-backdrop { display: none; }
+.app-datepicker-month { display: inline-flex; align-items: center; gap: 0.25rem; }
+.app-datepicker-title-btn {
+  display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.3rem 0.45rem; border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--color-text-primary); font: inherit; font-size: 0.8125rem; font-weight: 700; text-transform: capitalize; cursor: pointer;
+}
+.app-datepicker-title-btn:hover, .app-datepicker-title-btn:focus-visible { background: var(--color-surface-hover); color: var(--color-accent-cyan); outline: none; }
+.app-datepicker-title-btn svg { opacity: 0.7; }
+.app-datepicker-hint { margin: 0 0 0.4rem; text-align: center; font-size: 0.7rem; color: var(--color-text-muted); }
+.app-datepicker-body { min-height: 232px; }
+.app-datepicker-pick-grid { display: grid; gap: 0.4rem; }
+.app-datepicker-pick-grid.is-months { grid-template-columns: repeat(3, 1fr); }
+.app-datepicker-pick-grid.is-years { grid-template-columns: repeat(3, 1fr); }
+.app-datepicker-pick {
+  min-height: 44px; padding: 0; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent;
+  color: var(--color-text-secondary); font: inherit; font-size: 0.875rem; text-transform: capitalize; cursor: pointer;
+}
+.app-datepicker-pick:hover { background: var(--color-surface-hover); color: var(--color-text-primary); }
+.app-datepicker-pick.is-today { border-color: var(--color-border-strong); }
+.app-datepicker-pick.is-selected { background: var(--gradient-accent); color: var(--color-accent-ink); font-weight: 700; }
+.app-datepicker-yearinput { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.5rem; font-size: 0.72rem; color: var(--color-text-muted); }
+.app-datepicker-yearinput input {
+  width: 100%; box-sizing: border-box; padding: 0.55rem 0.7rem; border: 1px solid var(--color-input-border); border-radius: var(--radius-md);
+  background: var(--color-input-bg); color: var(--color-text-primary); font: inherit; font-size: 1rem; letter-spacing: 0.08em;
+}
+.app-datepicker-yearinput input:focus { outline: none; border-color: var(--color-accent-blue); box-shadow: 0 0 0 3px var(--color-focus-ring); }
+.app-datepicker-summary { margin-top: 0.5rem; padding: 0.45rem 0.6rem; border-radius: var(--radius-md); background: var(--color-surface-hover); font-size: 0.78rem; text-align: center; color: var(--color-text-secondary); }
+.app-datepicker-summary strong { color: var(--color-text-primary); }
+.app-datepicker-footer { flex-wrap: wrap; }
+
+/* Celular: panel inferior con botones grandes */
+@media (max-width: 600px) {
+  .app-datepicker-backdrop { display: block; position: fixed; inset: 0; z-index: 1099; background: rgba(0, 0, 0, 0.5); }
+  .app-datepicker {
+    top: auto !important; left: 8px !important; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: auto; max-width: none; padding: 0.9rem; border-radius: 20px;
+  }
+  .app-datepicker-nav { width: 44px; height: 44px; }
+  .app-datepicker-title-btn { font-size: 1rem; padding: 0.5rem 0.6rem; }
+  .app-datepicker-day { font-size: 0.95rem; min-height: 42px; aspect-ratio: auto; }
+  .app-datepicker-hint { font-size: 0.78rem; }
+  .app-datepicker-body { min-height: 0; }
+  .app-datepicker-pick { min-height: 48px; font-size: 1rem; }
+  .app-datepicker-apply, .app-datepicker-cancel { min-height: 46px; flex: 1; font-size: 0.95rem; }
+  .app-datepicker-link { min-height: 40px; font-size: 0.85rem; }
+  .app-datepicker-spacer { display: none; }
 }
