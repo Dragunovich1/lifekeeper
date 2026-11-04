@@ -185,6 +185,7 @@ export const DiaryNotesSection = () => {
       <SectionHeader
         title="Notas diarias"
         subtitle="Dejá registro sencillo de tu día con estado de ánimo y etiquetas accesibles"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button>}
       />
 
       <div className="section-body">
@@ -261,7 +262,6 @@ export const DiaryNotesSection = () => {
           <div className="panel-header">
             <h3 className="panel-title">Notas registradas</h3>
             <div className="section-actions">
-              <button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva nota</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

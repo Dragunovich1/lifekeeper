@@ -430,9 +430,10 @@ export const PasswordManagerSection = () => {
       <SectionHeader
         title="Gestor de contraseñas"
         subtitle="Todos tus accesos cifrados con la clave maestra, auditoría de fortaleza y portapapeles temporal"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva credencial</button>}
       />
 
-      <div className="section-body compact">
+      <div className="section-body">
         <div className="stats-grid">
           <div
             className="stat-card"
@@ -945,7 +946,6 @@ export const PasswordManagerSection = () => {
                 )}
               </div>
             </div>
-            <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva credencial</button></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 type="button"

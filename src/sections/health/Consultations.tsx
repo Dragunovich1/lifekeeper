@@ -247,6 +247,7 @@ export const ConsultationsSection = () => {
       <SectionHeader
         title="Consultas médicas"
         subtitle="Seguimiento completo de visitas, diagnósticos, tratamientos y próximos controles"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva consulta</button>}
       />
 
       <div className="section-body">
@@ -347,7 +348,6 @@ export const ConsultationsSection = () => {
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Historial de consultas</h3>
-            <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva consulta</button></div>
             <div className="search-input-wrap">
               <Search size={15} className="search-input-icon" aria-hidden />
               <input

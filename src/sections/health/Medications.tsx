@@ -329,6 +329,7 @@ export const MedicationsSection = () => {
       <SectionHeader
         title="Medicaciones"
         subtitle="Gestioná las tomas vigentes, dosis y horarios con alertas integradas"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo tratamiento</button>}
       />
 
       <div className="section-body">
@@ -603,7 +604,6 @@ export const MedicationsSection = () => {
         <div className="panel">
           <div className="panel-header">
             <h3 className="panel-title">Medicaciones activas</h3>
-            <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo tratamiento</button></div>
             <div className="search-input-wrap">
               <Search size={15} className="search-input-icon" aria-hidden />
               <input

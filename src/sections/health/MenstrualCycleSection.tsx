@@ -214,6 +214,7 @@ export const MenstrualCycleSection = () => {
       <SectionHeader
         title="Ciclo Menstrual & Bienestar Femenino"
         subtitle="Monitoreá tus fases hormonales, síntomas, ventana de fertilidad y predicciones sincronizadas con el calendario"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo registro</button>}
       />
 
       <div className="cy-tabs" role="tablist" aria-label="Secciones del ciclo">
@@ -555,7 +556,6 @@ export const MenstrualCycleSection = () => {
             <h3 className="panel-title">Historial de ciclos y registros</h3>
             <div className="section-actions">
               <span className="panel-subtitle">{entries.length} registro(s)</span>
-              <button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo registro</button>
             </div>
           </div>
 

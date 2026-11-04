@@ -59,14 +59,17 @@ export const PetsSection = () => {
 
   return (
     <div>
-      <SectionHeader title="Mascotas" subtitle="Una ficha completa por cada mascota: foto, salud, vacunas, peso, medicación, turnos y gastos" />
+      <SectionHeader
+        title="Mascotas"
+        subtitle="Una ficha completa por cada mascota: foto, salud, vacunas, peso, medicación, turnos y gastos"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setForm({ open: true, pet: null })}><Plus size={16} aria-hidden /> Nueva mascota</button>}
+      />
       <div className="section-body">
-        <div className="wk-toolbar">
+        {pets.length > 0 ? (
           <p className="wk-toolbar-text">
-            {pets.length === 0 ? 'Todavía no cargaste mascotas.' : `${pets.length} mascota${pets.length === 1 ? '' : 's'}${alerts.length ? ` · ${alerts.length} aviso${alerts.length === 1 ? '' : 's'} pendiente${alerts.length === 1 ? '' : 's'}` : ' · todo al día'}`}
+            {`${pets.length} mascota${pets.length === 1 ? '' : 's'}${alerts.length ? ` · ${alerts.length} aviso${alerts.length === 1 ? '' : 's'} pendiente${alerts.length === 1 ? '' : 's'}` : ' · todo al día'}`}
           </p>
-          <button type="button" className="primary-button" onClick={() => setForm({ open: true, pet: null })}><Plus size={16} aria-hidden /> Nueva mascota</button>
-        </div>
+        ) : null}
 
         {pets.length === 0 ? (
           <div className="empty-state wk-empty">

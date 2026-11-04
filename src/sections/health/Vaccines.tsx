@@ -233,6 +233,7 @@ export const VaccinesSection = () => {
       <SectionHeader
         title="Vacunas"
         subtitle="Registrá cada aplicación, mantené las dosis futuras en agenda y organizá refuerzos"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva vacuna</button>}
       />
 
       <div className="section-body">
@@ -412,7 +413,6 @@ export const VaccinesSection = () => {
           <div className="panel-header">
             <h3 className="panel-title">Historial de vacunas</h3>
             <div className="section-actions">
-              <button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nueva vacuna</button>
               <div className="search-input-wrap">
                 <Search size={15} className="search-input-icon" aria-hidden />
                 <input

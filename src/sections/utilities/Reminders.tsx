@@ -172,6 +172,7 @@ export const RemindersSection = () => {
       <SectionHeader
         title="Recordatorios"
         subtitle="Gestioná alertas generales, con categorías y avisos proactivos"
+        actions={<button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo recordatorio</button>}
       />
 
       <div className="section-body">
@@ -246,7 +247,6 @@ export const RemindersSection = () => {
 
         <div className="panel">
           <h3 className="panel-title">Listado</h3>
-          <div className="section-actions"><button type="button" className="primary-button add-new-btn" onClick={() => setAdding(true)}><Plus size={16} aria-hidden /> Nuevo recordatorio</button></div>
           {sortedReminders.length === 0 ? (
             <div className="empty-state">Todavía no hay recordatorios configurados.</div>
           ) : (

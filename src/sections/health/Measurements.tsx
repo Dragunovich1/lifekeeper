@@ -313,8 +313,8 @@ export const MeasurementsSection = () => {
                 <FileDown size={15} /> <span>PDF</span>
               </button>
             )}
-            <button type="button" className="primary-button" onClick={() => openNew()}>
-              <Plus size={16} /> <span>Nueva<span className="meas-long"> medición</span></span>
+            <button type="button" className="primary-button add-new-btn" onClick={() => openNew()}>
+              <Plus size={16} aria-hidden /> Nueva medición
             </button>
           </>
         }
