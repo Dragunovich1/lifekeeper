@@ -1,3 +1,4 @@
+import { Select } from '../../components/Select'
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Check, Copy, Minus, Plus, RotateCcw, Share2, ShoppingCart, SlidersHorizontal, Trash2, X } from 'lucide-react'
@@ -373,11 +374,7 @@ export const ShoppingListSection = () => {
           </label>
           <label>
             <span>Unidad</span>
-            <select value={unit} onChange={(e) => setUnit(e.target.value)}>
-              {SHOPPING_UNITS.map((u) => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </select>
+            <Select value={unit} onChange={setUnit} options={SHOPPING_UNITS.map((u) => ({ value: u, label: u }))} ariaLabel="Unidad" />
           </label>
           <label>
             <span>Precio unit. (opcional)</span>

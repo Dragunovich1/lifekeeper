@@ -1,3 +1,4 @@
+import { Select } from '../../../components/Select'
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { v4 as uuid } from 'uuid'
 import { AlertTriangle, Check, FileSpreadsheet, FileText, FileUp, Loader2, RotateCcw, Undo2 } from 'lucide-react'
@@ -248,16 +249,12 @@ export function FinanceImport({ onDone }: { onDone: () => void }) {
             </div>
             <label className="fin-opt">
               <span>Moneda</span>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <Select value={currency} onChange={setCurrency} options={CURRENCIES.map((c) => ({ value: c, label: c }))} ariaLabel="Moneda" />
             </label>
             {source.kind === 'table' && source.tables.length > 1 && (
               <label className="fin-opt">
                 <span>Hoja</span>
-                <select value={tableIdx} onChange={(e) => { setTableIdx(Number(e.target.value)); setMapOverride({}); setEdits({}) }}>
-                  {source.tables.map((t, i) => <option key={t.name} value={i}>{t.name}</option>)}
-                </select>
+                <Select value={String(tableIdx)} onChange={(v) => { setTableIdx(Number(v)); setMapOverride({}); setEdits({}) }} options={source.tables.map((t, i) => ({ value: String(i), label: t.name }))} ariaLabel="Hoja" />
               </label>
             )}
           </div>

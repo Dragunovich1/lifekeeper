@@ -1,3 +1,4 @@
+import { Select } from '../../components/Select'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Calculator as CalcIcon, ChevronDown, Copy, Delete, History, Percent, Receipt, Tag, Trash2, Users } from 'lucide-react'
@@ -306,12 +307,7 @@ function ToolsGrid() {
           <NumField id="t-net" label={vatMode === 'add' ? 'Monto sin IVA' : 'Monto con IVA'} value={net} onChange={setNet} suffix="$" />
           <div className="field">
             <label htmlFor="t-rate">Alícuota</label>
-            <select id="t-rate" value={rate} onChange={(e) => setRate(e.target.value)}>
-              <option value="21">21%</option>
-              <option value="10.5">10,5%</option>
-              <option value="27">27%</option>
-              <option value="0">Exento (0%)</option>
-            </select>
+            <Select id="t-rate" value={rate} onChange={setRate} options={[{ value: '21', label: '21%' }, { value: '10.5', label: '10,5%' }, { value: '27', label: '27%' }, { value: '0', label: 'Exento (0%)' }]} ariaLabel="Alícuota" />
           </div>
         </div>
         <div className="calc-tabs small" role="radiogroup" aria-label="Modo IVA">

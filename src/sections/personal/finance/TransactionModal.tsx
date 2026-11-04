@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ChevronRight, Trash2 } from 'lucide-react'
 import { CategoryIcon } from '../../../components/CategoryIcon'
+import { DatePicker } from '../../../components/DatePicker'
 import { Modal } from '../../../components/Modal'
+import { Select } from '../../../components/Select'
 import type { FinanceCategoryDef, FinanceTransaction, TransactionType } from '../../../types'
 import { resolveCategory } from '../../../utils/financeCategories'
 import { CategoryPickerModal } from './CategoryPickerModal'
@@ -87,11 +89,7 @@ export function TransactionModal({ open, draft, custom, onClose, onSave, onDelet
               aria-label="Monto"
               autoFocus
             />
-            <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} aria-label="Moneda">
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <Select className="fin-currency-select" value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} options={CURRENCIES.map((c) => ({ value: c, label: c }))} ariaLabel="Moneda" />
           </div>
 
           <button type="button" className="fin-field fin-category-btn" onClick={() => setPickerOpen(true)}>
@@ -108,19 +106,21 @@ export function TransactionModal({ open, draft, custom, onClose, onSave, onDelet
           <div className="fin-row">
             <label className="fin-field">
               <span>Fecha</span>
-              <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <DatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} allowClear={false} ariaLabel="Fecha" />
             </label>
             <label className="fin-field">
               <span>Repetir</span>
-              <select
+              <Select
                 value={form.recurring ? form.recurrence : 'no'}
-                onChange={(e) => setForm(e.target.value === 'no' ? { ...form, recurring: false } : { ...form, recurring: true, recurrence: e.target.value as TransactionDraft['recurrence'] })}
-              >
-                <option value="no">No repetir</option>
-                <option value="weekly">Cada semana</option>
-                <option value="monthly">Cada mes</option>
-                <option value="yearly">Cada año</option>
-              </select>
+                onChange={(v) => setForm(v === 'no' ? { ...form, recurring: false } : { ...form, recurring: true, recurrence: v as TransactionDraft['recurrence'] })}
+                options={[
+                  { value: 'no', label: 'No repetir' },
+                  { value: 'weekly', label: 'Cada semana' },
+                  { value: 'monthly', label: 'Cada mes' },
+                  { value: 'yearly', label: 'Cada año' },
+                ]}
+                ariaLabel="Repetir"
+              />
             </label>
           </div>
 

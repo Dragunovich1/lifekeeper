@@ -1,3 +1,4 @@
+import { Select } from '../../components/Select'
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -394,27 +395,12 @@ export const VehiclesSection = () => {
         actions={
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             {vehicleProfiles.length > 0 && (
-              <select
+              <Select
                 value={currentVehicle?.id || ''}
-                onChange={(e) => setSelectedVehicleId(e.target.value)}
-                style={{
-                  padding: '0.45rem 0.85rem',
-                  borderRadius: '10px',
-                  background: 'var(--color-surface-hover)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                {vehicleProfiles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    🚗 {v.name} {v.licensePlate ? `(${v.licensePlate})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedVehicleId}
+                options={vehicleProfiles.map((v) => ({ value: v.id, label: `🚗 ${v.name}${v.licensePlate ? ` (${v.licensePlate})` : ''}` }))}
+                ariaLabel="Vehículo"
+              />
             )}
 
             <button
@@ -1010,16 +996,17 @@ export const VehiclesSection = () => {
 
             <label className="form-label">
               <span>Tipo de Vehículo</span>
-              <select
-                className="form-input"
+              <Select
                 value={vehicleForm.vehicleType}
-                onChange={(e) => setVehicleForm({ ...vehicleForm, vehicleType: e.target.value as any })}
-              >
-                <option value="auto">🚗 Automóvil</option>
-                <option value="moto">🏍️ Motocicleta</option>
-                <option value="camioneta">🚙 Camioneta / Pickup</option>
-                <option value="otro">🚐 Otro</option>
-              </select>
+                onChange={(v) => setVehicleForm({ ...vehicleForm, vehicleType: v as any })}
+                options={[
+                  { value: 'auto', label: '🚗 Automóvil' },
+                  { value: 'moto', label: '🏍️ Motocicleta' },
+                  { value: 'camioneta', label: '🚙 Camioneta / Pickup' },
+                  { value: 'otro', label: '🚐 Otro' },
+                ]}
+                ariaLabel="Tipo de vehículo"
+              />
             </label>
           </div>
 
@@ -1234,16 +1221,17 @@ export const VehiclesSection = () => {
 
           <label className="form-label">
             <span>Tipo de Combustible</span>
-            <select
-              className="form-input"
-              value={fuelForm.fuelType}
-              onChange={(e) => setFuelForm({ ...fuelForm, fuelType: e.target.value as any })}
-            >
-              <option value="nafta">⛽ Nafta (Súper / Premium)</option>
-              <option value="gasoil">🛢️ Gasoil / Diesel</option>
-              <option value="gnc">💨 GNC</option>
-              <option value="electrico">⚡ Carga Eléctrica</option>
-            </select>
+            <Select
+              value={fuelForm.fuelType ?? "nafta"}
+              onChange={(v) => setFuelForm({ ...fuelForm, fuelType: v as any })}
+              options={[
+                { value: 'nafta', label: '⛽ Nafta (Súper / Premium)' },
+                { value: 'gasoil', label: '🛢️ Gasoil / Diesel' },
+                { value: 'gnc', label: '💨 GNC' },
+                { value: 'electrico', label: '⚡ Carga Eléctrica' },
+              ]}
+              ariaLabel="Tipo de combustible"
+            />
           </label>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.85rem', cursor: 'pointer' }}>

@@ -1,3 +1,4 @@
+import { Select } from '../Select'
 import { Volume2, X } from 'lucide-react'
 import type { AssistantVoice, VoiceChoice } from './useAssistantVoice'
 
@@ -24,25 +25,22 @@ export function VoiceMenu({
 
       <div className="asst-field">
         <label htmlFor="asst-voice-type">Tipo de voz</label>
-        <select
+        <Select
           id="asst-voice-type"
-          className="asst-select"
           value={voice.voiceChoice}
-          onChange={(e) => {
-            voice.setVoiceChoice(e.target.value as VoiceChoice)
-            if (e.target.value.startsWith('piper-')) voice.setSelectedVoiceURI('')
+          onChange={(v) => {
+            voice.setVoiceChoice(v as VoiceChoice)
+            if (v.startsWith('piper-')) voice.setSelectedVoiceURI('')
           }}
-        >
-          <optgroup label="Piper (voz neural local)">
-            <option value="piper-female">👩 Piper · Mujer (acento argentino)</option>
-            <option value="piper-male">👨 Piper · Hombre (acento latino, México)</option>
-          </optgroup>
-          <optgroup label="Voces del navegador / sistema">
-            <option value="female">👩 Voz Femenina (Mujer)</option>
-            <option value="male">👨 Voz Masculina (Hombre)</option>
-            <option value="system">🤖 Voz del Sistema / Neutra</option>
-          </optgroup>
-        </select>
+          options={[
+            { value: 'piper-female', label: '👩 Piper · Mujer (acento argentino)' },
+            { value: 'piper-male', label: '👨 Piper · Hombre (acento latino, México)' },
+            { value: 'female', label: '👩 Voz Femenina (navegador / sistema)' },
+            { value: 'male', label: '👨 Voz Masculina (navegador / sistema)' },
+            { value: 'system', label: '🤖 Voz del Sistema / Neutra' },
+          ]}
+          ariaLabel="Tipo de voz"
+        />
         {voice.usePiper && (
           <span className={`asst-hint ${voice.piperOnline === false ? 'is-error' : ''}`}>
             {voice.piperOnline === null && 'Verificando servicio Piper…'}
@@ -55,19 +53,13 @@ export function VoiceMenu({
       {!voice.usePiper && spanishVoices.length > 1 && (
         <div className="asst-field">
           <label htmlFor="asst-voice-variant">Variante de voz instalada</label>
-          <select
+          <Select
             id="asst-voice-variant"
-            className="asst-select"
             value={voice.selectedVoiceURI}
-            onChange={(e) => voice.setSelectedVoiceURI(e.target.value)}
-          >
-            <option value="">(Automática según género)</option>
-            {spanishVoices.map((v) => (
-              <option key={v.voiceURI} value={v.voiceURI}>
-                {v.name} ({v.lang})
-              </option>
-            ))}
-          </select>
+            onChange={voice.setSelectedVoiceURI}
+            options={[{ value: '', label: '(Automática según género)' }, ...spanishVoices.map((v) => ({ value: v.voiceURI, label: `${v.name} (${v.lang})` }))]}
+            ariaLabel="Variante de voz"
+          />
         </div>
       )}
 

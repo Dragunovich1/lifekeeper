@@ -447,31 +447,33 @@ export const FinancesSection = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>
                       De
                     </label>
-                    <select
-                      className="select"
+                    <Select
                       value={convSource}
-                      onChange={(e) => setConvSource(e.target.value)}
-                    >
-                      <option value="USD">USD (Dólar)</option>
-                      <option value="EUR">EUR (Euro)</option>
-                      <option value="ARS">ARS (Pesos)</option>
-                    </select>
+                      onChange={setConvSource}
+                      options={[
+                        { value: 'USD', label: 'USD (Dólar)' },
+                        { value: 'EUR', label: 'EUR (Euro)' },
+                        { value: 'ARS', label: 'ARS (Pesos)' },
+                      ]}
+                      ariaLabel="Moneda de origen"
+                    />
                   </div>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>
                       A
                     </label>
-                    <select
-                      className="select"
+                    <Select
                       value={convTarget}
-                      onChange={(e) => setConvTarget(e.target.value)}
-                    >
-                      <option value="blue">ARS (Dólar Blue)</option>
-                      <option value="oficial">ARS (Dólar Oficial)</option>
-                      <option value="mep">ARS (Dólar MEP)</option>
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                    </select>
+                      onChange={setConvTarget}
+                      options={[
+                        { value: 'blue', label: 'ARS (Dólar Blue)' },
+                        { value: 'oficial', label: 'ARS (Dólar Oficial)' },
+                        { value: 'mep', label: 'ARS (Dólar MEP)' },
+                        { value: 'USD', label: 'USD' },
+                        { value: 'EUR', label: 'EUR' },
+                      ]}
+                      ariaLabel="Convertir a"
+                    />
                   </div>
                   <div
                     style={{

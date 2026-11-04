@@ -301,6 +301,9 @@
   cursor: pointer;
 }
 
+/* Red de seguridad: cualquier <select> nativo (también dentro de modales) muestra una lista legible */
+select { color-scheme: inherit; }
+select option,
 .field select option,
 .panel select option {
   background: var(--color-bg-elevated);
