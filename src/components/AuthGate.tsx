@@ -33,7 +33,7 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
   const isLightMode = preferences.mode === 'light'
   const logoLoginSrc = isLightMode ? '/brand/logo-login-light.png?v=2' : '/brand/logo-login.png?v=2'
   const markSrc = isLightMode ? '/brand/isotipo-light.png?v=2' : '/brand/isotipo.png?v=2'
-  const wordmarkSrc = isLightMode ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'
+  const wordmarkSrc = isLightMode ? '/brand/wordmark-light.png?v=3' : '/brand/wordmark.png?v=2'
   // Iniciamos siempre en 'unlock' para que desde el Smartphone o APK pueda entrar directo con su usuario/email
   const [mode, setMode] = useState<AuthMode>('unlock')
   const [loginUsername, setLoginUsername] = useState('')

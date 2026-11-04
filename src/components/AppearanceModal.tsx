@@ -273,7 +273,7 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
                             className="mark"
                           />
                           <img
-                            src={preferences.mode === 'light' ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'}
+                            src={preferences.mode === 'light' ? '/brand/wordmark-light.png?v=3' : '/brand/wordmark.png?v=2'}
                             alt=""
                             className="wordmark"
                           />
@@ -288,7 +288,7 @@ export const AppearanceModal = ({ open, onClose }: AppearanceModalProps) => {
                       ) : null}
                       {logo.id === 'wordmark' ? (
                         <img
-                          src={preferences.mode === 'light' ? '/brand/wordmark-light.png?v=2' : '/brand/wordmark.png?v=2'}
+                          src={preferences.mode === 'light' ? '/brand/wordmark-light.png?v=3' : '/brand/wordmark.png?v=2'}
                           alt=""
                           className="wordmark"
                         />
