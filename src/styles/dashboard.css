@@ -2099,3 +2099,10 @@
   backdrop-filter: none;
 }
 .mobile-app-shell .fx-fogged-glass { animation: none; }
+
+/* Píldora del clima mientras se busca / si no está disponible: ocupa su lugar para que nada salte */
+.dashboard-weather-pill.is-loading { cursor: default; color: var(--color-text-muted); }
+.dashboard-weather-pill.is-loading .dashboard-weather-city { animation: wx-pulse 1.4s ease-in-out infinite; }
+.dashboard-weather-pill.is-empty { color: var(--color-text-muted); }
+@keyframes wx-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .dashboard-weather-pill.is-loading .dashboard-weather-city { animation: none; } }

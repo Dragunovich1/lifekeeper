@@ -151,26 +151,45 @@ export const MobileTopBar = ({
         </div>
       </div>
 
-      {/* Horizontal SubNav pills (Only when inside a section with multiple subsections) */}
-      {activeSection && subSections.length > 1 && (
-        <div className="mobile-subnav mobile-subnav-scroll" ref={subnavRef}>
-          <div className="mobile-subnav-list">
-            {subSections.map((sub) => {
-              const isActive = sub.key === activeSubSection
-              return (
-                <button
-                  key={sub.key}
-                  ref={isActive ? activePillRef : null}
-                  className={`mobile-subnav-pill ${isActive ? 'active' : ''}`}
-                  onClick={() => handlePillClick(sub.key)}
-                >
-                  <span>{sub.label}</span>
-                </button>
-              )
-            })}
-          </div>
+      {/* Fila de solapas SIEMPRE presente (misma altura en todas las pantallas → sin saltos al navegar):
+          dentro de una sección con varias subsecciones muestra esas; en el inicio o en una sección de una sola
+          página (perfil) muestra accesos a las secciones principales. */}
+      <div className="mobile-subnav mobile-subnav-scroll" ref={subnavRef}>
+        <div className="mobile-subnav-list">
+          {activeSection && subSections.length > 1
+            ? subSections.map((sub) => {
+                const isActive = sub.key === activeSubSection
+                return (
+                  <button
+                    key={sub.key}
+                    ref={isActive ? activePillRef : null}
+                    className={`mobile-subnav-pill ${isActive ? 'active' : ''}`}
+                    onClick={() => handlePillClick(sub.key)}
+                  >
+                    <span>{sub.label}</span>
+                  </button>
+                )
+              })
+            : sections
+                .filter((sec) => sec.key !== 'profile')
+                .map((sec) => {
+                  const isActive = sec.key === activeSection
+                  return (
+                    <button
+                      key={sec.key}
+                      ref={isActive ? activePillRef : null}
+                      className={`mobile-subnav-pill ${isActive ? 'active' : ''}`}
+                      onClick={() => {
+                        triggerHaptic('light')
+                        onNavigate(sec.key, sec.subSections[0]?.key ?? '')
+                      }}
+                    >
+                      <span>{sec.label}</span>
+                    </button>
+                  )
+                })}
         </div>
-      )}
+      </div>
     </header>
   )
 }

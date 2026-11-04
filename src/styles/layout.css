@@ -556,3 +556,11 @@
 @media (min-width: 900px) {
   .section-header { margin-bottom: 1rem; }
 }
+
+/* ==========================================================================
+   Estabilidad del layout (evitar saltos)
+   ========================================================================== */
+/* (La barra de scroll de la página ya es superpuesta —scrollbar/PageScrollbar—, así que abrir un modal
+   o pasar a una sección más larga no corre el contenido de costado.) */
+/* Mientras carga una sección, el marcador ocupa la pantalla: el pie no sube y baja. */
+.page-container > .loading-container { min-height: 60vh; }

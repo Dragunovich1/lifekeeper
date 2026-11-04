@@ -92,6 +92,10 @@
 - **Series Especiales:** Biseries, Drop Sets, Series al Fallo, Calentamiento y notas/comentarios por cada serie individual.
 - **Exportación en PDF Profesional:** Generador en `src/utils/workoutPdfExport.ts` con formato A4, métricas consolidadas (volumen en kg, distancia, tiempo) y desglose completo para enviar a un Personal Trainer.
 
+### 🧱 Estabilidad del layout (sin saltos)
+- Medido con `PerformanceObserver('layout-shift')` en todas las pantallas (escritorio y celular): CLS 0 al navegar entre secciones.
+- **Reglas:** (1) lo que llega tarde (clima, datos de internet) se lee de la caché en el *primer* render (`useState(init)`), no en un `useEffect`, y mientras tanto ocupa su lugar con un marcador del mismo tamaño (ej. píldora "Buscando el clima…", que además va al final de su fila); (2) avisos de "guardado/generado" con `components/StatusToast` (fijo abajo), nunca un `<p>` que se inserta en la página; (3) elementos flotantes que aparecen (globo del asistente) con `position: absolute` para no cambiar el tamaño de su contenedor; (4) la barra superior del celular siempre tiene la fila de solapas (en el inicio/perfil muestra accesos a las secciones) para que su alto no cambie al navegar; (5) las secciones se precargan en segundo plano después de entrar (`App.tsx`, `requestIdleCallback`) y el marcador de carga ocupa `60vh`; (6) la barra de scroll de la página ya es superpuesta (`scrollbar/PageScrollbar`), así que abrir un modal no corre el contenido.
+
 ### 🐾 Mascotas (Vida personal → Mascotas)
 - **Archivos:** `src/sections/personal/pets/` (`PetsSection` lista de tarjetas + `PetDetail` ficha con solapas Resumen · Salud · Peso · Medicación · Turnos · Gastos, `PetFormModal` alta/edición con foto, `RecordModals` un modal por tipo de registro), lógica pura y testeada en `src/utils/pets.ts`, PDF de la ficha en `src/utils/petPdfExport.ts`, estilos `src/styles/pets.css`. Datos en `personal.pets: Pet[]` (todo cifrado en el snapshot).
 - **Foto:** se elige de galería/cámara y se reduce a JPEG ≤640 px (`utils/image.ts: fileToResizedDataUrl`) para no inflar la bóveda.

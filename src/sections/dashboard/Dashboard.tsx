@@ -238,6 +238,18 @@ interface WeatherData {
 }
 
 const WEATHER_STORAGE_KEY = 'lifekeeper:weather-geo-v2'
+
+/** Clima guardado en la sesión (lectura sincrónica para el primer render). */
+const readCachedWeather = (): WeatherData | null => {
+  try {
+    const raw = sessionStorage.getItem(WEATHER_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as WeatherData
+    return parsed && parsed.city && Array.isArray(parsed.daily) ? parsed : null
+  } catch {
+    return null
+  }
+}
 const FALLBACK_COORDS = {
   city: 'Quilmes',
   latitude: -34.7206,
@@ -583,7 +595,9 @@ export const DashboardSection = () => {
 
   const [tipIndex, setTipIndex] = useState<number>(() => getSessionTipIndex(masterPassword))
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [weather, setWeather] = useState<WeatherData | null>(null)
+  // El clima se lee de la caché en el primer render (no después): así la píldora no "aparece" moviendo las demás
+  const [weather, setWeather] = useState<WeatherData | null>(readCachedWeather)
+  const [weatherLoading, setWeatherLoading] = useState(() => readCachedWeather() === null)
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null)
   const [weatherExpanded, setWeatherExpanded] = useState(false)
   const [locatingWeather, setLocatingWeather] = useState(false)
@@ -628,6 +642,7 @@ export const DashboardSection = () => {
           const parsed = JSON.parse(cachedRaw) as WeatherData
           if (parsed && parsed.city && Array.isArray(parsed.daily)) {
             setWeather(parsed)
+            setWeatherLoading(false)
             return
           }
         }
@@ -778,6 +793,7 @@ export const DashboardSection = () => {
       // Keep silent if offline
     } finally {
       setLocatingWeather(false)
+      setWeatherLoading(false)
     }
   }, [])
 
@@ -1121,6 +1137,22 @@ export const DashboardSection = () => {
         <div className="dashboard-hero-meta">
           <span className="page-eyebrow">{today}</span>
           <div className="dashboard-hero-pills">
+
+            <span className={heroStatusClass}>
+              <span className="status-dot" aria-hidden />
+              <span>{heroStatusText}</span>
+            </span>
+
+            <button
+              type="button"
+              className="dashboard-share-pill"
+              onClick={() => setShareModalOpen(true)}
+              title="Compartir LifeKeeper con conocidos"
+            >
+              <Share2 size={13} aria-hidden />
+              <span>Compartir app</span>
+            </button>
+            <SyncStatusChip />
             {weather ? (
               <button
                 type="button"
@@ -1141,23 +1173,17 @@ export const DashboardSection = () => {
                 <span className="dashboard-weather-desc">{weather.description}</span>
                 <ChevronDown size={13} className="dashboard-weather-chevron" aria-hidden />
               </button>
-            ) : null}
-
-            <span className={heroStatusClass}>
-              <span className="status-dot" aria-hidden />
-              <span>{heroStatusText}</span>
-            </span>
-
-            <button
-              type="button"
-              className="dashboard-share-pill"
-              onClick={() => setShareModalOpen(true)}
-              title="Compartir LifeKeeper con conocidos"
-            >
-              <Share2 size={13} aria-hidden />
-              <span>Compartir app</span>
-            </button>
-            <SyncStatusChip />
+            ) : weatherLoading ? (
+              <span className="dashboard-weather-pill is-loading" aria-label="Cargando el clima">
+                <MapPin size={13} className="dashboard-weather-pin" aria-hidden />
+                <span className="dashboard-weather-city">Buscando el clima…</span>
+              </span>
+            ) : (
+              <button type="button" className="dashboard-weather-pill is-empty" onClick={() => void fetchWeatherData(true)} title="Volver a intentar">
+                <MapPin size={13} className="dashboard-weather-pin" aria-hidden />
+                <span className="dashboard-weather-city">Clima no disponible · reintentar</span>
+              </button>
+            )}
           </div>
         </div>
 

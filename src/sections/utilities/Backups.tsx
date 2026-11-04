@@ -1,3 +1,4 @@
+import { StatusToast } from '../../components/StatusToast'
 import { saveFile } from '../../utils/saveFile'
 import { useEffect, useState } from 'react'
 import { Cloud, RefreshCw, Smartphone } from 'lucide-react'
@@ -614,7 +615,6 @@ export const BackupsSection = () => {
               <span>{isSyncingCloud ? 'Sincronizando con el servidor...' : 'Sincronizar ahora (Subir / Descargar)'}</span>
             </button>
           </div>
-          {statusMessage ? <p className="panel-subtitle" style={{ marginTop: '0.75rem', color: 'var(--color-success)' }}>{statusMessage}</p> : null}
           {errorMessage ? <p className="auth-error" style={{ marginTop: '0.75rem' }}>{errorMessage}</p> : null}
         </div>
 
@@ -717,6 +717,7 @@ export const BackupsSection = () => {
         onConfirm={confirmRestore}
         onClose={() => setPendingRestore(null)}
       />
+      <StatusToast message={statusMessage} onDone={() => setStatusMessage(null)} />
     </div>
   )
 }

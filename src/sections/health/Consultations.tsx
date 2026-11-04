@@ -1,3 +1,4 @@
+import { StatusToast } from '../../components/StatusToast'
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
 import { Search, Plus } from 'lucide-react'
@@ -358,7 +359,6 @@ export const ConsultationsSection = () => {
               />
             </div>
           </div>
-          {statusMessage ? <p className="panel-subtitle">{statusMessage}</p> : null}
 
           {filteredConsultations.length === 0 ? (
             <div className="empty-state">
@@ -549,6 +549,7 @@ export const ConsultationsSection = () => {
         }}
         onClose={() => setPendingDelete(null)}
       />
+      <StatusToast message={statusMessage} onDone={() => setStatusMessage(null)} />
     </div>
   )
 }

@@ -25,3 +25,26 @@
 .tc-line { stroke: var(--color-accent-blue); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .tc-dot { fill: var(--color-accent-blue); }
 .tc-last { fill: #f59e0b; stroke: var(--color-surface); stroke-width: 2; }
+
+/* Aviso flotante (StatusToast): fijo, no empuja el contenido */
+.status-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--footer-height, 3rem) + 1rem);
+  transform: translateX(-50%);
+  z-index: 1060;
+  max-width: min(92vw, 520px);
+  padding: 0.65rem 1.1rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-success, #10b981) 55%, var(--color-border));
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text-primary);
+  font-size: 0.86rem;
+  text-align: center;
+  animation: status-toast-in 0.2s ease-out;
+}
+.status-toast.is-error { border-color: color-mix(in srgb, var(--color-error, #ef4444) 60%, var(--color-border)); }
+.mobile-app-shell .status-toast { bottom: calc(var(--mobile-bottom-height, 64px) + var(--safe-bottom, 0px) + 1rem); }
+@keyframes status-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .status-toast { animation: none; } }

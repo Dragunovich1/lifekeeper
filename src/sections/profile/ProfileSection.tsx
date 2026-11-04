@@ -1,3 +1,4 @@
+import { StatusToast } from '../../components/StatusToast'
 import { LocationFields } from '../../components/LocationFields'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -832,7 +833,6 @@ export const ProfileSection = () => {
         </div>
 
         {error ? <p className="auth-error" role="alert">{error}</p> : null}
-        {status ? <p className="panel-subtitle">{status}</p> : null}
 
         {/* Barra de guardado: avisa cambios pendientes, el guardado en curso y la confirmación */}
         {dirty || saving || justSaved ? <div className="save-bar-spacer" aria-hidden /> : null}
@@ -878,6 +878,7 @@ export const ProfileSection = () => {
           </div>
         )}
       </form>
+      <StatusToast message={status} onDone={() => setStatus(null)} />
     </div>
   )
 }

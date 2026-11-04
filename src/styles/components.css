@@ -839,8 +839,13 @@ select option,
   pointer-events: auto;
 }
 
+/* El globo flota a la izquierda del botón sin cambiar el tamaño del contenedor:
+   antes, al aparecer el saludo, el botón se corría (layout shift) */
 .floating-assistant-bubble {
-  position: relative;
+  position: absolute;
+  right: calc(100% + 0.75rem);
+  bottom: 0;
+  width: max-content;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl) var(--radius-xl) 4px var(--radius-xl);

@@ -124,6 +124,26 @@ const VaultApp = () => {
   const alertsBtnRef = useRef<HTMLButtonElement | null>(null)
   const contentRef = useRef<HTMLElement | null>(null)
 
+  // Precarga en segundo plano de todas las secciones (después de entrar, cuando el equipo está libre):
+  // al navegar ya no aparece el "Cargando sección…" que hacía saltar el contenido y el pie.
+  useEffect(() => {
+    const preload = () => {
+      void import('./sections/health/index')
+      void import('./sections/personal/index')
+      void import('./sections/utilities/index')
+      void import('./sections/diary/index')
+      void import('./sections/security/index')
+      void import('./sections/profile/index')
+    }
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(preload, { timeout: 4000 })
+      return () => (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id)
+    }
+    const t = window.setTimeout(preload, 2500)
+    return () => window.clearTimeout(t)
+  }, [])
+
   // Configure Native Android Status Bar according to theme
   useEffect(() => {
     void configureNativeStatusBar(preferences.mode === 'dark')

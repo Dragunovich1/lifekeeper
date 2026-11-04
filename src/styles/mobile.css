@@ -736,3 +736,6 @@ body { overscroll-behavior-y: none; }
 .mobile-app-shell .mqa-fab.is-dragging { transform: scale(1.12); box-shadow: 0 10px 26px rgba(20, 184, 166, 0.55); cursor: grabbing; }
 .mqa-hint { margin: 0.7rem 0 0; font-size: 0.72rem; opacity: 0.65; text-align: center; }
 .mqa-hide { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%; margin-top: 0.5rem; padding: 0.55rem; border-radius: 10px; font-size: 0.8rem; background: transparent; color: inherit; border: 1px dashed rgba(148, 163, 184, 0.4); opacity: 0.85; }
+
+/* La parte izquierda de la barra (logo o "atrás") tiene siempre el mismo alto */
+.mobile-top-left { min-height: 40px; }

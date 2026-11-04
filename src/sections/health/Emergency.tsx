@@ -1,3 +1,4 @@
+import { StatusToast } from '../../components/StatusToast'
 import { isNativePlatform } from '../../services/platform'
 import { useEffect, useMemo, useState } from 'react'
 import { X, QrCode, Printer, ShieldCheck } from 'lucide-react'
@@ -313,7 +314,6 @@ export const EmergencySection = () => {
               Guardar cambios
             </button>
           </div>
-          {statusMessage ? <p className="panel-subtitle">{statusMessage}</p> : null}
           <div className="form-grid two-columns">
             <div className="field">
               <label htmlFor="profile-name">Nombre completo</label>
@@ -799,6 +799,7 @@ export const EmergencySection = () => {
         }}
         onClose={() => setPendingDeleteContact(null)}
       />
+      <StatusToast message={statusMessage} onDone={() => setStatusMessage(null)} />
     </div>
   )
 }
