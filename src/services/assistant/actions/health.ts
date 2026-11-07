@@ -1,3 +1,4 @@
+import { recurrenceLabel } from '../../../utils/medicationSchedule'
 import type { ClinicalNote, HealthMeasurement, MedicalConsultation, Medication, Reminder, VaccineRecord } from '../../../types'
 import { FEELINGS, MEASUREMENT_META, MEASUREMENT_TYPES, classifyMeasurement, detectContext, feelingEmoji, formatMeasurement, normalizeContext } from '../../../utils/measurements'
 import { detectMood } from './wellbeing'
@@ -113,7 +114,7 @@ export const medicationAddAction: ActionDef = {
   type: 'medication_add',
   about: 'quiere cargar, agregar o anotar un medicamento o tratamiento que toma (nombre, dosis, cada cuánto, a qué hora), o le recetaron uno nuevo o empieza a tomarlo',
   hints: /medicaci|medicamento|remedio|pastilla|comprimido|capsula|jarabe|empece|empiezo|me recetaron|me indicaron|tengo que tomar|tomo \w+ (todos|cada)|tratamiento|antibiotic|\bmg\b|\d+\s*\/\s*\d+\s*(mg)?|dosis|cada \d+ horas|\d+ veces? al dia/,
-  schema: '{"type":"medication_add","name":"...","dosage":"ej. 500 mg","frequency":"ej. cada 8 horas","times":["08:00","16:00"],"startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD o vacío","instructions":"..."}',
+  schema: '{"type":"medication_add","name":"...","dosage":"ej. 500 mg","frequency":"ej. cada 8 horas | una vez por semana | lunes y jueves | cada 15 días","times":["08:00","16:00"],"startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD o vacío","instructions":"..."}',
   example: '"me recetaron amoxicilina 500 mg cada 8 horas por 7 días" → {"type":"medication_add","name":"Amoxicilina","dosage":"500 mg","frequency":"Cada 8 horas","times":["08:00","16:00","00:00"],"endDate":"(hoy + 7 días)"}',
   build(raw, { todayKey }) {
     const name = capitalize(str(raw.name, 60))
@@ -124,6 +125,7 @@ export const medicationAddAction: ActionDef = {
       name,
       dosage: str(raw.dosage, 40) || 'Según indicación',
       frequency: str(raw.frequency, 60) || 'Según indicación',
+      // La frecuencia del texto ("una vez por semana", "cada 15 días"…) define qué días avisa
       schedules: (times.length ? times : ['09:00']).map((time) => ({ time })),
       startDate: isoDate(raw.startDate, todayKey),
       endDate: optionalIsoDate(raw.endDate),
@@ -133,7 +135,7 @@ export const medicationAddAction: ActionDef = {
     }
     return {
       apply: (prev) => ({ ...prev, health: { ...prev.health, medications: [med, ...prev.health.medications] } }),
-      line: `• 💊 **Medicación nueva:** ${med.name} ${med.dosage} — ${med.frequency} (${med.schedules.map((s) => s.time).join(', ')})${med.endDate ? ` hasta ${fmtDate(med.endDate)}` : ''}`,
+      line: `• 💊 **Medicación nueva:** ${med.name} ${med.dosage} — ${med.frequency} (${recurrenceLabel(med)}; ${med.schedules.map((s) => s.time).join(', ')})${med.endDate ? ` hasta ${fmtDate(med.endDate)}` : ''}`,
       card: { category: 'salud', title: med.name, details: `${med.dosage} · ${med.frequency}`, badge: 'Medicación', entityId: med.id },
       link: { label: 'Ver Medicación', hash: '#health:medications' },
     }

@@ -5,6 +5,7 @@
  * únicamente hacia la instancia privada de Ollama en la red local.
  */
 
+import { recurrenceLabel } from '../../utils/medicationSchedule'
 import { computeCycle, normalizeEntries } from '../../utils/cycle'
 import type { AppData } from '../../types'
 import { toLocalDateKey, toLocalTimeKey, formatDate } from '../../utils/dates'
@@ -221,7 +222,7 @@ DATOS ACTUALES DE LA BÓVEDA DEL USUARIO (CONFIDENCIAL Y PRIVADO):
   • Grupo sanguíneo: ${ep.bloodType || 'Sin especificar'}
   • Alergias: ${ep.allergies?.length ? ep.allergies.join(', ') : 'Ninguna registrada'}
   • Condiciones médicas preexistentes: ${ep.conditions?.length ? ep.conditions.join(', ') : 'Ninguna registrada'}
-  • Tratamientos médicos activos (${activeMeds.length}): ${activeMeds.map((m) => `${m.name} (${m.dosage}, horarios: ${m.schedules.map((s) => s.time).join(', ') || 'a demanda'}${m.instructions ? ` - ${m.instructions}` : ''})`).join('; ') || 'Ninguno'}
+  • Tratamientos médicos activos (${activeMeds.length}): ${activeMeds.map((m) => `${m.name} (${m.dosage}, ${recurrenceLabel(m)}, horarios: ${m.schedules.map((s) => s.time).join(', ') || 'a demanda'}${m.instructions ? ` - ${m.instructions}` : ''})`).join('; ') || 'Ninguno'}
   • Últimas consultas médicas: ${consults.slice(0, 3).map((c) => `${c.doctor} (${formatDate(c.date)}): ${c.reason} - Diag: ${c.diagnosis || 'N/A'}`).join('; ') || 'Sin consultas recientes'}
   • Notas clínicas del historial: ${notes.slice(0, 3).map((n) => `${n.title} (${formatDate(n.date)}): ${n.description}`).join('; ') || 'Sin notas'}
   • Vacunas: ${vaccines.length} aplicadas.

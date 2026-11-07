@@ -1,3 +1,4 @@
+import { isDoseDay, recurrenceLabel } from './medicationSchedule'
 import { differenceInCalendarDays, isSameMonth, subMonths } from 'date-fns'
 import { navigation } from '../navigation'
 import type { AppData, MoodLevel } from '../types'
@@ -175,7 +176,9 @@ export const computeSmartSummary = (data: AppData, now = new Date()): DashboardS
 
   // 3. Salud: Tomas de medicación de hoy y cruce con alergias
   const activeMedications = data.health.medications.filter((m) => m.active)
+  const todayKeyForMeds = toLocalDateKey(now)
   const todayDoses: TodayMedicationDose[] = activeMedications
+    .filter((med) => isDoseDay(med, todayKeyForMeds)) // solo las que toca tomar HOY (semanal, cada N días…)
     .flatMap((med) =>
       med.schedules.map((sched) => {
         const isDueNow = sched.time === currentHHMM
@@ -757,7 +760,7 @@ export const searchVaultRecords = (data: AppData, rawQuery: string): GlobalSearc
       recordResults.push({
         id: `med:${m.id}`,
         title: `${m.name} (${m.dosage})`,
-        subtitle: `${m.frequency}${m.schedules.length ? ` · Tomas: ${m.schedules.map((s) => s.time).join(', ')}` : ''}`,
+        subtitle: `${recurrenceLabel(m)}${m.schedules.length ? ` · Tomas: ${m.schedules.map((s) => s.time).join(', ')}` : ''}`,
         categoryLabel: 'Medicación',
         sectionHash: '#health:medications',
         kind: 'record',

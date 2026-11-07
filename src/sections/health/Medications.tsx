@@ -13,6 +13,8 @@ import { useAppData } from '../../hooks/useAppData'
 import type { Medication, MedicationSchedule } from '../../types'
 import { formatDate, fromLocalDateOrDateTime, toLocalDateKey } from '../../utils/dates'
 import { searchMedications, type MedicationSuggestion } from '../../services/api'
+import { MedicationRecurrenceFields } from '../../components/MedicationRecurrenceFields'
+import { isDoseDay, recurrenceLabel } from '../../utils/medicationSchedule'
 
 type MedicationFormState = Omit<Medication, 'id'>
 
@@ -82,6 +84,7 @@ export const MedicationsSection = () => {
       const currentTime = now.toTimeString().slice(0, 5)
       const due = medications
         .filter((med) => med.active)
+        .filter((med) => isDoseDay(med, toLocalDateKey(now)))
         .filter((med) => med.schedules.some((schedule) => schedule.time === currentTime))
         .map((med) => med.id)
       setDueMedications(due)
@@ -128,7 +131,7 @@ export const MedicationsSection = () => {
 
   const todayDoses = useMemo(() => {
     return medications
-      .filter((med) => med.active)
+      .filter((med) => med.active && isDoseDay(med, todayKey))
       .flatMap((med) =>
         med.schedules.map((schedule) => {
           const intakeKey = `${todayKey}T${schedule.time}`
@@ -285,6 +288,7 @@ export const MedicationsSection = () => {
       name: med.name,
       dosage: med.dosage,
       frequency: med.frequency,
+      recurrence: med.recurrence,
       schedules: [...med.schedules],
       startDate: med.startDate,
       endDate: med.endDate ?? '',
@@ -440,15 +444,12 @@ export const MedicationsSection = () => {
                 placeholder="Ej. 500 mg"
               />
             </div>
-            <div className="field">
-              <label htmlFor="med-frequency">Frecuencia</label>
-              <input
-                id="med-frequency"
-                value={formState.frequency}
-                onChange={(event) => setFormState({ ...formState, frequency: event.target.value })}
-                placeholder="Cada 8 hs, diaria, semanal"
-              />
-            </div>
+            <MedicationRecurrenceFields
+              frequency={formState.frequency}
+              recurrence={formState.recurrence}
+              startDate={formState.startDate}
+              onChange={(next) => setFormState({ ...formState, ...next })}
+            />
             <div className="field">
               <label htmlFor="med-start">Inicio</label>
               <DatePicker
@@ -638,7 +639,7 @@ export const MedicationsSection = () => {
                     <tr key={med.id} className={isDue ? 'due-medication' : ''}>
                       <td>{med.name}</td>
                       <td>{med.dosage || '—'}</td>
-                      <td>{med.frequency || '—'}</td>
+                      <td>{recurrenceLabel(med)}{med.frequency && med.frequency !== recurrenceLabel(med) ? <small className="panel-subtitle" style={{ display: 'block' }}>{med.frequency}</small> : null}</td>
                       <td>
                         <div className="chip-list">
                           {med.schedules.map((schedule, index) => (
@@ -735,17 +736,12 @@ export const MedicationsSection = () => {
               placeholder="Ej. 500 mg"
             />
           </div>
-          <div className="field">
-            <label htmlFor="edit-med-frequency">Frecuencia</label>
-            <input
-              id="edit-med-frequency"
-              value={editFormState.frequency}
-              onChange={(event) =>
-                setEditFormState({ ...editFormState, frequency: event.target.value })
-              }
-              placeholder="Cada 8 hs, diaria, semanal"
-            />
-          </div>
+          <MedicationRecurrenceFields
+            frequency={editFormState.frequency}
+            recurrence={editFormState.recurrence}
+            startDate={editFormState.startDate}
+            onChange={(next) => setEditFormState({ ...editFormState, ...next })}
+          />
           <div className="field">
             <label htmlFor="edit-med-start">Inicio</label>
             <DatePicker

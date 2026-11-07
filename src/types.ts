@@ -37,11 +37,26 @@ export interface MedicationSchedule {
   note?: string
 }
 
+/**
+ * Qué días se toma una medicación. Si falta, se deduce del texto de `frequency`
+ * ("una vez por semana", "cada 15 días", "lunes y jueves"…); sin pistas se asume diaria.
+ */
+export interface MedicationRecurrence {
+  kind: 'daily' | 'weekly' | 'weekdays' | 'interval' | 'monthly' | 'asNeeded'
+  /** weekly / weekdays: 0 = domingo … 6 = sábado. En 'weekly' vacío = el día de la semana del inicio. */
+  weekdays?: number[]
+  /** interval: cada cuántos días (a partir del inicio). */
+  everyDays?: number
+  /** monthly: cada cuántos meses (el mismo día del mes que el inicio). */
+  everyMonths?: number
+}
+
 export interface Medication {
   id: string
   name: string
   dosage: string
   frequency: string
+  recurrence?: MedicationRecurrence
   schedules: MedicationSchedule[]
   startDate: string
   endDate?: string

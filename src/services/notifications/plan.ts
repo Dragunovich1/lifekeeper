@@ -7,6 +7,7 @@
  * La lista se vuelve a calcular cada vez que cambian los datos o se abre la app.
  */
 
+import { isDoseDay, resolveRecurrence } from '../../utils/medicationSchedule'
 import { METHODS, methodStatus } from '../../utils/contraceptives'
 import type { AppData } from '../../types'
 import { safeParseDate, toLocalDateKey } from '../../utils/dates'
@@ -74,7 +75,8 @@ export function buildNotificationPlan(data: AppData, { now = new Date(), showDet
 
   // --- Medicación ------------------------------------------------------------
   const meds = (data.health.medications ?? []).filter((m) => m.active && m.schedules.length > 0)
-  const dosesPerDay = meds.reduce((sum, m) => sum + m.schedules.length, 0)
+  // Para dimensionar el horizonte se cuentan solo las medicaciones que se toman a diario (las semanales ocupan poco)
+  const dosesPerDay = meds.reduce((sum, m) => sum + (resolveRecurrence(m).kind === 'daily' ? m.schedules.length : 0.3 * m.schedules.length), 0)
   // Con muchas tomas por día se programan menos días para no pasarse del tope
   const days = Math.min(14, Math.max(2, Math.floor(40 / Math.max(1, dosesPerDay))))
 
@@ -84,6 +86,7 @@ export function buildNotificationPlan(data: AppData, { now = new Date(), showDet
       const key = dateKey(day)
       if (med.startDate && key < med.startDate.slice(0, 10)) continue
       if (med.endDate && key > med.endDate.slice(0, 10)) continue
+      if (!isDoseDay(med, key)) continue // inyección semanal, cada N días, mensual, etc.
       for (const schedule of med.schedules) {
         const at = atLocal(day, schedule.time)
         if (!at || at.getTime() <= now.getTime()) continue

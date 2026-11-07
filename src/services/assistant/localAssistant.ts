@@ -5,6 +5,7 @@
  * ciclo menstrual, entrenamientos, biometría, medicación, daily briefing y armado de planes.
  */
 
+import { recurrenceLabel } from '../../utils/medicationSchedule'
 import type {
   AppData,
   FinanceTransaction,
@@ -1248,7 +1249,7 @@ export async function processAssistantQuery(query: string, data: AppData): Promi
         { label: 'Cargar Medicación', hash: '#health:medications' },
       )
     }
-    const lines = activeMeds.map((m) => `• **${m.name}** (${m.dosage}) — Horarios: ${m.schedules.map((s) => s.time).join(', ') || 'A demanda'}`)
+    const lines = activeMeds.map((m) => `• **${m.name}** (${m.dosage}) — ${recurrenceLabel(m)} · Horarios: ${m.schedules.map((s) => s.time).join(', ') || 'A demanda'}`)
     return createAssistantMessage(
       `💊 **Tratamientos activos (${activeMeds.length}):**\n\n${lines.join('\n')}\n\n¡La constancia en las tomas es salud asegurada!`,
       { label: 'Gestionar Medicación', hash: '#health:medications' },
