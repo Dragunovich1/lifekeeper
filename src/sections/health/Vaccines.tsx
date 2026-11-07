@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { DatePicker } from '../../components/DatePicker'
 import { Modal } from '../../components/Modal'
+import { VaccineSchedulePanel } from '../../components/VaccineSchedulePanel'
 import { SectionHeader } from '../../components/SectionHeader'
 import { Select } from '../../components/Select'
 import { useAppData } from '../../hooks/useAppData'
@@ -237,6 +238,16 @@ export const VaccinesSection = () => {
       />
 
       <div className="section-body">
+        <VaccineSchedulePanel
+          birthDate={data.profile.birthDate}
+          country={data.profile.country}
+          countryCode={data.profile.countryCode}
+          records={data.health.vaccines}
+          onRegister={(item) => {
+            setFormState({ ...createInitialFormState(), vaccine: item.vaccineName, dose: item.doseLabel })
+            setAdding(true)
+          }}
+        />
         <Modal
           open={adding}
           onClose={closeAdd}

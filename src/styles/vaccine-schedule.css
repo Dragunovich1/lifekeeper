@@ -1,0 +1,33 @@
+.vs-panel { margin-bottom: 16px; }
+.vs-sub { margin: 2px 0 0; font-size: 0.82rem; color: var(--text-muted, #8a8f98); }
+.vs-attention { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vs-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border, rgba(128,128,128,.25)); }
+.vs-row.is-overdue { border-color: color-mix(in srgb, #ef4444 45%, transparent); }
+.vs-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vs-row-main span { font-size: 0.82rem; color: var(--text-muted, #8a8f98); }
+.vs-register { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.vs-ok { display: flex; align-items: center; gap: 8px; padding: 10px 2px; color: var(--success, #22c55e); }
+.vs-details { margin-top: 12px; }
+.vs-details > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.vs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 10px; }
+.vs-card { border: 1px solid var(--border, rgba(128,128,128,.25)); border-radius: 14px; padding: 12px 14px; }
+.vs-card h4 { margin: 0; font-size: 0.95rem; }
+.vs-card header p { margin: 2px 0 8px; font-size: 0.78rem; color: var(--text-muted, #8a8f98); }
+.vs-doses { list-style: none; margin: 0; padding: 0 0 0 4px; display: flex; flex-direction: column; gap: 8px; border-left: 2px solid var(--border, rgba(128,128,128,.25)); }
+.vs-dose { display: flex; gap: 10px; align-items: flex-start; position: relative; padding-left: 10px; }
+.vs-dot { position: absolute; left: -9px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--border, #888); }
+.vs-dose.is-done .vs-dot { background: #22c55e; }
+.vs-dose.is-overdue .vs-dot { background: #ef4444; }
+.vs-dose.is-soon .vs-dot { background: #f59e0b; }
+.vs-dose > div { display: flex; flex-direction: column; }
+.vs-dose-label { font-size: 0.86rem; }
+.vs-dose-date { font-size: 0.76rem; color: var(--text-muted, #8a8f98); }
+.vs-note { margin: 8px 0 0; font-size: 0.76rem; color: var(--text-muted, #8a8f98); }
+.vs-sub-title { margin: 16px 0 6px; font-size: 0.9rem; }
+.vs-optional { margin: 0; padding-left: 18px; font-size: 0.84rem; display: flex; flex-direction: column; gap: 4px; }
+.vs-source { margin: 14px 0 0; font-size: 0.76rem; color: var(--text-muted, #8a8f98); line-height: 1.5; }
+.vs-source a { color: inherit; text-decoration: underline; display: inline-flex; align-items: center; gap: 2px; }
+@media (max-width: 640px) {
+  .vs-row { flex-wrap: wrap; }
+  .vs-register { width: 100%; justify-content: center; }
+}
