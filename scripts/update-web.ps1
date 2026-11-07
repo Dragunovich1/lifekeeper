@@ -28,6 +28,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Acentos bien en la consola de Windows
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 function Step($text) { Write-Host ""; Write-Host "> $text" -ForegroundColor Green }
 function Info($text) { Write-Host "  $text" }
@@ -52,13 +54,18 @@ if (-not $SkipPushCheck -and (Get-Command git -ErrorAction SilentlyContinue) -an
     $null = git fetch origin $Branch 2>$null
     $local = (git rev-parse HEAD 2>$null)
     $remote = (git rev-parse "origin/$Branch" 2>$null)
-    $dirty = git status --porcelain --untracked-files=no
-    if ($dirty) { Warn "Tenés cambios locales sin commitear: el servidor solo recibe lo que está en GitHub." }
+    # 'cap sync' regenera estos archivos en cada compilación del APK: no cuentan como cambios tuyos
+    $generated = @('android/app/capacitor.build.gradle', 'android/capacitor.settings.gradle')
+    $dirty = @(git status --porcelain --untracked-files=no | Where-Object { $line = $_; -not ($generated | Where-Object { $line -like "*$_*" }) })
+    if ($dirty.Count -gt 0) {
+      $dirty | ForEach-Object { Info $_ }
+      Warn "Tenés cambios locales sin commitear (arriba): el servidor solo recibe lo que está en GitHub."
+    }
     if ($local -and $remote -and $local -ne $remote) {
       $ahead = (git rev-list --count "origin/$Branch..HEAD" 2>$null)
       if ([int]$ahead -gt 0) { Warn "Tenés $ahead commit(s) locales sin subir (git push). El servidor NO los va a tener." }
     }
-    if (-not $dirty -and $local -eq $remote) { Info "Todo subido. Versión: $((git rev-parse --short HEAD).Trim())" }
+    if ($dirty.Count -eq 0 -and $local -eq $remote) { Info "Todo subido. Versión: $((git rev-parse --short HEAD).Trim())" }
   } catch {
     Warn "No pude comparar con GitHub ($($_.Exception.Message)). Sigo igual."
   } finally {
