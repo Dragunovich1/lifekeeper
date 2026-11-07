@@ -59,7 +59,7 @@ cd ~/lifekeeper && sudo ./scripts/install-autostart.sh
 
 Deja Docker y los contenedores arrancando con la máquina, un vigilante que cada minuto revisa la web/API y repara lo caído o trabado (registro en `journalctl -u lifekeeper-watchdog`), y desactiva la suspensión. Estado: `sudo ./scripts/install-autostart.sh --status`. Deshacer: `--remove`.
 
-> El aviso `client_loop: send disconnect: Connection reset` es tu **cliente SSH** que perdió la conexión (Wi-Fi, suspensión de la PC…): no tira el servidor, que corre en Docker. Para que SSH no se corte por inactividad, en tu PC agregá a `~/.ssh/config`:
+> El aviso `client_loop: send disconnect: Connection reset` es tu **cliente SSH** que perdió la conexión (Wi-Fi, suspensión de la PC…): no tira el servidor, que corre en Docker. Para que SSH no se corte por inactividad, en tu PC corré `setup-ssh.bat` (doble clic; lo agrega solo a `~/.ssh/config`) o agregalo a mano:
 > ```
 > Host 192.168.0.52
 >   ServerAliveInterval 30
