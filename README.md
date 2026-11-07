@@ -49,6 +49,23 @@ Hace copia de la base de datos, trae el código, asegura el `.env` y el `JWT_SEC
 
 Hace `git pull`, `npm install`, build, `cap sync` y `gradlew assembleDebug`; deja el APK en `apk\`.
 
+## Que el servidor se levante solo
+
+En el servidor, **una sola vez**:
+
+```bash
+cd ~/lifekeeper && sudo ./scripts/install-autostart.sh
+```
+
+Deja Docker y los contenedores arrancando con la máquina, un vigilante que cada minuto revisa la web/API y repara lo caído o trabado (registro en `journalctl -u lifekeeper-watchdog`), y desactiva la suspensión. Estado: `sudo ./scripts/install-autostart.sh --status`. Deshacer: `--remove`.
+
+> El aviso `client_loop: send disconnect: Connection reset` es tu **cliente SSH** que perdió la conexión (Wi-Fi, suspensión de la PC…): no tira el servidor, que corre en Docker. Para que SSH no se corte por inactividad, en tu PC agregá a `~/.ssh/config`:
+> ```
+> Host 192.168.0.52
+>   ServerAliveInterval 30
+>   ServerAliveCountMax 6
+> ```
+
 ## Servidor (Docker Compose)
 
 ```bash

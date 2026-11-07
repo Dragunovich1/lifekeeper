@@ -9,6 +9,12 @@ services:
       - api
       - postgres
       - tts
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   api:
     build:
@@ -35,6 +41,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4000/api/public/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 20s
 
   postgres:
     image: postgres:16-alpine
@@ -60,6 +72,12 @@ services:
     container_name: lifekeeper-tts
     restart: always
     # Sin puertos publicados: solo accesible desde nginx dentro de la red de Docker
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS -m 4 http://127.0.0.1:5000/ -o /dev/null -w '%{http_code}' | grep -qE '^(200|404|405)$'"]
+      interval: 30s
+      timeout: 6s
+      retries: 3
+      start_period: 30s
 
   ollama:
     image: ollama/ollama:latest
