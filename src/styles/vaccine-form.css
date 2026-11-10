@@ -1,0 +1,19 @@
+.vf { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.vf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; min-width: 0; }
+.vf-grid .field { min-width: 0; }
+.vf-full { grid-column: 1 / -1; }
+.vf-hint { margin: 4px 0 0; font-size: 0.76rem; color: var(--color-text-muted); }
+.vf-error { margin: 4px 0 0; font-size: 0.78rem; color: var(--color-danger, #ef4444); }
+.vf-quick { display: flex; gap: 0.35rem; margin-top: 6px; }
+.vf-check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; cursor: pointer; }
+.vf-check input { width: 18px; height: 18px; }
+.vf-more { border-top: 1px solid var(--color-border); padding-top: 0.8rem; }
+.vf-more > summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; padding: 2px 0 10px; }
+.vf-label { font-size: 0.85rem; font-weight: 600; }
+.vf-files { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.vf-files li { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 10px; }
+.vf-files li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vf-files li button { border: 0; background: transparent; color: inherit; cursor: pointer; display: inline-flex; }
+.vf-attach { display: inline-flex; align-items: center; gap: 6px; width: fit-content; cursor: pointer; margin-top: 4px; }
+@media (max-width: 560px) { .vf-grid { grid-template-columns: minmax(0, 1fr); } }
+.vf-att-link { display: inline-flex; vertical-align: middle; margin-left: 6px; color: var(--color-accent-blue, #3b82f6); }

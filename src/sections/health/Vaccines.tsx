@@ -1,36 +1,26 @@
 import type { FormEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import { Search, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Paperclip, Search, Plus } from 'lucide-react'
 import { v4 as uuid } from 'uuid'
 import { ConfirmModal } from '../../components/ConfirmModal'
-import { DatePicker } from '../../components/DatePicker'
-import { Modal } from '../../components/Modal'
-import { VaccineSchedulePanel } from '../../components/VaccineSchedulePanel'
+import { FormModal } from '../../components/FormModal'
 import { SectionHeader } from '../../components/SectionHeader'
-import { Select } from '../../components/Select'
+import { VaccineFormFields } from '../../components/VaccineFormFields'
+import { VaccineSchedulePanel } from '../../components/VaccineSchedulePanel'
 import { useAppData } from '../../hooks/useAppData'
-import { searchPlaces, type PlaceSuggestion } from '../../services/api'
+import { scheduleForCountry } from '../../data/vaccineSchedules'
 import type { Reminder, VaccineRecord } from '../../types'
 import {
   formatDate,
   fromLocalDateOrDateTime,
   isUpcoming,
   safeParseDate,
-  toLocalDateKey,
 } from '../../utils/dates'
+import { createInitialVaccineForm, applyScheduleChoice, type VaccineFormState } from '../../utils/vaccineForm'
+import { rankPlaceHistory } from '../../utils/placeHistory'
+import { computeSchedule } from '../../utils/vaccineSchedule'
 
-type VaccineFormState = Omit<VaccineRecord, 'id'> & { nextDoseDate?: string }
-
-const createInitialFormState = (): VaccineFormState => ({
-  vaccine: '',
-  dose: '',
-  date: new Date().toISOString(),
-  location: '',
-  lot: '',
-  notes: '',
-  nextDoseDate: '',
-  reminderEnabled: true,
-})
+const createInitialFormState = createInitialVaccineForm
 
 export const VaccinesSection = () => {
   const { data, updateData } = useAppData()
@@ -42,30 +32,16 @@ export const VaccinesSection = () => {
   }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormState, setEditFormState] = useState<VaccineFormState>(createInitialFormState)
-  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([])
-  const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false)
-
-  useEffect(() => {
-    const loc = formState.location.trim()
-    if (loc.length < 3) {
-      setPlaceSuggestions([])
-      return
-    }
-    let isCurrent = true
-    const timer = setTimeout(async () => {
-      const places = await searchPlaces(loc)
-      if (isCurrent) setPlaceSuggestions(places)
-    }, 350)
-    return () => {
-      isCurrent = false
-      clearTimeout(timer)
-    }
-  }, [formState.location])
   const [pendingDelete, setPendingDelete] = useState<VaccineRecord | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [showOnlyUpcoming, setShowOnlyUpcoming] = useState(false)
 
   const vaccines = data.health.vaccines
+  const schedule = useMemo(() => scheduleForCountry(data.profile.countryCode, data.profile.country), [data.profile.countryCode, data.profile.country])
+  const report = useMemo(() => (data.profile.birthDate ? computeSchedule(schedule, data.profile.birthDate, vaccines) : null), [schedule, data.profile.birthDate, vaccines])
+  const history = useMemo(() => rankPlaceHistory(vaccines.map((v) => ({ place: v.location, date: v.date }))), [vaccines])
+  const near = typeof data.profile.latitude === 'number' && typeof data.profile.longitude === 'number' ? { latitude: data.profile.latitude, longitude: data.profile.longitude } : undefined
+  const formProps = { schedule, report, birthDate: data.profile.birthDate, history, countryCode: data.profile.countryCode, near }
 
   const sortedVaccines = useMemo(
     () =>
@@ -94,8 +70,8 @@ export const VaccinesSection = () => {
     })
   }, [searchTerm, showOnlyUpcoming, sortedVaccines])
 
-  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleCreate = (event?: FormEvent) => {
+    event?.preventDefault()
     if (!formState.vaccine.trim() || !formState.date) {
       return
     }
@@ -138,8 +114,8 @@ export const VaccinesSection = () => {
     closeAdd()
   }
 
-  const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const handleUpdate = (event?: FormEvent) => {
+    event?.preventDefault()
     if (!editingId || !editFormState.vaccine.trim() || !editFormState.date) {
       return
     }
@@ -209,6 +185,9 @@ export const VaccinesSection = () => {
       notes: record.notes ?? '',
       nextDoseDate: record.nextDoseDate ?? '',
       reminderEnabled: Boolean(record.reminderEnabled),
+      scheduleVaccineId: record.scheduleVaccineId,
+      doseIndex: record.doseIndex,
+      attachments: record.attachments ?? [],
     })
   }
 
@@ -244,181 +223,24 @@ export const VaccinesSection = () => {
           countryCode={data.profile.countryCode}
           records={data.health.vaccines}
           onRegister={(item) => {
-            setFormState({ ...createInitialFormState(), vaccine: item.vaccineName, dose: item.doseLabel })
+            const sv = schedule.vaccines.find((v) => v.id === item.vaccineId)
+            const base = createInitialFormState()
+            setFormState(sv ? applyScheduleChoice(base, sv, item.doseIndex, data.profile.birthDate) : { ...base, vaccine: item.vaccineName, dose: item.doseLabel })
             setAdding(true)
           }}
         />
-        <Modal
+        <FormModal
           open={adding}
           onClose={closeAdd}
           title="Nueva vacuna"
-          subtitle="Completá los datos clave de la aplicación"
+          subtitle="Elegí la vacuna y listo: la dosis y la próxima fecha se completan solas"
+          submitLabel="Guardar vacuna"
+          canSubmit={Boolean(formState.vaccine.trim() && formState.date)}
+          onSubmit={() => handleCreate()}
           maxWidth={720}
-          footer={
-            <>
-              <button type="button" className="secondary-button" onClick={closeAdd}>Cancelar</button>
-              <button type="submit" form="vaccine-add-form" className="primary-button">Guardar vacuna</button>
-            </>
-          }
         >
-          <form id="vaccine-add-form" className="form-grid two-columns" onSubmit={handleCreate}>
-            <div className="field">
-              <label htmlFor="vaccine-name">Vacuna</label>
-              <input
-                id="vaccine-name"
-                value={formState.vaccine}
-                onChange={(event) => setFormState({ ...formState, vaccine: event.target.value })}
-                placeholder="Ejemplo: Hepatitis B"
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="vaccine-dose">Dosis</label>
-              <input
-                id="vaccine-dose"
-                value={formState.dose}
-                onChange={(event) => setFormState({ ...formState, dose: event.target.value })}
-                placeholder="1ra, 2da, refuerzo"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="vaccine-date">Fecha de aplicación</label>
-              <DatePicker
-                id="vaccine-date"
-                value={toLocalDateKey(formState.date)}
-                onChange={(value) =>
-                  setFormState({
-                    ...formState,
-                    date: fromLocalDateOrDateTime(value, true),
-                  })
-                }
-                ariaLabel="Fecha de la vacuna"
-              />
-            </div>
-            <div className="field" style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label htmlFor="vaccine-location">Ubicación / Centro de aplicación</label>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                  OpenStreetMap
-                </span>
-              </div>
-              <input
-                id="vaccine-location"
-                value={formState.location}
-                onChange={(event) => {
-                  setFormState({ ...formState, location: event.target.value })
-                  setShowPlaceSuggestions(true)
-                }}
-                onFocus={() => setShowPlaceSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowPlaceSuggestions(false), 200)}
-                placeholder="Hospital, clínica, vacunatorio"
-                autoComplete="off"
-              />
-              {showPlaceSuggestions && placeSuggestions.length > 0 ? (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    zIndex: 100,
-                    background: 'var(--color-surface)',
-                    boxShadow: 'var(--shadow-card)',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden',
-                    marginTop: '0.25rem',
-                  }}
-                >
-                  {placeSuggestions.map((place, idx) => (
-                    <button
-                      key={`${place.lat}-${place.lon}-${idx}`}
-                      type="button"
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '0.5rem 0.75rem',
-                        border: 'none',
-                        background: 'transparent',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid rgba(15, 23, 42, 0.06)',
-                        color: 'var(--color-text-primary)',
-                      }}
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        setFormState({ ...formState, location: place.shortName })
-                        setShowPlaceSuggestions(false)
-                      }}
-                    >
-                      <strong style={{ fontSize: '0.875rem' }}>📍 {place.shortName}</strong>
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          color: 'var(--color-text-muted)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: '100%',
-                        }}
-                      >
-                        {place.displayName}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="field">
-              <label htmlFor="vaccine-lot">Lote</label>
-              <input
-                id="vaccine-lot"
-                value={formState.lot}
-                onChange={(event) => setFormState({ ...formState, lot: event.target.value })}
-                placeholder="Código de lote"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="vaccine-next">Próxima dosis</label>
-              <DatePicker
-                id="vaccine-next"
-                value={toLocalDateKey(formState.nextDoseDate)}
-                onChange={(value) =>
-                  setFormState({
-                    ...formState,
-                    nextDoseDate: fromLocalDateOrDateTime(value),
-                  })
-                }
-                placeholder="Sin recordatorio"
-                ariaLabel="Próxima dosis"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="vaccine-notes">Notas</label>
-              <textarea
-                id="vaccine-notes"
-                value={formState.notes}
-                onChange={(event) => setFormState({ ...formState, notes: event.target.value })}
-                placeholder="Observaciones, reacciones, indicaciones"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="vaccine-reminder">Recordatorio de refuerzo</label>
-              <Select
-                id="vaccine-reminder"
-                value={formState.reminderEnabled ? 'yes' : 'no'}
-                onChange={(value) =>
-                  setFormState({ ...formState, reminderEnabled: value === 'yes' })
-                }
-                options={[
-                  { value: 'yes', label: 'Sí, crear recordatorio' },
-                  { value: 'no', label: 'No por ahora' },
-                ]}
-                ariaLabel="Recordatorio de refuerzo"
-              />
-            </div>
-          </form>
-        </Modal>
+          <VaccineFormFields {...formProps} idPrefix="vaccine" value={formState} onChange={setFormState} />
+        </FormModal>
 
         <div className="panel">
           <div className="panel-header">
@@ -462,7 +284,14 @@ export const VaccinesSection = () => {
               <tbody>
                 {filteredVaccines.map((record) => (
                   <tr key={record.id}>
-                    <td>{record.vaccine}</td>
+                    <td>
+                      {record.vaccine}
+                      {(record.attachments ?? []).map((att) => (
+                        <a key={att.id} className="vf-att-link" href={att.dataUrl} download={att.fileName} title={`Abrir comprobante: ${att.fileName}`} aria-label={`Descargar comprobante ${att.fileName}`}>
+                          <Paperclip size={13} aria-hidden />
+                        </a>
+                      ))}
+                    </td>
                     <td>{record.dose || '—'}</td>
                     <td>{formatDate(record.date)}</td>
                     <td>{record.location || '—'}</td>
@@ -502,133 +331,18 @@ export const VaccinesSection = () => {
         </div>
       </div>
 
-      <Modal
+      <FormModal
         open={Boolean(editingId)}
         onClose={() => setEditingId(null)}
         title="Editar vacuna"
         subtitle="Actualizá los datos de la aplicación seleccionada"
-        maxWidth="640px"
+        submitLabel="Guardar cambios"
+        canSubmit={Boolean(editFormState.vaccine.trim() && editFormState.date)}
+        onSubmit={() => handleUpdate()}
+        maxWidth={720}
       >
-        <form className="form-grid two-columns" onSubmit={handleUpdate}>
-          <div className="field">
-            <label htmlFor="edit-vaccine-name">Vacuna</label>
-            <input
-              id="edit-vaccine-name"
-              value={editFormState.vaccine}
-              onChange={(event) =>
-                setEditFormState({ ...editFormState, vaccine: event.target.value })
-              }
-              placeholder="Ejemplo: Hepatitis B"
-              required
-              autoFocus
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-dose">Dosis</label>
-            <input
-              id="edit-vaccine-dose"
-              value={editFormState.dose}
-              onChange={(event) =>
-                setEditFormState({ ...editFormState, dose: event.target.value })
-              }
-              placeholder="1ra, 2da, refuerzo"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-date">Fecha de aplicación</label>
-            <DatePicker
-              id="edit-vaccine-date"
-              value={toLocalDateKey(editFormState.date)}
-              onChange={(value) =>
-                setEditFormState({
-                  ...editFormState,
-                  date: fromLocalDateOrDateTime(value, true),
-                })
-              }
-              ariaLabel="Fecha de la vacuna"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-location">Ubicación / Centro de aplicación</label>
-            <input
-              id="edit-vaccine-location"
-              value={editFormState.location}
-              onChange={(event) =>
-                setEditFormState({ ...editFormState, location: event.target.value })
-              }
-              placeholder="Hospital, clínica, vacunatorio"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-lot">Lote</label>
-            <input
-              id="edit-vaccine-lot"
-              value={editFormState.lot}
-              onChange={(event) =>
-                setEditFormState({ ...editFormState, lot: event.target.value })
-              }
-              placeholder="Código de lote"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-next">Próxima dosis</label>
-            <DatePicker
-              id="edit-vaccine-next"
-              value={toLocalDateKey(editFormState.nextDoseDate)}
-              onChange={(value) =>
-                setEditFormState({
-                  ...editFormState,
-                  nextDoseDate: fromLocalDateOrDateTime(value),
-                })
-              }
-              placeholder="Sin recordatorio"
-              ariaLabel="Próxima dosis"
-              allowClear
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-notes">Notas</label>
-            <textarea
-              id="edit-vaccine-notes"
-              value={editFormState.notes}
-              onChange={(event) =>
-                setEditFormState({ ...editFormState, notes: event.target.value })
-              }
-              placeholder="Observaciones, reacciones, indicaciones"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="edit-vaccine-reminder">Recordatorio de refuerzo</label>
-            <Select
-              id="edit-vaccine-reminder"
-              value={editFormState.reminderEnabled ? 'yes' : 'no'}
-              onChange={(value) =>
-                setEditFormState({ ...editFormState, reminderEnabled: value === 'yes' })
-              }
-              options={[
-                { value: 'yes', label: 'Sí, crear recordatorio' },
-                { value: 'no', label: 'No por ahora' },
-              ]}
-              ariaLabel="Recordatorio de refuerzo"
-            />
-          </div>
-          <div
-            className="form-actions field-full"
-            style={{ justifyContent: 'flex-end', marginTop: '0.5rem' }}
-          >
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() => setEditingId(null)}
-            >
-              Cancelar
-            </button>
-            <button className="primary-button" type="submit">
-              Guardar cambios
-            </button>
-          </div>
-        </form>
-      </Modal>
+        <VaccineFormFields {...formProps} idPrefix="edit-vaccine" editing value={editFormState} onChange={setEditFormState} />
+      </FormModal>
 
       <ConfirmModal
         open={Boolean(pendingDelete)}

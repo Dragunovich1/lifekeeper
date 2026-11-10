@@ -72,14 +72,26 @@ export function computeSchedule(schedule: VaccineSchedule, birthDate: string, re
     const optional = Boolean(vaccine.condition)
     // En la adultez no se evalúan las dosis de la infancia (se ven si están cargadas, pero no figuran como pendientes)
     const evaluate = !isAdult || Boolean(vaccine.adult)
-    const mine = sorted.filter((r) => vaccine.match.test(fold(r.vaccine)))
+    // Un registro con vacuna del calendario elegida (y dosis) cuenta solo para esa; el resto se reconoce por el nombre
+    const explicit = sorted.filter((r) => r.scheduleVaccineId === vaccine.id)
+    const byName = sorted.filter((r) => !r.scheduleVaccineId && vaccine.match.test(fold(r.vaccine)))
+    const mine = [...explicit, ...byName].sort((a, b) => a.date.localeCompare(b.date))
     const used = new Set<string>()
     const items: ScheduleItem[] = []
+
+    // Primero las dosis marcadas explícitamente (posición exacta)
+    const assigned = new Map<number, VaccineRecord>()
+    for (const r of explicit) {
+      if (typeof r.doseIndex === 'number' && r.doseIndex >= 0 && r.doseIndex < vaccine.doses.length && !assigned.has(r.doseIndex)) {
+        assigned.set(r.doseIndex, r)
+        used.add(r.id)
+      }
+    }
 
     vaccine.doses.forEach((dose, doseIndex) => {
       const due = addMonths(birth, dose.ageMonths)
       const earliest = addMonths(due, -EARLY_TOLERANCE_MONTHS)
-      const hit = mine.find((r) => !used.has(r.id) && startOfDay(r.date) >= earliest)
+      const hit = assigned.get(doseIndex) ?? mine.find((r) => !used.has(r.id) && startOfDay(r.date) >= earliest)
       if (hit) used.add(hit.id)
       let status: DoseStatus = 'future'
       if (hit) status = 'done'
@@ -115,6 +127,34 @@ export function computeSchedule(schedule: VaccineSchedule, birthDate: string, re
     totalCount: all.filter((i) => i.status !== 'future' || i.record).length || all.length,
     ageMonths,
   }
+}
+
+/** Distancia mínima razonable entre dosis de una misma vacuna */
+const MIN_INTERVAL_DAYS = 28
+
+/**
+ * Cuándo toca la dosis siguiente a la que se aplicó: la fecha del calendario (por edad) o, si la persona se
+ * atrasó, 4 semanas después de esta aplicación. Devuelve '' si no hay otra dosis en el esquema.
+ */
+export function suggestNextDose(vaccine: ScheduleVaccine | undefined, doseIndex: number, appliedDate: string, birthDate?: string): string {
+  if (!vaccine || !appliedDate) return ''
+  const applied = startOfDay(appliedDate)
+  const next = vaccine.doses[doseIndex + 1]
+  if (next) {
+    const minimum = new Date(applied.getFullYear(), applied.getMonth(), applied.getDate() + MIN_INTERVAL_DAYS)
+    const scheduled = birthDate ? addMonths(startOfDay(birthDate), next.ageMonths) : minimum
+    return keyOf(scheduled > minimum ? scheduled : minimum)
+  }
+  if (vaccine.repeatYears) return keyOf(addMonths(applied, vaccine.repeatYears * 12))
+  return ''
+}
+
+/** Primera dosis sin aplicar de una vacuna (o la última si ya está completa). */
+export function nextPendingDoseIndex(report: ScheduleReport | null, vaccineId: string): number {
+  const res = report?.results.find((r) => r.vaccine.id === vaccineId)
+  if (!res) return 0
+  const idx = res.items.findIndex((i) => i.status !== 'done')
+  return idx === -1 ? Math.max(0, res.items.length - 1) : idx
 }
 
 export function ageLabel(ageMonths: number): string {

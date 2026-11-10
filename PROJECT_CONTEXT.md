@@ -277,3 +277,8 @@
 - **Ramas Principales:**
   - `main`: Sincronizada con el último commit de producción (`ea8b950`).
   - `feat/ui-ux-dashboard-responsive-branding`: Rama de trabajo activa sincronizada con `main`.
+
+## Vacunas: calendario sugerido y formulario
+- **Calendario:** `src/data/vaccineSchedules.ts` (versionado, con fuentes y fecha de revisión). Argentina → Calendario Nacional del Ministerio de Salud; resto → referencia OMS/CDC. `src/utils/vaccineSchedule.ts` cruza fecha de nacimiento + registros (aplicada / pendiente / próxima, refuerzos periódicos). Los registros pueden traer `scheduleVaccineId` + `doseIndex` (cruce exacto); sin eso se reconocen por nombre. Panel: `components/VaccineSchedulePanel.tsx`.
+- **Formulario:** `components/VaccineFormFields.tsx` (alta y edición, dentro de `FormModal`): vacuna con sugerencias (`SuggestInput`), dosis del esquema, próxima dosis calculada (`suggestNextDose`), datos opcionales plegados y comprobantes (hasta 3 archivos de 3 MB, en `attachments`, cifrados con la bóveda).
+- **Ubicación:** `components/PlaceField.tsx`: primero lugares ya usados (`utils/placeHistory.ts`, local) y luego búsqueda en OpenStreetMap vía `GET /api/public/venues` del servidor (caché, User-Agent propio, 1 consulta/s, sesgo por país y ciudad del perfil, establecimientos de salud primero). Reutilizable en otras secciones.

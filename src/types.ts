@@ -18,6 +18,12 @@ export interface VaccineRecord {
   notes?: string
   nextDoseDate?: string
   reminderEnabled: boolean
+  /** Vacuna del calendario sugerido a la que corresponde (src/data/vaccineSchedules.ts). Sin esto se reconoce por el nombre. */
+  scheduleVaccineId?: string
+  /** Posición de la dosis dentro del esquema de esa vacuna (0 = primera). */
+  doseIndex?: number
+  /** Foto o PDF del carnet / comprobante */
+  attachments?: Attachment[]
 }
 
 export interface MedicalConsultation {

@@ -38,6 +38,12 @@ const fetchImpl = async (url) => {
     { id: 3, name: 'Quilmes', latitude: -26.6, longitude: -66.0, country_code: 'AR', country: 'Argentina', admin1: 'Tucumán' },
     { id: 4, name: 'sin coordenadas', country_code: 'AR' },
   ] })
+  if (u.includes('nominatim.openstreetmap.org')) return json([
+    { lat: '-34.6', lon: '-58.4', name: 'Calle Hospital', category: 'highway', type: 'residential', address: { road: 'Calle Hospital', city: 'Buenos Aires' } },
+    { lat: '-34.61', lon: '-58.43', name: 'Hospital Italiano', category: 'amenity', type: 'hospital', address: { road: 'Perón', house_number: '4190', suburb: 'Almagro', city: 'Buenos Aires' } },
+    { lat: '-34.61', lon: '-58.43', name: 'Hospital Italiano', category: 'amenity', type: 'hospital', address: { road: 'Perón', house_number: '4190', suburb: 'Almagro', city: 'Buenos Aires' } },
+    { lat: 'x', lon: 'y', name: 'roto' },
+  ])
   if (u.includes('wsearch.nlm.nih.gov')) return mode.medline === 'ok' ? text(MEDLINE_XML) : json({}, 500)
   if (u.includes('approximateTerm')) return json({ approximateGroup: { candidate: [{ rxcui: '5640' }] } })
   if (u.includes('/related.json')) return json({ relatedGroup: { conceptGroup: [{ tty: 'IN', conceptProperties: [{ rxcui: '5640', name: 'ibuprofen' }] }] } })
@@ -55,6 +61,11 @@ test('datos públicos: feriados, inflación, ejercicios y MedlinePlus (con respa
   ok('ciudades: manda el país en mayúsculas', calls.some((u) => u.includes('geocoding-api.open-meteo.com') && u.includes('countryCode=AR')))
   ok('ciudades: texto muy corto', (await get('/geocode?q=a')).status === 400)
   const callsBefore = calls.length; await get('/geocode?q=quil&country=ar'); ok('ciudades: la segunda vez sale de la caché', calls.length === callsBefore)
+
+  calls = []; let v = await get('/venues?q=hospital italiano&country=ar&lat=-34.6&lon=-58.4')
+  ok('lugares: salud primero, sin repetidos ni coordenadas rotas', v.status === 200 && v.body.places.length === 2 && v.body.places[0].name === 'Hospital Italiano' && v.body.places[0].health === true && v.body.places[0].detail === 'Perón 4190, Almagro, Buenos Aires', JSON.stringify(v.body.places))
+  ok('lugares: sesgo por país y zona', calls.some((c) => c.includes('countrycodes=ar') && c.includes('viewbox=') && c.includes('accept-language=es')), calls[0])
+  ok('lugares: búsqueda corta', (await get('/venues?q=h')).status === 400)
 
   let r = await get('/holidays?year=2026'); ok('feriados', r.status === 200 && r.body.holidays.length === 2 && r.body.holidays[0].date === '2026-01-01', JSON.stringify(r.body.holidays))
   ok('feriados año inválido', (await get('/holidays?year=1800')).status === 400)

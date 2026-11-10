@@ -469,8 +469,73 @@ export function createPublicDataRouter({ fetchImpl = globalThis.fetch, cacheFile
     }
   })
 
+  // -------------------------------------------------------------------------
+  // Lugares (hospitales, clínicas, vacunatorios…) para el campo "Ubicación". Nominatim exige User-Agent propio
+  // y no más de 1 consulta por segundo: se serializa y se cachea.
+  // -------------------------------------------------------------------------
+  const HEALTH_TYPES = new Set(['hospital', 'clinic', 'doctors', 'pharmacy', 'dentist', 'health_post', 'healthcare', 'laboratory', 'centre', 'vaccination_centre'])
+  let nominatimQueue = Promise.resolve()
+  let lastNominatim = 0
+  const throttled = (fn) => {
+    const run = nominatimQueue.then(async () => {
+      const wait = lastNominatim + 1100 - Date.now()
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+      lastNominatim = Date.now()
+      return fn()
+    })
+    nominatimQueue = run.catch(() => {})
+    return run
+  }
+
+  /** Respuesta de Nominatim → { name, detail, category, type, latitude, longitude, health }, sin repetidos, salud primero. */
+  function normalizeVenues(raw) {
+    const seen = new Set()
+    const out = []
+    for (const r of Array.isArray(raw) ? raw : []) {
+      const lat = Number(r?.lat)
+      const lon = Number(r?.lon)
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue
+      const a = r.address ?? {}
+      const name = String(r.name || a.amenity || a.healthcare || (r.display_name ?? '').split(',')[0] || '').trim()
+      if (!name) continue
+      const street = [a.road, a.house_number].filter(Boolean).join(' ')
+      const area = a.suburb || a.neighbourhood || a.city_district || a.city || a.town || a.village || a.municipality
+      const city = a.city || a.town || a.village || a.municipality || a.county
+      const detail = [street, area && area !== city ? area : '', city].filter(Boolean).join(', ')
+      const key = `${normalize(name)}|${normalize(detail)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const type = String(r.type ?? '')
+      out.push({ name, detail, category: String(r.category ?? r.class ?? ''), type, latitude: lat, longitude: lon, health: HEALTH_TYPES.has(type) || r.category === 'healthcare' })
+    }
+    // Estable: los establecimientos de salud antes que calles o barrios
+    return out.map((v, i) => ({ v, i })).sort((x, y) => Number(y.v.health) - Number(x.v.health) || x.i - y.i).map((x) => x.v)
+  }
+
+  router.get('/venues', async (req, res) => {
+    const q = String(req.query.q ?? '').trim().slice(0, 80)
+    const countryCode = /^[A-Za-z]{2}$/.test(String(req.query.country ?? '')) ? String(req.query.country).toLowerCase() : ''
+    const lat = Number(req.query.lat)
+    const lon = Number(req.query.lon)
+    const near = Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
+    if (q.length < 2) return res.status(400).json({ error: 'Búsqueda demasiado corta' })
+    try {
+      const nearKey = near ? `${lat.toFixed(1)},${lon.toFixed(1)}` : ''
+      const { value, stale } = await cached(`venues:${countryCode}:${nearKey}:${normalize(q)}`, 7 * DAY, async () => {
+        const params = new URLSearchParams({ q, format: 'jsonv2', limit: '12', addressdetails: '1', 'accept-language': 'es', dedupe: '1' })
+        if (countryCode) params.set('countrycodes', countryCode)
+        // Sesgo (no filtro) hacia unos ~50 km alrededor de la ciudad del perfil
+        if (near) params.set('viewbox', `${lon - 0.5},${lat + 0.5},${lon + 0.5},${lat - 0.5}`)
+        return normalizeVenues(await throttled(() => getJson(`https://nominatim.openstreetmap.org/search?${params}`)))
+      })
+      res.json({ query: q, source: 'OpenStreetMap (Nominatim)', places: value.slice(0, 8), stale })
+    } catch (err) {
+      fail(res, err)
+    }
+  })
+
   router.get('/status', (_req, res) => {
-    res.json({ ok: true, services: ['holidays', 'inflation', 'exercises', 'medlineplus', 'geocode'], exercises: { ready: catalog.ready, total: catalog.items.length } })
+    res.json({ ok: true, services: ['holidays', 'inflation', 'exercises', 'medlineplus', 'geocode', 'venues'], exercises: { ready: catalog.ready, total: catalog.items.length } })
   })
 
   return router

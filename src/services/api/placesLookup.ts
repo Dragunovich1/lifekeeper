@@ -1,61 +1,56 @@
 /**
- * Servicio de búsqueda y autocompletado de lugares y direcciones vía OpenStreetMap (Nominatim).
- * Respeta las directrices de la API incluyendo User-Agent adecuado y debounce.
+ * Búsqueda de lugares (hospitales, clínicas, vacunatorios, farmacias…) para el campo "Ubicación".
+ * Pasa por el servidor propio: caché, User-Agent correcto para OpenStreetMap, sin exponer tu IP y sin problemas de CORS en la APK.
  */
+import { apiFetch } from './apiConfig'
+import { timeoutSignal } from '../../utils/abort'
 
-export interface PlaceSuggestion {
-  displayName: string
-  shortName: string
+export interface VenueSuggestion {
+  name: string
+  /** Calle, barrio y ciudad */
+  detail: string
   type: string
-  category: string
-  lat: number
-  lon: number
+  latitude: number
+  longitude: number
+  /** Establecimiento de salud (hospital, clínica, farmacia…) */
+  health: boolean
 }
 
-export async function searchPlaces(query: string): Promise<PlaceSuggestion[]> {
-  const clean = query.trim()
-  if (!clean || clean.length < 3) return []
+const cache = new Map<string, VenueSuggestion[]>()
 
+const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim()
+
+export async function searchVenues(
+  text: string,
+  opts: { countryCode?: string; near?: { latitude: number; longitude: number }; signal?: AbortSignal } = {},
+): Promise<VenueSuggestion[]> {
+  const q = text.trim()
+  if (q.length < 2) return []
+  const near = opts.near
+  const key = `${opts.countryCode ?? ''}|${near ? `${near.latitude.toFixed(1)},${near.longitude.toFixed(1)}` : ''}|${fold(q)}`
+  const hit = cache.get(key)
+  if (hit) return hit
   try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 2500)
-
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-      clean,
-    )}&format=json&limit=5&addressdetails=1`
-
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-      },
-    })
-    clearTimeout(timeout)
-
+    const params = new URLSearchParams({ q })
+    if (opts.countryCode) params.set('country', opts.countryCode)
+    if (near) {
+      params.set('lat', String(near.latitude))
+      params.set('lon', String(near.longitude))
+    }
+    const res = await apiFetch(`/api/public/venues?${params}`, { headers: { Accept: 'application/json' }, signal: opts.signal ?? timeoutSignal(6000) })
     if (!res.ok) return []
-
-    const items = (await res.json()) as Array<{
-      display_name: string
-      name?: string
-      type?: string
-      class?: string
-      lat: string
-      lon: string
-    }>
-
-    return items.map((item) => {
-      const parts = item.display_name.split(',')
-      const shortName = item.name || parts[0]?.trim() || item.display_name
-      return {
-        displayName: item.display_name,
-        shortName,
-        type: item.type || 'lugar',
-        category: item.class || 'ubicación',
-        lat: parseFloat(item.lat),
-        lon: parseFloat(item.lon),
-      }
-    })
-  } catch {
-    return []
+    const body = (await res.json()) as { places?: VenueSuggestion[] }
+    const places = Array.isArray(body.places) ? body.places : []
+    cache.set(key, places)
+    return places
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError' && opts.signal?.aborted) throw err
+    return [] // sin conexión o servidor caído: quedan los lugares usados antes
   }
+}
+
+/** Texto que se guarda en el registro: nombre y, para distinguir sucursales, la ciudad. */
+export function venueLabel(v: Pick<VenueSuggestion, 'name' | 'detail'>): string {
+  const city = v.detail.split(',').map((s) => s.trim()).filter(Boolean).pop()
+  return city && fold(city) !== fold(v.name) && !fold(v.name).includes(fold(city)) ? `${v.name} (${city})` : v.name
 }
